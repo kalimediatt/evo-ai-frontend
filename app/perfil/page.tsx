@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,26 +11,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { User, Key, LogOut } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export default function ProfilePage() {
   const { toast } = useToast()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
-  // Mock user data
-  const [userData, setUserData] = useState({
-    id: "550e8400-e29b-41d4-a716-446655440000",
-    name: "João Silva",
-    email: "joao.silva@example.com",
-    is_admin: false,
-    email_verified: true,
-    created_at: "2023-01-15T14:30:00Z",
+  // Estado para dados reais do usuário
+  const [userData, setUserData] = useState(() => {
+    if (typeof window !== "undefined") {
+      const user = localStorage.getItem("user")
+      if (user) return JSON.parse(user)
+    }
+    return {
+      id: "",
+      name: "",
+      email: "",
+      is_admin: false,
+      email_verified: false,
+      created_at: "",
+    }
   })
 
-  // Profile form state
+  // Atualizar profileData quando userData mudar
   const [profileData, setProfileData] = useState({
     name: userData.name,
     email: userData.email,
   })
+  useEffect(() => {
+    setProfileData({ name: userData.name, email: userData.email })
+  }, [userData])
 
   // Password form state
   const [passwordData, setPasswordData] = useState({
@@ -109,6 +120,17 @@ export default function ProfilePage() {
     }
   }
 
+  // Função de logout
+  const handleLogout = () => {
+    // Remover token do cookie
+    document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+    // Remover do localStorage
+    localStorage.removeItem("access_token")
+    localStorage.removeItem("user")
+    // Redirecionar para login
+    router.push("/login")
+  }
+
   return (
     <div className="container mx-auto p-6">
       <div className="flex flex-col md:flex-row gap-6">
@@ -119,10 +141,11 @@ export default function ProfilePage() {
                 <Avatar className="h-24 w-24 mb-4">
                   <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${userData.name}`} />
                   <AvatarFallback className="text-2xl bg-[#00ff9d] text-black">
-                    {userData.name
+                    {(userData.name || "?")
                       .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
+                      .filter(Boolean)
+                      .map((n: string) => n[0])
+                      .join("") || "?"}
                   </AvatarFallback>
                 </Avatar>
                 <CardTitle className="text-white text-xl">{userData.name}</CardTitle>
@@ -150,7 +173,7 @@ export default function ProfilePage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button variant="destructive" className="w-full">
+              <Button variant="destructive" className="w-full" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" /> Sair
               </Button>
             </CardFooter>

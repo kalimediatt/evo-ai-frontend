@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -41,35 +41,14 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-
-type ToolConfig = {
-  id: string
-  name: string
-  description: string
-  tags: string[]
-  examples: string[]
-  inputModes: string[]
-  outputModes: string[]
-}
-
-type MCPServer = {
-  id: string
-  name: string
-  description: string
-  config_type: "sse" | "studio" // Tipo de configuração: SSE ou Studio
-  config_json: {
-    url?: string
-    headers?: Record<string, string>
-    command?: string
-    args?: string[]
-    env?: Record<string, string>
-  }
-  environments: Record<string, string>
-  tools: ToolConfig[]
-  type: string
-  created_at: string
-  updated_at: string | null
-}
+import {
+  createMCPServer,
+  listMCPServers,
+  getMCPServer,
+  updateMCPServer,
+  deleteMCPServer,
+} from "@/services/mcpServerService"
+import { MCPServer, MCPServerCreate, ToolConfig } from "@/types/mcpServer"
 
 export default function MCPServersPage() {
   const { toast } = useToast()
@@ -105,148 +84,42 @@ export default function MCPServersPage() {
     tools: [],
   })
 
-  // Mock MCP servers data
-  const [mcpServers, setMcpServers] = useState<MCPServer[]>([
-    {
-      id: "mcp-1",
-      name: "Evo Knowledge MCP",
-      description: "API for knowledge management and retrieval.",
-      type: "official",
-      config_type: "sse",
-      config_json: {
-        url: "http://localhost:5540/sse",
-        headers: {
-          "x-api-key": "79405047-7a5e-4b18-b25a-4af149d747dc",
-        },
-      },
-      environments: {},
-      tools: [
-        {
-          id: "tool-1",
-          name: "knowledge_search",
-          description: "Search knowledge base for information",
-          tags: ["knowledge", "search"],
-          examples: ["Search for information about X"],
-          inputModes: ["text"],
-          outputModes: ["text"],
-        },
-      ],
-      created_at: "2023-01-10T14:30:00Z",
-      updated_at: null,
-    },
-    {
-      id: "mcp-2",
-      name: "Web Search MCP",
-      description: "API for web search and information retrieval.",
-      type: "official",
-      config_type: "sse",
-      config_json: {
-        url: "http://localhost:5541/sse",
-        headers: {
-          "x-api-key": "8a7c6b5d-4e3f-2a1b-9c8d-7e6f5d4c3b2a",
-        },
-      },
-      environments: {
-        BRAVE_API_KEY: "env@@BRAVE_API_KEY",
-      },
-      tools: [
-        {
-          id: "tool-2",
-          name: "google_search",
-          description: "Search the web using Google",
-          tags: ["search", "web"],
-          examples: ["Search for the latest news about AI"],
-          inputModes: ["text"],
-          outputModes: ["text"],
-        },
-        {
-          id: "tool-3",
-          name: "brave_search",
-          description: "Search the web using Brave Search",
-          tags: ["search", "web"],
-          examples: ["Find information about climate change"],
-          inputModes: ["text"],
-          outputModes: ["text"],
-        },
-      ],
-      created_at: "2023-02-15T10:45:00Z",
-      updated_at: "2023-03-20T09:30:00Z",
-    },
-    {
-      id: "mcp-3",
-      name: "Code Assistant MCP",
-      description: "API for code generation and analysis.",
-      type: "official",
-      config_type: "sse",
-      config_json: {
-        url: "http://localhost:5542/sse",
-        headers: {
-          "x-api-key": "1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p",
-        },
-      },
-      environments: {
-        GITHUB_TOKEN: "env@@GITHUB_TOKEN",
-      },
-      tools: [
-        {
-          id: "tool-4",
-          name: "code_analysis",
-          description: "Analyze code for bugs and improvements",
-          tags: ["code", "analysis"],
-          examples: ["Analyze this Python function for bugs"],
-          inputModes: ["text"],
-          outputModes: ["text"],
-        },
-        {
-          id: "tool-5",
-          name: "code_generation",
-          description: "Generate code based on requirements",
-          tags: ["code", "generation"],
-          examples: ["Generate a JavaScript function to sort an array"],
-          inputModes: ["text"],
-          outputModes: ["text"],
-        },
-      ],
-      created_at: "2023-03-22T09:15:00Z",
-      updated_at: null,
-    },
-    {
-      id: "mcp-4",
-      name: "Brave Search Studio",
-      description: "Studio-based MCP for Brave Search integration.",
-      type: "official",
-      config_type: "studio",
-      config_json: {
-        command: "npx",
-        args: ["-y", "@modelcontextprotocol/server-brave-search"],
-        env: {
-          BRAVE_API_KEY: "env@@BRAVE_API_KEY",
-        },
-      },
-      environments: {
-        BRAVE_API_KEY: "env@@BRAVE_API_KEY",
-      },
-      tools: [
-        {
-          id: "tool-6",
-          name: "brave_search",
-          description: "Search the web using Brave Search",
-          tags: ["search", "web"],
-          examples: ["Search for information about climate change"],
-          inputModes: ["text"],
-          outputModes: ["text"],
-        },
-      ],
-      created_at: "2023-04-05T16:20:00Z",
-      updated_at: null,
-    },
-  ])
+  // Paginação
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
+  const [total, setTotal] = useState(0)
 
-  const filteredServers = mcpServers.filter(
-    (server) =>
-      server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      server.description.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  // Carregar MCP servers da API
+  const [mcpServers, setMcpServers] = useState<MCPServer[]>([])
+
+  useEffect(() => {
+    const fetchServers = async () => {
+      setIsLoading(true)
+      try {
+        const res = await listMCPServers((page - 1) * limit, limit)
+        setMcpServers(res.data)
+        setTotal(res.data.length)
+      } catch (error) {
+        toast({
+          title: "Erro ao carregar servidores MCP",
+          description: "Não foi possível carregar os servidores.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchServers()
+  }, [page, limit])
+
+  // Buscar servidor por nome/descrição (filtro local)
+  const filteredServers = Array.isArray(mcpServers)
+    ? mcpServers.filter(
+        (server) =>
+          server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (server.description || "").toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : []
 
   const handleAddHeader = () => {
     setServerData({
@@ -338,24 +211,14 @@ export default function MCPServersPage() {
   const handleAddServer = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
       // Convert environments array to object
       const environmentsObj: Record<string, string> = {}
       serverData.environments.forEach((env) => {
         if (env.key) {
-          // Para servidores studio, sempre formatamos como env@@NOME_DA_ENV
-          if (serverData.config_type === "studio") {
-            environmentsObj[env.key] = `env@@${env.key}`
-          } else {
-            environmentsObj[env.key] = `env@@${env.key}`
-          }
+          environmentsObj[env.key] = `env@@${env.key}`
         }
       })
-
       // Convert headers array to object
       const headersObj: Record<string, string> = {}
       serverData.headers.forEach((header) => {
@@ -363,65 +226,55 @@ export default function MCPServersPage() {
           headersObj[header.key] = header.value
         }
       })
-
       // Preparar config_json baseado no tipo de configuração
       let config_json: any = {}
-
       if (serverData.config_type === "sse") {
         config_json = {
           url: serverData.url,
           headers: headersObj,
         }
       } else if (serverData.config_type === "studio") {
-        // Converter a string de args em um array
         const args = serverData.args.split("\n").filter((arg) => arg.trim() !== "")
-
-        // Preparar env para o formato env@@NOME_DA_ENV
         const envObj: Record<string, string> = {}
         serverData.environments.forEach((env) => {
           if (env.key) {
             envObj[env.key] = `env@@${env.key}`
           }
         })
-
         config_json = {
           command: serverData.command,
           args: args,
           env: envObj,
         }
       }
-
-      const newServer: MCPServer = {
-        id: selectedServer ? selectedServer.id : `mcp-${mcpServers.length + 1}`,
+      const payload: MCPServerCreate = {
         name: serverData.name,
         description: serverData.description,
         type: serverData.type,
         config_type: serverData.config_type,
-        config_json: config_json,
+        config_json,
         environments: environmentsObj,
         tools: serverData.tools,
-        created_at: selectedServer ? selectedServer.created_at : new Date().toISOString(),
-        updated_at: selectedServer ? new Date().toISOString() : null,
       }
-
       if (selectedServer) {
-        // Update existing server
-        setMcpServers(mcpServers.map((server) => (server.id === selectedServer.id ? newServer : server)))
+        await updateMCPServer(selectedServer.id, payload)
         toast({
           title: "Servidor atualizado",
           description: `${serverData.name} foi atualizado com sucesso.`,
         })
       } else {
-        // Add new server
-        setMcpServers([...mcpServers, newServer])
+        await createMCPServer(payload)
         toast({
           title: "Servidor adicionado",
           description: `${serverData.name} foi adicionado com sucesso.`,
         })
       }
-
-      resetForm()
       setIsDialogOpen(false)
+      resetForm()
+      // Recarregar lista
+      const res = await listMCPServers((page - 1) * limit, limit)
+      setMcpServers(res.data)
+      setTotal(res.data.length)
     } catch (error) {
       toast({
         title: "Erro",
@@ -433,53 +286,55 @@ export default function MCPServersPage() {
     }
   }
 
-  const handleEditServer = (server: MCPServer) => {
-    setSelectedServer(server)
-
-    // Convert environments object to array
-    const environmentsArray = Object.keys(server.environments).map((key) => ({
-      key,
-    }))
-
-    // Convert headers object to array
-    const headersArray = server.config_json.headers
-      ? Object.entries(server.config_json.headers).map(([key, value]) => ({
-          key,
-          value: value as string,
-        }))
-      : [{ key: "x-api-key", value: "" }]
-
-    // Preparar os dados do formulário com base no tipo de configuração
-    if (server.config_type === "sse") {
-      setServerData({
-        name: server.name,
-        description: server.description,
-        type: server.type,
-        config_type: server.config_type,
-        url: server.config_json.url || "",
-        headers: headersArray,
-        command: "",
-        args: "",
-        environments: environmentsArray,
-        tools: server.tools,
+  const handleEditServer = async (server: MCPServer) => {
+    setIsLoading(true)
+    try {
+      const res = await getMCPServer(server.id)
+      setSelectedServer(res.data)
+      // Convert environments object to array
+      const environmentsArray = Object.keys(res.data.environments || {}).map((key) => ({ key }))
+      // Convert headers object to array
+      const headersArray = res.data.config_json.headers
+        ? Object.entries(res.data.config_json.headers).map(([key, value]) => ({ key, value: value as string }))
+        : [{ key: "x-api-key", value: "" }]
+      if (res.data.config_type === "sse") {
+        setServerData({
+          name: res.data.name,
+          description: res.data.description || "",
+          type: res.data.type,
+          config_type: res.data.config_type as any,
+          url: res.data.config_json.url || "",
+          headers: headersArray,
+          command: "",
+          args: "",
+          environments: environmentsArray,
+          tools: res.data.tools,
+        })
+      } else if (res.data.config_type === "studio") {
+        setServerData({
+          name: res.data.name,
+          description: res.data.description || "",
+          type: res.data.type,
+          config_type: res.data.config_type as any,
+          url: "",
+          headers: [],
+          command: res.data.config_json.command || "npx",
+          args: (res.data.config_json.args || []).join("\n"),
+          environments: environmentsArray,
+          tools: res.data.tools,
+        })
+      }
+      setActiveTab("basic")
+      setIsDialogOpen(true)
+    } catch (error) {
+      toast({
+        title: "Erro ao buscar servidor MCP",
+        description: "Não foi possível buscar o servidor.",
+        variant: "destructive",
       })
-    } else if (server.config_type === "studio") {
-      setServerData({
-        name: server.name,
-        description: server.description,
-        type: server.type,
-        config_type: server.config_type,
-        url: "",
-        headers: [],
-        command: server.config_json.command || "npx",
-        args: server.config_json.args?.join("\n") || "",
-        environments: environmentsArray,
-        tools: server.tools,
-      })
+    } finally {
+      setIsLoading(false)
     }
-
-    setActiveTab("basic")
-    setIsDialogOpen(true)
   }
 
   const handleDeleteServer = (server: MCPServer) => {
@@ -489,18 +344,19 @@ export default function MCPServersPage() {
 
   const confirmDeleteServer = async () => {
     if (!selectedServer) return
-
     setIsLoading(true)
-
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      setMcpServers(mcpServers.filter((server) => server.id !== selectedServer.id))
+      await deleteMCPServer(selectedServer.id)
       toast({
         title: "Servidor excluído",
         description: `${selectedServer.name} foi excluído com sucesso.`,
       })
+      setIsDeleteDialogOpen(false)
+      setSelectedServer(null)
+      // Recarregar lista
+      const res = await listMCPServers((page - 1) * limit, limit)
+      setMcpServers(res.data)
+      setTotal(res.data.length)
     } catch (error) {
       toast({
         title: "Erro",
@@ -509,8 +365,6 @@ export default function MCPServersPage() {
       })
     } finally {
       setIsLoading(false)
-      setIsDeleteDialogOpen(false)
-      setSelectedServer(null)
     }
   }
 
@@ -618,7 +472,7 @@ export default function MCPServersPage() {
                         </SelectTrigger>
                         <SelectContent className="bg-[#222] border-[#444] text-white">
                           <SelectItem value="official">Oficial</SelectItem>
-                          <SelectItem value="custom">Personalizado</SelectItem>
+                          <SelectItem value="community">Comunidade</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -867,7 +721,7 @@ export default function MCPServersPage() {
                                 </Label>
                                 <Input
                                   id={`tool-tags-${index}`}
-                                  value={tool.tags.join(", ")}
+                                  value={(tool.tags ?? []).join(", ")}
                                   onChange={(e) => handleToolChange(index, "tags", e.target.value.split(", "))}
                                   className="bg-[#222] border-[#444] text-white"
                                   placeholder="tag1, tag2, tag3"
@@ -879,7 +733,7 @@ export default function MCPServersPage() {
                                 </Label>
                                 <Textarea
                                   id={`tool-examples-${index}`}
-                                  value={tool.examples.join(", ")}
+                                  value={(tool.examples ?? []).join(", ")}
                                   onChange={(e) => handleToolChange(index, "examples", e.target.value.split(", "))}
                                   className="bg-[#222] border-[#444] text-white"
                                   placeholder="Exemplo 1, Exemplo 2"

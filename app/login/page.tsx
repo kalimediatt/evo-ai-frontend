@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
+import { login, register as registerService, forgotPassword, getMe } from "@/services/authService"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -41,19 +42,32 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // For demo purposes, just redirect to dashboard
+      const response = await login({
+        email: loginData.email,
+        password: loginData.password,
+      })
+      // Salvar token no localStorage
+      if (response.data.access_token) {
+        localStorage.setItem("access_token", response.data.access_token)
+        // Salvar token em cookie (expira em 7 dias)
+        document.cookie = `access_token=${response.data.access_token}; path=/; max-age=${60 * 60 * 24 * 7}`
+        // Buscar dados do usuário
+        const meResponse = await getMe()
+        if (meResponse.data) {
+          localStorage.setItem("user", JSON.stringify(meResponse.data))
+          // Salvar user em cookie (expira em 7 dias)
+          document.cookie = `user=${encodeURIComponent(JSON.stringify(meResponse.data))}; path=/; max-age=${60 * 60 * 24 * 7}`
+        }
+      }
       toast({
         title: "Login bem-sucedido",
         description: "Bem-vindo de volta!",
       })
       router.push("/")
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Erro ao fazer login",
-        description: "Verifique suas credenciais e tente novamente.",
+        description: error?.response?.data?.detail || "Verifique suas credenciais e tente novamente.",
         variant: "destructive",
       })
     } finally {
@@ -76,18 +90,20 @@ export default function LoginPage() {
     }
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
+      await registerService({
+        name: registerData.name,
+        email: registerData.email,
+        password: registerData.password,
+      })
       toast({
         title: "Cadastro realizado",
         description: "Sua conta foi criada com sucesso!",
       })
       setActiveTab("login")
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Erro no cadastro",
-        description: "Não foi possível criar sua conta. Tente novamente.",
+        description: error?.response?.data?.detail || "Não foi possível criar sua conta. Tente novamente.",
         variant: "destructive",
       })
     } finally {
@@ -100,18 +116,16 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
+      await forgotPassword({ email: forgotEmail })
       toast({
         title: "Email enviado",
         description: "Verifique sua caixa de entrada para redefinir sua senha.",
       })
       setActiveTab("login")
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Erro ao enviar email",
-        description: "Não foi possível enviar o email de redefinição. Tente novamente.",
+        description: error?.response?.data?.detail || "Não foi possível enviar o email de redefinição. Tente novamente.",
         variant: "destructive",
       })
     } finally {
@@ -122,7 +136,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#121212] p-4">
       <div className="mb-8">
-        <Image src="/images/evolutionapi-logo.png" alt="Evolution API" width={220} height={50} />
+        <Image src="/images/evolution-api-logo.png" alt="Evolution API" width={220} height={50} />
       </div>
 
       <Card className="w-full max-w-md bg-[#1a1a1a] border-[#333]">

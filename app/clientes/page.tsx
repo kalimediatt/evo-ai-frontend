@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -37,15 +37,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-
-type Client = {
-  id: string
-  name: string
-  email: string
-  created_at: string
-  users_count: number
-  agents_count: number
-}
+import {
+  createClient,
+  listClients,
+  getClient,
+  updateClient,
+  deleteClient,
+  Client,
+} from "@/services/clientService"
 
 export default function ClientsPage() {
   const { toast } = useToast()
@@ -61,83 +60,69 @@ export default function ClientsPage() {
     email: "",
   })
 
-  // Mock clients data
-  const [clients, setClients] = useState<Client[]>([
-    {
-      id: "c1",
-      name: "Empresa ABC",
-      email: "contato@empresaabc.com",
-      created_at: "2023-01-10T14:30:00Z",
-      users_count: 5,
-      agents_count: 8,
-    },
-    {
-      id: "c2",
-      name: "Tech Solutions",
-      email: "admin@techsolutions.com",
-      created_at: "2023-02-15T10:45:00Z",
-      users_count: 3,
-      agents_count: 12,
-    },
-    {
-      id: "c3",
-      name: "Global Services",
-      email: "info@globalservices.com",
-      created_at: "2023-03-22T09:15:00Z",
-      users_count: 7,
-      agents_count: 15,
-    },
-    {
-      id: "c4",
-      name: "Digital Marketing",
-      email: "contact@digitalmarketing.com",
-      created_at: "2023-04-05T16:20:00Z",
-      users_count: 2,
-      agents_count: 6,
-    },
-  ])
+  // Paginação
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
+  const [total, setTotal] = useState(0)
 
-  const filteredClients = clients.filter(
-    (client) =>
-      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  // Carregar clientes da API
+  const [clients, setClients] = useState<Client[]>([])
 
+  useEffect(() => {
+    const fetchClients = async () => {
+      setIsLoading(true)
+      try {
+        const res = await listClients((page - 1) * limit, limit)
+        setClients(res.data)
+        setTotal(res.data.length)
+      } catch (error) {
+        toast({
+          title: "Erro ao carregar clientes",
+          description: "Não foi possível carregar os clientes.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchClients()
+  }, [page, limit])
+
+  // Buscar cliente por nome/email (filtro local)
+  const filteredClients = Array.isArray(clients)
+    ? clients.filter(
+        (client) =>
+          client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          client.email.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : []
+
+  // Adicionar ou editar cliente
   const handleAddClient = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      const newClient: Client = {
-        id: `c${clients.length + 1}`,
-        name: clientData.name,
-        email: clientData.email,
-        created_at: new Date().toISOString(),
-        users_count: 0,
-        agents_count: 0,
-      }
-
       if (selectedClient) {
-        // Update existing client
-        setClients(clients.map((client) => (client.id === selectedClient.id ? { ...client, ...clientData } : client)))
+        // Editar cliente
+        await updateClient(selectedClient.id, clientData)
         toast({
           title: "Cliente atualizado",
           description: `${clientData.name} foi atualizado com sucesso.`,
         })
       } else {
-        // Add new client
-        setClients([...clients, newClient])
+        // Criar cliente (senha padrão para exemplo)
+        await createClient({ ...clientData, password: "Senha@123" })
         toast({
           title: "Cliente adicionado",
           description: `${clientData.name} foi adicionado com sucesso.`,
         })
       }
-
-      resetForm()
       setIsDialogOpen(false)
+      resetForm()
+      // Recarregar lista
+      const res = await listClients((page - 1) * limit, limit)
+      setClients(res.data)
+      setTotal(res.data.length)
     } catch (error) {
       toast({
         title: "Erro",
@@ -149,34 +134,44 @@ export default function ClientsPage() {
     }
   }
 
-  const handleEditClient = (client: Client) => {
-    setSelectedClient(client)
-    setClientData({
-      name: client.name,
-      email: client.email,
-    })
-    setIsDialogOpen(true)
+  // Editar cliente (busca na API)
+  const handleEditClient = async (client: Client) => {
+    setIsLoading(true)
+    try {
+      const res = await getClient(client.id)
+      setSelectedClient(res.data)
+      setClientData({
+        name: res.data.name,
+        email: res.data.email,
+      })
+      setIsDialogOpen(true)
+    } catch (error) {
+      toast({
+        title: "Erro ao buscar cliente",
+        description: "Não foi possível buscar o cliente.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleDeleteClient = (client: Client) => {
-    setSelectedClient(client)
-    setIsDeleteDialogOpen(true)
-  }
-
+  // Excluir cliente
   const confirmDeleteClient = async () => {
     if (!selectedClient) return
-
     setIsLoading(true)
-
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      setClients(clients.filter((client) => client.id !== selectedClient.id))
+      await deleteClient(selectedClient.id)
       toast({
         title: "Cliente excluído",
         description: `${selectedClient.name} foi excluído com sucesso.`,
       })
+      setIsDeleteDialogOpen(false)
+      setSelectedClient(null)
+      // Recarregar lista
+      const res = await listClients((page - 1) * limit, limit)
+      setClients(res.data)
+      setTotal(res.data.length)
     } catch (error) {
       toast({
         title: "Erro",
@@ -185,8 +180,6 @@ export default function ClientsPage() {
       })
     } finally {
       setIsLoading(false)
-      setIsDeleteDialogOpen(false)
-      setSelectedClient(null)
     }
   }
 
@@ -332,10 +325,10 @@ export default function ClientsPage() {
                     <TableCell className="text-gray-300">
                       <div className="flex items-center">
                         <Users className="h-4 w-4 mr-1 text-[#00ff9d]" />
-                        {client.users_count}
+                        {client.users_count ?? 0}
                       </div>
                     </TableCell>
-                    <TableCell className="text-gray-300">{client.agents_count}</TableCell>
+                    <TableCell className="text-gray-300">{client.agents_count ?? 0}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -355,7 +348,10 @@ export default function ClientsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="cursor-pointer hover:bg-[#333] text-red-500"
-                            onClick={() => handleDeleteClient(client)}
+                            onClick={() => {
+                              setSelectedClient(client)
+                              setIsDeleteDialogOpen(true)
+                            }}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Excluir
@@ -376,6 +372,17 @@ export default function ClientsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Paginação UI */}
+      <div className="flex justify-end mt-4">
+        <Button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || isLoading}>
+          Anterior
+        </Button>
+        <span className="mx-4 text-white">Página {page} de {Math.ceil(total / limit) || 1}</span>
+        <Button onClick={() => setPage((p) => p + 1)} disabled={page * limit >= total || isLoading}>
+          Próxima
+        </Button>
+      </div>
     </div>
   )
 }

@@ -5,31 +5,53 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { MessageSquare, Grid3X3, Server, Users, User } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useEffect, useState } from "react"
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const user = localStorage.getItem("user")
+      if (user) {
+        try {
+          const parsed = JSON.parse(user)
+          setIsAdmin(!!parsed.is_admin)
+        } catch {}
+      }
+    }
+  }, [])
 
   const menuItems = [
-    {
-      name: "Agentes",
-      href: "/agentes",
-      icon: Grid3X3,
-    },
-    {
-      name: "Chat",
-      href: "/chat",
-      icon: MessageSquare,
-    },
-    {
-      name: "Servidores MCP",
-      href: "/servidores-mcp",
-      icon: Server,
-    },
-    {
-      name: "Clientes",
-      href: "/clientes",
-      icon: Users,
-    },
+    ...(!isAdmin
+      ? [
+          {
+            name: "Agentes",
+            href: "/agentes",
+            icon: Grid3X3,
+          },
+          {
+            name: "Chat",
+            href: "/chat",
+            icon: MessageSquare,
+          },
+        ]
+      : []),
+    ...(isAdmin
+      ? [
+          {
+            name: "Servidores MCP",
+            href: "/servidores-mcp",
+            icon: Server,
+          },
+          {
+            name: "Clientes",
+            href: "/clientes",
+            icon: Users,
+          },
+        ]
+      : []),
     {
       name: "Perfil",
       href: "/perfil",
@@ -68,7 +90,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="border-t border-gray-800 pt-4 mt-4">
-        <div className="text-sm text-gray-400">Evolution API - Multi-Agentes v1.0</div>
+        <div className="text-sm text-gray-400">Evo AI</div>
         <div className="text-xs text-gray-500 mt-1">© 2024 Evolution API</div>
       </div>
     </div>
