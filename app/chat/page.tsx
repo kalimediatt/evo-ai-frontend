@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,6 +47,13 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+// Adicionar a interface para o tipo de retorno da função getMessageText
+interface FunctionMessageContent {
+  title: string;
+  content: string;
+  author?: string;
+}
+
 export default function Chat() {
   const [isLoading, setIsLoading] = useState(true);
   const [agents, setAgents] = useState<any[]>([]);
@@ -61,7 +68,10 @@ export default function Chat() {
   const [isSending, setIsSending] = useState(false);
   const [isNewChatDialogOpen, setIsNewChatDialogOpen] = useState(false);
   const [showAgentFilter, setShowAgentFilter] = useState(false);
-  const [expandedFunctions, setExpandedFunctions] = useState<Record<string, boolean>>({});
+  const [expandedFunctions, setExpandedFunctions] = useState<
+    Record<string, boolean>
+  >({});
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   // Buscar ID do cliente do localStorage
@@ -70,6 +80,14 @@ export default function Chat() {
       ? JSON.parse(localStorage.getItem("user") || "{}")
       : {};
   const clientId = user?.client_id || "teste"; // Fallback para teste
+
+  // Função para rolar para o final do chat
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
+    }
+  };
 
   // Carregar agentes e sessões ao iniciar
   useEffect(() => {
@@ -109,6 +127,9 @@ export default function Chat() {
         // Extrair o ID do agente do ID da sessão
         const agentId = selectedSession.split("_")[1];
         setCurrentAgentId(agentId);
+
+        // Rolar para o final após carregar mensagens
+        setTimeout(scrollToBottom, 100);
       } catch (error) {
         console.error("Erro ao carregar mensagens:", error);
       } finally {
@@ -118,6 +139,13 @@ export default function Chat() {
 
     loadMessages();
   }, [selectedSession]);
+
+  // Efeito para rolar para o final quando as mensagens mudarem
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(scrollToBottom, 100);
+    }
+  }, [messages]);
 
   // Filtrar sessões por termo de busca e agente selecionado
   const filteredSessions = sessions.filter((session) => {
@@ -206,6 +234,8 @@ export default function Chat() {
       };
 
       setMessages((prev) => [...prev, tempMessage]);
+      // Rolar para o final após adicionar mensagem
+      setTimeout(scrollToBottom, 100);
 
       // Enviar para a API
       const sessionId =
@@ -240,6 +270,9 @@ export default function Chat() {
         const messagesResponse = await getSessionMessages(sessionId);
         setMessages(messagesResponse.data);
       }
+
+      const messagesResponse = await getSessionMessages(sessionId);
+      setMessages(messagesResponse.data);
 
       // Limpar input
       setMessageInput("");
@@ -298,97 +331,146 @@ export default function Chat() {
   const containsMarkdown = (text: string): boolean => {
     // Se o texto for muito curto, provavelmente não é markdown
     if (!text || text.length < 3) return false;
-    
+
     // Padrões mais comuns de markdown
     const markdownPatterns = [
-      /[*_]{1,2}[^*_]+[*_]{1,2}/,  // bold/italic
-      /\[[^\]]+\]\([^)]+\)/,       // links
-      /^#{1,6}\s/m,                // headers
-      /^[-*+]\s/m,                 // unordered lists
-      /^[0-9]+\.\s/m,              // ordered lists
-      /^>\s/m,                     // blockquotes
-      /`[^`]+`/,                   // inline code
-      /```[\s\S]*?```/,            // code blocks
-      /^\|(.+\|)+$/m,              // tables
-      /!\[[^\]]*\]\([^)]+\)/       // images
+      /[*_]{1,2}[^*_]+[*_]{1,2}/, // bold/italic
+      /\[[^\]]+\]\([^)]+\)/, // links
+      /^#{1,6}\s/m, // headers
+      /^[-*+]\s/m, // unordered lists
+      /^[0-9]+\.\s/m, // ordered lists
+      /^>\s/m, // blockquotes
+      /`[^`]+`/, // inline code
+      /```[\s\S]*?```/, // code blocks
+      /^\|(.+\|)+$/m, // tables
+      /!\[[^\]]*\]\([^)]+\)/, // images
     ];
 
     // Verifica presença de qualquer padrão de markdown
-    return markdownPatterns.some(pattern => pattern.test(text));
+    return markdownPatterns.some((pattern) => pattern.test(text));
   };
 
   // Função para interpretar o conteúdo da mensagem
-  const getMessageText = (message: ChatMessage) => {
+  const getMessageText = (
+    message: ChatMessage
+  ): string | FunctionMessageContent => {
+    const author = message.author;
     const parts = message.content.parts;
-
+    
     if (!parts || parts.length === 0) return "Conteúdo vazio";
-
-    // Verificar se há texto direto
-    if (parts[0].text) return parts[0].text;
-
-    // Verificar se há função com argumento thought
-    if (
-      parts[0].functionCall &&
-      parts[0].functionCall.args &&
-      parts[0].functionCall.args.thought
-    ) {
-      return parts[0].functionCall.args.thought;
+    
+    // Verificar se há uma chamada de função ou resposta de função em qualquer parte
+    const functionCallPart = parts.find(part => part.functionCall || part.function_call);
+    const functionResponsePart = parts.find(part => part.functionResponse || part.function_response);
+    
+    // Se houver uma chamada de função, priorizá-la
+    if (functionCallPart) {
+      const funcCall = functionCallPart.functionCall || functionCallPart.function_call || {};
+      const args = funcCall.args || {};
+      const name = funcCall.name || "desconhecida";
+      const id = funcCall.id || "sem-id";
+      
+      return {
+        author,
+        title: `📞 Chamada de função: ${name}`,
+        content: `ID: ${id}
+Args: ${
+        Object.keys(args).length > 0
+          ? `\n${JSON.stringify(args, null, 2)}`
+          : "{}"
+      }`,
+      } as FunctionMessageContent;
     }
-
-    try {
-      // Verificar se há chamada de função (formato camelCase ou underscore)
-      if (parts[0].functionCall || parts[0].function_call) {
-        const funcCall = parts[0].functionCall || parts[0].function_call || {};
-        const args = funcCall.args || {};
-        const name = funcCall.name || "desconhecida";
-        const id = funcCall.id || "sem-id";
-        
-        return {
-          title: `📞 Chamada de função: ${name}`,
-          content: `ID: ${id}
-Args: ${Object.keys(args).length > 0 ? `\n${JSON.stringify(args, null, 2)}` : "{}"}`
-        };
-      }
-
-      // Verificar se há resposta de função (formato camelCase ou underscore)
-      if (parts[0].functionResponse || parts[0].function_response) {
-        const funcResponse = parts[0].functionResponse || parts[0].function_response || {};
-        const response = funcResponse.response || {};
-        const name = funcResponse.name || "desconhecida";
-        const id = funcResponse.id || "sem-id";
-        const status = response.status || "unknown";
-        const statusEmoji = status === "error" ? "❌" : "✅";
-        
-        let resultText = "";
-        if (status === "error") {
-          resultText = `Erro: ${response.error_message || "Erro desconhecido"}`;
-        } else if (response.report) {
-          resultText = `Resultado: ${response.report}`;
+    
+    // Se houver uma resposta de função, priorizá-la
+    if (functionResponsePart) {
+      const funcResponse =
+        functionResponsePart.functionResponse || functionResponsePart.function_response || {};
+      const response = funcResponse.response || {};
+      const name = funcResponse.name || "desconhecida";
+      const id = funcResponse.id || "sem-id";
+      const status = response.status || "unknown";
+      const statusEmoji = status === "error" ? "❌" : "✅";
+      
+      let resultText = "";
+      if (status === "error") {
+        resultText = `Erro: ${
+          response.error_message || "Erro desconhecido"
+        }`;
+      } else if (response.report) {
+        resultText = `Resultado: ${response.report}`;
+      } else if (response.result && response.result.content) {
+        // Processar conteúdo de resposta que pode vir no formato de result.content
+        const content = response.result.content;
+        if (
+          Array.isArray(content) &&
+          content.length > 0 &&
+          content[0].text
+        ) {
+          try {
+            // Tentar analisar o conteúdo como JSON se for uma string
+            const textContent = content[0].text;
+            const parsedJson = JSON.parse(textContent);
+            resultText = `Resultado: \n${JSON.stringify(
+              parsedJson,
+              null,
+              2
+            )}`;
+          } catch (e) {
+            // Se não for JSON válido, exibir como texto
+            resultText = `Resultado: ${content[0].text}`;
+          }
         } else {
           resultText = `Resultado:\n${JSON.stringify(response, null, 2)}`;
         }
-        
-        return {
-          title: `${statusEmoji} Resposta da função: ${name}`,
-          content: `ID: ${id}
-${resultText}`
-        };
+      } else {
+        resultText = `Resultado:\n${JSON.stringify(response, null, 2)}`;
       }
+      
+      return {
+        author,
+        title: `${statusEmoji} Resposta da função: ${name}`,
+        content: `ID: ${id}\n${resultText}`,
+      } as FunctionMessageContent;
+    }
+    
+    // Se só houver uma parte com texto, retorne-a diretamente
+    if (parts.length === 1 && parts[0].text) {
+      return {
+        author,
+        content: parts[0].text,
+        title: "Mensagem",
+      } as FunctionMessageContent;
+    }
 
-      // Fallback
-      return JSON.stringify(parts, null, 2).replace(/\\n/g, '\n');
+    // Se chegamos aqui, não há chamadas de função, então juntamos todas as partes de texto
+    const textParts = parts
+      .filter(part => part.text)
+      .map(part => part.text)
+      .filter(text => text);
+    
+    if (textParts.length > 0) {
+      return {
+        author,
+        content: textParts.join("\n\n"),
+        title: "Mensagem",
+      } as FunctionMessageContent;
+    }
+
+    // Se não encontramos nada útil, tentamos representar o conteúdo como JSON
+    try {
+      return JSON.stringify(parts, null, 2).replace(/\\n/g, "\n");
     } catch (error) {
       console.error("Erro ao processar mensagem:", error);
-      // Em caso de erro, retornar uma versão simplificada
-      return JSON.stringify(parts);
+      return "Não foi possível interpretar o conteúdo da mensagem";
     }
   };
 
   // Função para alternar a expansão de uma mensagem de função
   const toggleFunctionExpansion = (messageId: string) => {
-    setExpandedFunctions(prev => ({
+    setExpandedFunctions((prev) => ({
       ...prev,
-      [messageId]: !prev[messageId]
+      [messageId]: !prev[messageId],
     }));
   };
 
@@ -409,7 +491,7 @@ ${resultText}`
   // Adicionar esta função dentro do componente Chat
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Enviar mensagem ao pressionar Enter sem Shift
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage(e as unknown as React.FormEvent);
     }
@@ -419,16 +501,16 @@ ${resultText}`
   // Função para ajustar automaticamente a altura do textarea
   const autoResizeTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = e.target;
-    
+
     // Primeiro reset para altura mínima para calcular corretamente
-    textarea.style.height = 'auto';
-    
+    textarea.style.height = "auto";
+
     // Limitar a 10 linhas no máximo
     const maxHeight = 10 * 24; // 24px é aproximadamente a altura de uma linha (ajuste conforme necessário)
     const newHeight = Math.min(textarea.scrollHeight, maxHeight);
-    
+
     textarea.style.height = `${newHeight}px`;
-    
+
     // Atualizar o state com o novo valor
     setMessageInput(textarea.value);
   };
@@ -601,7 +683,10 @@ ${resultText}`
             </div>
 
             {/* Mensagens */}
-            <div className="flex-1 overflow-y-auto p-4 bg-[#121212]">
+            <div
+              ref={messagesContainerRef}
+              className="flex-1 overflow-y-auto p-4 bg-[#121212]"
+            >
               {isLoading ? (
                 <div className="flex justify-center items-center h-full">
                   <Loader2 className="h-6 w-6 text-[#00ff9d] animate-spin" />
@@ -618,9 +703,14 @@ ${resultText}`
                     const isUser = message.author === "user";
                     const agentColor = getAgentColor(message.author);
                     const messageContent = getMessageText(message);
-                    const hasFunctionCall = message.content.parts[0]?.functionCall || message.content.parts[0]?.function_call;
-                    const hasFunctionResponse = message.content.parts[0]?.functionResponse || message.content.parts[0]?.function_response;
-                    const isFunctionMessage = hasFunctionCall || hasFunctionResponse;
+                    const hasFunctionCall = message.content.parts.some(
+                      (part) => part.functionCall || part.function_call
+                    );
+                    const hasFunctionResponse = message.content.parts.some(
+                      (part) => part.functionResponse || part.function_response
+                    );
+                    const isFunctionMessage =
+                      hasFunctionCall || hasFunctionResponse;
                     const isExpanded = expandedFunctions[message.id] || false;
 
                     return (
@@ -652,95 +742,243 @@ ${resultText}`
                           >
                             {isFunctionMessage ? (
                               <div className="w-full">
-                                <div 
-                                  className="flex items-center gap-2 cursor-pointer hover:bg-[#444] rounded px-1 py-0.5 transition-colors" 
-                                  onClick={() => toggleFunctionExpansion(message.id)}
+                                <div
+                                  className="flex items-center gap-2 cursor-pointer hover:bg-[#444] rounded px-1 py-0.5 transition-colors"
+                                  onClick={() =>
+                                    toggleFunctionExpansion(message.id)
+                                  }
                                 >
-                                  {typeof messageContent === 'object' && (
-                                    <>
-                                      <div className="flex-1 font-semibold">{messageContent.title}</div>
-                                      <div className="flex items-center justify-center w-5 h-5 text-[#00ff9d]">
-                                        {isExpanded ? (
-                                          <ChevronDown className="h-4 w-4" />
-                                        ) : (
-                                          <ChevronRight className="h-4 w-4" />
-                                        )}
-                                      </div>
-                                    </>
-                                  )}
+                                  {typeof messageContent === "object" &&
+                                    "title" in messageContent && (
+                                      <>
+                                        <div className="flex-1 font-semibold">
+                                          {
+                                            (
+                                              messageContent as FunctionMessageContent
+                                            ).title
+                                          }
+                                        </div>
+                                        <div className="flex items-center justify-center w-5 h-5 text-[#00ff9d]">
+                                          {isExpanded ? (
+                                            <ChevronDown className="h-4 w-4" />
+                                          ) : (
+                                            <ChevronRight className="h-4 w-4" />
+                                          )}
+                                        </div>
+                                      </>
+                                    )}
                                 </div>
-                                
-                                {isExpanded && typeof messageContent === 'object' && (
-                                  <div className="mt-2 pt-2 border-t border-[#555]">
-                                    <pre className="whitespace-pre-wrap break-all overflow-hidden text-xs">
-                                      {messageContent.content}
-                                    </pre>
-                                  </div>
-                                )}
+
+                                {isExpanded &&
+                                  typeof messageContent === "object" &&
+                                  "content" in messageContent && (
+                                    <div className="mt-2 pt-2 border-t border-[#555]">
+                                      <pre className="whitespace-pre-wrap break-all overflow-hidden text-xs">
+                                        {
+                                          (
+                                            messageContent as FunctionMessageContent
+                                          ).content
+                                        }
+                                      </pre>
+                                    </div>
+                                  )}
                               </div>
                             ) : (
                               <div className="markdown-content break-words">
-                                {typeof messageContent === 'string' && containsMarkdown(messageContent) ? (
-                                  <ReactMarkdown 
+                                {/* Usar o author do objeto messageContent se disponível e não for do usuário */}
+                                {typeof messageContent === "object" && 
+                                 "author" in messageContent && 
+                                 messageContent.author !== "user" && (
+                                  <div className="text-xs text-gray-400 mb-1">
+                                    {messageContent.author}
+                                  </div>
+                                )}
+                                {(typeof messageContent === "string" && containsMarkdown(messageContent)) || 
+                                 (typeof messageContent === "object" && 
+                                  "content" in messageContent && 
+                                  typeof messageContent.content === "string" && 
+                                  containsMarkdown(messageContent.content)) ? (
+                                  <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     components={{
-                                      h1: ({...props}) => <h1 className="text-xl font-bold my-4" {...props} />,
-                                      h2: ({...props}) => <h2 className="text-lg font-bold my-3" {...props} />,
-                                      h3: ({...props}) => <h3 className="text-base font-bold my-2" {...props} />,
-                                      h4: ({...props}) => <h4 className="font-semibold my-2" {...props} />,
-                                      p: ({...props}) => <p className="mb-3" {...props} />,
-                                      ul: ({...props}) => <ul className="list-disc pl-6 mb-3 space-y-1" {...props} />,
-                                      ol: ({...props}) => <ol className="list-decimal pl-6 mb-3 space-y-1" {...props} />,
-                                      li: ({...props}) => <li className="mb-1" {...props} />,
-                                      a: ({...props}) => (
-                                        <a 
-                                          className="text-[#00ff9d] underline hover:opacity-80 transition-opacity" 
-                                          target="_blank" 
-                                          rel="noopener noreferrer" 
-                                          {...props} 
+                                      h1: ({ ...props }) => (
+                                        <h1
+                                          className="text-xl font-bold my-4"
+                                          {...props}
                                         />
                                       ),
-                                      blockquote: ({...props}) => (
-                                        <blockquote className="border-l-4 border-[#444] pl-4 py-1 italic my-3 text-gray-300" {...props} />
+                                      h2: ({ ...props }) => (
+                                        <h2
+                                          className="text-lg font-bold my-3"
+                                          {...props}
+                                        />
                                       ),
-                                      code: ({className, children, ...props}: any) => {
-                                        const match = /language-(\w+)/.exec(className || '');
-                                        const isInline = !match && (
-                                          typeof children === 'string' && !children.includes('\n')
+                                      h3: ({ ...props }) => (
+                                        <h3
+                                          className="text-base font-bold my-2"
+                                          {...props}
+                                        />
+                                      ),
+                                      h4: ({ ...props }) => (
+                                        <h4
+                                          className="font-semibold my-2"
+                                          {...props}
+                                        />
+                                      ),
+                                      p: ({ ...props }) => (
+                                        <p className="mb-3" {...props} />
+                                      ),
+                                      ul: ({ ...props }) => (
+                                        <ul
+                                          className="list-disc pl-6 mb-3 space-y-1"
+                                          {...props}
+                                        />
+                                      ),
+                                      ol: ({ ...props }) => (
+                                        <ol
+                                          className="list-decimal pl-6 mb-3 space-y-1"
+                                          {...props}
+                                        />
+                                      ),
+                                      li: ({ ...props }) => (
+                                        <li className="mb-1" {...props} />
+                                      ),
+                                      a: ({ ...props }) => (
+                                        <a
+                                          className="text-[#00ff9d] underline hover:opacity-80 transition-opacity"
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          {...props}
+                                        />
+                                      ),
+                                      blockquote: ({ ...props }) => (
+                                        <blockquote
+                                          className="border-l-4 border-[#444] pl-4 py-1 italic my-3 text-gray-300"
+                                          {...props}
+                                        />
+                                      ),
+                                      code: ({
+                                        className,
+                                        children,
+                                        ...props
+                                      }: any) => {
+                                        const match = /language-(\w+)/.exec(
+                                          className || ""
                                         );
-                                        
+                                        const isInline =
+                                          !match &&
+                                          typeof children === "string" &&
+                                          !children.includes("\n");
+
                                         if (isInline) {
-                                          return <code className="bg-[#333] px-1.5 py-0.5 rounded text-[#00ff9d] text-sm font-mono" {...props}>{children}</code>
+                                          return (
+                                            <code
+                                              className="bg-[#333] px-1.5 py-0.5 rounded text-[#00ff9d] text-sm font-mono"
+                                              {...props}
+                                            >
+                                              {children}
+                                            </code>
+                                          );
                                         }
-                                        
+
                                         return (
                                           <pre className="bg-[#2a2a2a] p-3 rounded-md my-3 overflow-x-auto">
-                                            <code className="text-[#00ff9d] font-mono text-sm" {...props}>{children}</code>
+                                            <code
+                                              className="text-[#00ff9d] font-mono text-sm"
+                                              {...props}
+                                            >
+                                              {children}
+                                            </code>
                                           </pre>
-                                        )
+                                        );
                                       },
-                                      pre: ({...props}) => <pre className="bg-[#2a2a2a] p-0 rounded-md my-3 overflow-x-auto font-mono text-sm" {...props} />,
-                                      table: ({...props}) => (
+                                      pre: ({ ...props }) => (
+                                        <pre
+                                          className="bg-[#2a2a2a] p-0 rounded-md my-3 overflow-x-auto font-mono text-sm"
+                                          {...props}
+                                        />
+                                      ),
+                                      table: ({ ...props }) => (
                                         <div className="overflow-x-auto my-3 rounded border border-[#444]">
-                                          <table className="min-w-full border-collapse text-sm" {...props} />
+                                          <table
+                                            className="min-w-full border-collapse text-sm"
+                                            {...props}
+                                          />
                                         </div>
                                       ),
-                                      thead: ({...props}) => <thead className="bg-[#333]" {...props} />,
-                                      tbody: ({...props}) => <tbody className="divide-y divide-[#444]" {...props} />,
-                                      tr: ({...props}) => <tr className="hover:bg-[#2a2a2a] transition-colors" {...props} />,
-                                      th: ({...props}) => <th className="px-4 py-2 text-left font-medium text-gray-300" {...props} />,
-                                      td: ({...props}) => <td className="px-4 py-2 border-[#444]" {...props} />,
-                                      img: ({...props}) => <img className="max-w-full h-auto my-3 rounded" {...props} />,
-                                      hr: ({...props}) => <hr className="border-[#444] my-4" {...props} />,
-                                      strong: ({...props}) => <strong className="font-bold" {...props} />,
-                                      em: ({...props}) => <em className="italic" {...props} />,
-                                      del: ({...props}) => <del className="line-through" {...props} />
+                                      thead: ({ ...props }) => (
+                                        <thead
+                                          className="bg-[#333]"
+                                          {...props}
+                                        />
+                                      ),
+                                      tbody: ({ ...props }) => (
+                                        <tbody
+                                          className="divide-y divide-[#444]"
+                                          {...props}
+                                        />
+                                      ),
+                                      tr: ({ ...props }) => (
+                                        <tr
+                                          className="hover:bg-[#2a2a2a] transition-colors"
+                                          {...props}
+                                        />
+                                      ),
+                                      th: ({ ...props }) => (
+                                        <th
+                                          className="px-4 py-2 text-left font-medium text-gray-300"
+                                          {...props}
+                                        />
+                                      ),
+                                      td: ({ ...props }) => (
+                                        <td
+                                          className="px-4 py-2 border-[#444]"
+                                          {...props}
+                                        />
+                                      ),
+                                      img: ({ ...props }) => (
+                                        <img
+                                          className="max-w-full h-auto my-3 rounded"
+                                          {...props}
+                                        />
+                                      ),
+                                      hr: ({ ...props }) => (
+                                        <hr
+                                          className="border-[#444] my-4"
+                                          {...props}
+                                        />
+                                      ),
+                                      strong: ({ ...props }) => (
+                                        <strong
+                                          className="font-bold"
+                                          {...props}
+                                        />
+                                      ),
+                                      em: ({ ...props }) => (
+                                        <em className="italic" {...props} />
+                                      ),
+                                      del: ({ ...props }) => (
+                                        <del
+                                          className="line-through"
+                                          {...props}
+                                        />
+                                      ),
                                     }}
                                   >
-                                    {messageContent}
+                                    {typeof messageContent === "string" 
+                                      ? messageContent 
+                                      : typeof messageContent === "object" && "content" in messageContent
+                                      ? messageContent.content
+                                      : ""}
                                   </ReactMarkdown>
                                 ) : (
-                                  <span>{typeof messageContent === 'string' ? messageContent : JSON.stringify(messageContent)}</span>
+                                  <span>
+                                    {typeof messageContent === "string"
+                                      ? messageContent
+                                      : typeof messageContent === "object" && "content" in messageContent
+                                      ? messageContent.content
+                                      : JSON.stringify(messageContent)}
+                                  </span>
                                 )}
                               </div>
                             )}
