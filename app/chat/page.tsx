@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   MessageSquare,
@@ -43,6 +44,8 @@ import {
   ChatSession,
   ChatMessage,
 } from "@/services/sessionService";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function Chat() {
   const [isLoading, setIsLoading] = useState(true);
@@ -291,6 +294,29 @@ export default function Chat() {
     return sessionId.split("_")[0];
   };
 
+  // Função para verificar se o texto contém markdown
+  const containsMarkdown = (text: string): boolean => {
+    // Se o texto for muito curto, provavelmente não é markdown
+    if (!text || text.length < 3) return false;
+    
+    // Padrões mais comuns de markdown
+    const markdownPatterns = [
+      /[*_]{1,2}[^*_]+[*_]{1,2}/,  // bold/italic
+      /\[[^\]]+\]\([^)]+\)/,       // links
+      /^#{1,6}\s/m,                // headers
+      /^[-*+]\s/m,                 // unordered lists
+      /^[0-9]+\.\s/m,              // ordered lists
+      /^>\s/m,                     // blockquotes
+      /`[^`]+`/,                   // inline code
+      /```[\s\S]*?```/,            // code blocks
+      /^\|(.+\|)+$/m,              // tables
+      /!\[[^\]]*\]\([^)]+\)/       // images
+    ];
+
+    // Verifica presença de qualquer padrão de markdown
+    return markdownPatterns.some(pattern => pattern.test(text));
+  };
+
   // Função para interpretar o conteúdo da mensagem
   const getMessageText = (message: ChatMessage) => {
     const parts = message.content.parts;
@@ -378,6 +404,33 @@ ${resultText}`
 
   const getAgentColor = (agentName: string) => {
     return agentColors[agentName] || agentColors.default;
+  };
+
+  // Adicionar esta função dentro do componente Chat
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enviar mensagem ao pressionar Enter sem Shift
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(e as unknown as React.FormEvent);
+    }
+    // Quando Shift+Enter é pressionado, deixamos o comportamento padrão (quebra de linha)
+  };
+
+  // Função para ajustar automaticamente a altura do textarea
+  const autoResizeTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = e.target;
+    
+    // Primeiro reset para altura mínima para calcular corretamente
+    textarea.style.height = 'auto';
+    
+    // Limitar a 10 linhas no máximo
+    const maxHeight = 10 * 24; // 24px é aproximadamente a altura de uma linha (ajuste conforme necessário)
+    const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+    
+    textarea.style.height = `${newHeight}px`;
+    
+    // Atualizar o state com o novo valor
+    setMessageInput(textarea.value);
   };
 
   return (
@@ -626,9 +679,70 @@ ${resultText}`
                                 )}
                               </div>
                             ) : (
-                              <span className="break-words">
-                                {typeof messageContent === 'string' ? messageContent : JSON.stringify(messageContent)}
-                              </span>
+                              <div className="markdown-content break-words">
+                                {typeof messageContent === 'string' && containsMarkdown(messageContent) ? (
+                                  <ReactMarkdown 
+                                    remarkPlugins={[remarkGfm]}
+                                    components={{
+                                      h1: ({...props}) => <h1 className="text-xl font-bold my-4" {...props} />,
+                                      h2: ({...props}) => <h2 className="text-lg font-bold my-3" {...props} />,
+                                      h3: ({...props}) => <h3 className="text-base font-bold my-2" {...props} />,
+                                      h4: ({...props}) => <h4 className="font-semibold my-2" {...props} />,
+                                      p: ({...props}) => <p className="mb-3" {...props} />,
+                                      ul: ({...props}) => <ul className="list-disc pl-6 mb-3 space-y-1" {...props} />,
+                                      ol: ({...props}) => <ol className="list-decimal pl-6 mb-3 space-y-1" {...props} />,
+                                      li: ({...props}) => <li className="mb-1" {...props} />,
+                                      a: ({...props}) => (
+                                        <a 
+                                          className="text-[#00ff9d] underline hover:opacity-80 transition-opacity" 
+                                          target="_blank" 
+                                          rel="noopener noreferrer" 
+                                          {...props} 
+                                        />
+                                      ),
+                                      blockquote: ({...props}) => (
+                                        <blockquote className="border-l-4 border-[#444] pl-4 py-1 italic my-3 text-gray-300" {...props} />
+                                      ),
+                                      code: ({className, children, ...props}: any) => {
+                                        const match = /language-(\w+)/.exec(className || '');
+                                        const isInline = !match && (
+                                          typeof children === 'string' && !children.includes('\n')
+                                        );
+                                        
+                                        if (isInline) {
+                                          return <code className="bg-[#333] px-1.5 py-0.5 rounded text-[#00ff9d] text-sm font-mono" {...props}>{children}</code>
+                                        }
+                                        
+                                        return (
+                                          <pre className="bg-[#2a2a2a] p-3 rounded-md my-3 overflow-x-auto">
+                                            <code className="text-[#00ff9d] font-mono text-sm" {...props}>{children}</code>
+                                          </pre>
+                                        )
+                                      },
+                                      pre: ({...props}) => <pre className="bg-[#2a2a2a] p-0 rounded-md my-3 overflow-x-auto font-mono text-sm" {...props} />,
+                                      table: ({...props}) => (
+                                        <div className="overflow-x-auto my-3 rounded border border-[#444]">
+                                          <table className="min-w-full border-collapse text-sm" {...props} />
+                                        </div>
+                                      ),
+                                      thead: ({...props}) => <thead className="bg-[#333]" {...props} />,
+                                      tbody: ({...props}) => <tbody className="divide-y divide-[#444]" {...props} />,
+                                      tr: ({...props}) => <tr className="hover:bg-[#2a2a2a] transition-colors" {...props} />,
+                                      th: ({...props}) => <th className="px-4 py-2 text-left font-medium text-gray-300" {...props} />,
+                                      td: ({...props}) => <td className="px-4 py-2 border-[#444]" {...props} />,
+                                      img: ({...props}) => <img className="max-w-full h-auto my-3 rounded" {...props} />,
+                                      hr: ({...props}) => <hr className="border-[#444] my-4" {...props} />,
+                                      strong: ({...props}) => <strong className="font-bold" {...props} />,
+                                      em: ({...props}) => <em className="italic" {...props} />,
+                                      del: ({...props}) => <del className="line-through" {...props} />
+                                    }}
+                                  >
+                                    {messageContent}
+                                  </ReactMarkdown>
+                                ) : (
+                                  <span>{typeof messageContent === 'string' ? messageContent : JSON.stringify(messageContent)}</span>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>
@@ -668,12 +782,14 @@ ${resultText}`
             {/* Área de entrada de mensagem */}
             <div className="p-4 border-t border-[#333] bg-[#1a1a1a]">
               <form onSubmit={handleSendMessage} className="flex w-full gap-2">
-                <Input
+                <Textarea
                   value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
+                  onChange={autoResizeTextarea}
+                  onKeyDown={handleKeyDown}
                   placeholder="Digite sua mensagem..."
-                  className="flex-1 bg-[#222] border-[#444] text-white focus-visible:ring-[#00ff9d]"
+                  className="flex-1 bg-[#222] border-[#444] text-white focus-visible:ring-[#00ff9d] min-h-[40px] max-h-[240px] resize-none"
                   disabled={isSending || isLoading}
+                  rows={1}
                 />
                 <Button
                   type="submit"
