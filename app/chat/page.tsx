@@ -16,6 +16,7 @@ import {
   Filter,
   ChevronDown,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ import {
   generateContactId,
   ChatSession,
   ChatMessage,
+  deleteSession,
 } from "@/services/sessionService";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -73,6 +75,7 @@ export default function Chat() {
   >({});
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Buscar ID do cliente do localStorage
   const user =
@@ -212,14 +215,19 @@ export default function Chat() {
 
     if (!messageInput.trim() || !currentAgentId) return;
 
+    let sessionId = selectedSession;
+    let responseData = null;
+
     try {
       setIsSending(true);
 
       // Se não houver sessão selecionada, criar uma nova sessão implicitamente
       if (!selectedSession) {
         const contactId = generateContactId();
+        // Formato simplificado: contactId_agentId (sem timestamp)
         const newSessionId = `${contactId}_${currentAgentId}`;
         setSelectedSession(newSessionId);
+        sessionId = newSessionId;
       }
 
       // Adicionar mensagem localmente para feedback imediato
@@ -237,43 +245,24 @@ export default function Chat() {
       // Rolar para o final após adicionar mensagem
       setTimeout(scrollToBottom, 100);
 
+      // Verificar se sessionId existe antes de chamar a API
+      if (!sessionId) {
+        throw new Error("ID da sessão não definido");
+      }
+
       // Enviar para a API
-      const sessionId =
-        selectedSession || `${generateContactId()}_${currentAgentId}`;
       const response = await sendMessage(
         sessionId,
         currentAgentId,
         messageInput
       );
+      
+      responseData = response.data;
 
-      // Processar resposta diretamente
-      if (response.data && response.data.response) {
-        // Criar objeto de mensagem para a resposta do agente
-        const agentMessage: ChatMessage = {
-          id: `response-${Date.now()}`,
-          content: {
-            parts: [{ text: response.data.response }],
-            role: "assistant",
-          },
-          author: currentAgent?.name || "Assistente",
-          timestamp: Date.now() / 1000,
-        };
-
-        // Adicionar a resposta às mensagens
-        setMessages((prev) => [...prev, agentMessage]);
-
-        // Atualizar a lista de sessões
-        const sessionsResponse = await listSessions(clientId);
-        setSessions(sessionsResponse.data);
-      } else {
-        // Fallback: buscar todas as mensagens da sessão
-        const messagesResponse = await getSessionMessages(sessionId);
-        setMessages(messagesResponse.data);
-      }
-
-      const messagesResponse = await getSessionMessages(sessionId);
-      setMessages(messagesResponse.data);
-
+      // Atualizar a lista de sessões
+      const sessionsResponse = await listSessions(clientId);
+      setSessions(sessionsResponse.data);
+      
       // Limpar input
       setMessageInput("");
     } catch (error) {
@@ -283,8 +272,62 @@ export default function Chat() {
         variant: "destructive",
       });
     } finally {
-      setIsSending(false);
+      // Verificar se a API retornou um ID de sessão válido
+      if (responseData && responseData.session_id) {
+        sessionId = responseData.session_id;
+        // Atualizar o ID da sessão selecionada
+        setSelectedSession(sessionId);
+      }
+      
+      // Pequeno delay para garantir que a sessão foi processada no backend
+      setTimeout(async () => {
+        try {
+          // Certificar que temos um ID de sessão
+          if (sessionId) {
+            const messagesResponse = await getSessionMessages(sessionId);
+            setMessages(messagesResponse.data);
+          }
+        } catch (error) {
+          console.error("Erro ao buscar mensagens atualizadas:", error);
+          
+          // Se não conseguir buscar com o ID atual, tentar com um formato alternativo
+          if (sessionId && sessionId.includes("_")) {
+            try {
+              // Extrair contactId e agentId do sessionId atual
+              const parts = sessionId.split("_");
+              // Para lidar com múltiplos underscores, pegamos o primeiro elemento como contactId
+              // e o último como agentId
+              const contactId = parts[0];
+              const agentId = parts[parts.length - 1];
+              
+              // Tentar com o formato simplificado
+              const alternativeId = `${contactId}_${agentId}`;
+              
+              if (alternativeId !== sessionId) {
+                console.log("Tentando formato alternativo de ID:", alternativeId);
+                const altResponse = await getSessionMessages(alternativeId);
+                setMessages(altResponse.data);
+                // Atualizar para o ID correto
+                setSelectedSession(alternativeId);
+              }
+            } catch (altError) {
+              console.error("Falha ao tentar formato alternativo:", altError);
+            }
+          }
+        } finally {
+          setIsSending(false);
+        }
+      }, 1500); // Aumentei o tempo para 1.5s
     }
+  };
+
+  // Gerar ID de contato (atualizado para remover timestamp)
+  const generateContactId = () => {
+    const now = new Date();
+    // Formato YYYYMMDD
+    return now.getFullYear().toString() +
+           (now.getMonth() + 1).toString().padStart(2, "0") +
+           now.getDate().toString().padStart(2, "0");
   };
 
   // Encontrar informações do agente atual
@@ -515,6 +558,33 @@ Args: ${
     setMessageInput(textarea.value);
   };
 
+  // Função para excluir uma sessão
+  const handleDeleteSession = async () => {
+    if (!selectedSession) return;
+    
+    try {
+      // Chamar a API para excluir a sessão
+      await deleteSession(selectedSession);
+      
+      // Atualizar a lista de sessões localmente
+      setSessions(sessions.filter(session => session.id !== selectedSession));
+      setSelectedSession(null);
+      setMessages([]);
+      setCurrentAgentId(null);
+      setIsDeleteDialogOpen(false);
+      
+      toast({
+        title: "Sessão excluída com sucesso",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir sessão:", error);
+      toast({
+        title: "Erro ao excluir sessão",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="flex h-screen max-h-screen bg-[#121212]">
       {/* Sidebar - Lista de sessões de chat */}
@@ -672,11 +742,24 @@ Args: ${
                         : "Nova Conversa"}
                     </h2>
 
-                    {currentAgent && (
-                      <Badge className="bg-[#00ff9d] text-black px-3 py-1 text-sm">
-                        {currentAgent.name || currentAgentId}
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {currentAgent && (
+                        <Badge className="bg-[#00ff9d] text-black px-3 py-1 text-sm">
+                          {currentAgent.name || currentAgentId}
+                        </Badge>
+                      )}
+                      
+                      {selectedSession && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-[#333]"
+                          onClick={() => setIsDeleteDialogOpen(true)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 );
               })()}
@@ -1138,6 +1221,36 @@ Args: ${
               className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333]"
             >
               Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para confirmar exclusão de sessão */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="bg-[#1a1a1a] border-[#333] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-white">
+              Excluir Sessão
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Tem certeza que deseja excluir esta sessão? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2">
+            <Button
+              onClick={() => setIsDeleteDialogOpen(false)}
+              variant="outline"
+              className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333]"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDeleteSession}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Excluir
             </Button>
           </DialogFooter>
         </DialogContent>

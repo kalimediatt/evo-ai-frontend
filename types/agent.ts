@@ -14,6 +14,11 @@ export interface MCPServerConfig {
   selected_tools?: string[]; // Para uso na UI
 }
 
+export interface CustomMCPServer {
+  url: string;
+  headers?: Record<string, string>;
+}
+
 export interface HTTPToolParameter {
   type: string;
   required: boolean;
@@ -54,6 +59,7 @@ export interface AgentConfig {
   tools?: ToolConfig[];
   custom_tools?: CustomTools;
   mcp_servers?: MCPServerConfig[];
+  custom_mcp_servers?: CustomMCPServer[];
   
   // Sequential, Parallel e Loop config
   sub_agents?: string[];

@@ -69,6 +69,10 @@ export const createSession = (clientId: string, agentId: string) => {
   });
 };
 
+export const deleteSession = (sessionId: string) => {
+  return api.delete<ChatSession>(`/api/v1/sessions/${sessionId}`);
+};
+
 // Enviar uma mensagem para uma sessão
 export const sendMessage = (sessionId: string, agentId: string, message: string) => {
   // Extrair o contact_id do session_id (formato é contactId_agentId)

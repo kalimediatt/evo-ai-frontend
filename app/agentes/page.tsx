@@ -47,7 +47,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Agent, AgentCreate, AgentType, ToolConfig as AgentToolConfig, MCPServerConfig, AgentConfig } from "@/types/agent"
+import { Agent, AgentCreate, AgentType, ToolConfig as AgentToolConfig, MCPServerConfig, AgentConfig, CustomMCPServer } from "@/types/agent"
 import { MCPServer, ToolConfig } from "@/types/mcpServer"
 import { listAgents, createAgent, updateAgent, deleteAgent } from "@/services/agentService"
 import { listMCPServers } from "@/services/mcpServerService"
@@ -98,6 +98,7 @@ export default function AgentsPage() {
       api_key: "",
       tools: [],
       mcp_servers: [],
+      custom_mcp_servers: [],
       custom_tools: {
         http_tools: [],
       },
@@ -129,6 +130,11 @@ export default function AgentsPage() {
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null)
 
   const [isApiKeyVisible, setIsApiKeyVisible] = useState<boolean>(false);
+
+  // Estado para o diálogo de MCP customizado
+  const [isCustomMCPDialogOpen, setIsCustomMCPDialogOpen] = useState(false);
+  const [selectedCustomMCP, setSelectedCustomMCP] = useState<CustomMCPServer | null>(null);
+  const [customMCPHeaders, setCustomMCPHeaders] = useState<Record<string, string>>({});
 
   // Tipos de agentes
   const agentTypes = [
@@ -179,6 +185,7 @@ export default function AgentsPage() {
           api_key: prev.api_key || "",
           tools: [],
           mcp_servers: [],
+          custom_mcp_servers: [],
           custom_tools: {
             http_tools: [],
           },
@@ -201,7 +208,7 @@ export default function AgentsPage() {
         agent_card_url: undefined,
         config: {
           sub_agents: [],
-          max_iterations: 5,
+          custom_mcp_servers: [],
         } // Usando AgentConfig unificado
       }))
     } else {
@@ -213,6 +220,7 @@ export default function AgentsPage() {
         agent_card_url: undefined,
         config: {
           sub_agents: [],
+          custom_mcp_servers: [],
         } // Usando AgentConfig unificado
       }))
     }
@@ -285,6 +293,7 @@ export default function AgentsPage() {
         api_key: "",
         tools: [],
         mcp_servers: [],
+        custom_mcp_servers: [],
         custom_tools: {
           http_tools: [],
         },
@@ -485,6 +494,92 @@ export default function AgentsPage() {
         description: "Não foi possível copiar o valor",
         variant: "destructive"
       });
+    });
+  };
+
+  // Função para abrir o diálogo de MCP customizado
+  const handleOpenCustomMCPDialog = (customMCP?: CustomMCPServer) => {
+    if (customMCP) {
+      setSelectedCustomMCP(customMCP);
+      setCustomMCPHeaders(customMCP.headers || {});
+    } else {
+      setSelectedCustomMCP(null);
+      setCustomMCPHeaders({});
+    }
+    setIsCustomMCPDialogOpen(true);
+  };
+
+  // Função para adicionar/atualizar um MCP customizado
+  const handleAddCustomMCP = () => {
+    if (!selectedCustomMCP?.url) {
+      toast({
+        title: "Erro",
+        description: "A URL do MCP customizado é obrigatória",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Verificar se o config existe antes de adicionar MCPs
+    if (newAgent.config) {
+      const customMCPConfig: CustomMCPServer = {
+        url: selectedCustomMCP.url,
+        headers: customMCPHeaders,
+      };
+
+      const existingCustomMCPIndex = newAgent.config.custom_mcp_servers?.findIndex(
+        (customMCP) => customMCP.url === selectedCustomMCP.url
+      );
+
+      if (existingCustomMCPIndex !== undefined && existingCustomMCPIndex >= 0) {
+        // Atualizar MCP customizado existente
+        const updatedCustomMCPs = [...(newAgent.config.custom_mcp_servers || [])];
+        updatedCustomMCPs[existingCustomMCPIndex] = customMCPConfig;
+
+        setNewAgent({
+          ...newAgent,
+          config: {
+            ...newAgent.config,
+            custom_mcp_servers: updatedCustomMCPs,
+          },
+        });
+      } else {
+        // Adicionar novo MCP customizado
+        setNewAgent({
+          ...newAgent,
+          config: {
+            ...newAgent.config,
+            custom_mcp_servers: [...(newAgent.config.custom_mcp_servers || []), customMCPConfig],
+          },
+        });
+      }
+
+      setIsCustomMCPDialogOpen(false);
+      toast({
+        title: "MCP customizado configurado",
+        description: `MCP ${selectedCustomMCP.url} foi configurado com sucesso`,
+      });
+    } else {
+      toast({
+        title: "Erro",
+        description: "O tipo de agente atual não suporta servidores MCP customizados",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Função para remover um MCP customizado
+  const handleRemoveCustomMCP = (url: string) => {
+    setNewAgent({
+      ...newAgent,
+      config: {
+        ...newAgent.config,
+        custom_mcp_servers: newAgent.config?.custom_mcp_servers?.filter((customMCP) => customMCP.url !== url) || [],
+      },
+    });
+    toast({
+      title: "MCP customizado removido",
+      description: "O MCP customizado foi removido com sucesso",
     });
   };
 
@@ -767,6 +862,79 @@ export default function AgentsPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleOpenMCPDialog()}
+                                className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                              >
+                                <Plus className="h-4 w-4 mr-1" /> Adicionar
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Nova seção para MCPs customizados */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-medium text-white">Servidores MCP Customizados</h3>
+                        <div className="border border-[#444] rounded-md p-4 bg-[#222]">
+                          <p className="text-sm text-gray-400 mb-4">
+                            Configure servidores MCP personalizados com URL e cabeçalhos HTTP.
+                          </p>
+
+                          {newAgent.config?.custom_mcp_servers && newAgent.config.custom_mcp_servers.length > 0 ? (
+                            <div className="space-y-2">
+                              {newAgent.config.custom_mcp_servers.map((customMCP) => (
+                                <div
+                                  key={customMCP.url}
+                                  className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md"
+                                >
+                                  <div>
+                                    <p className="font-medium text-white">{customMCP.url}</p>
+                                    <p className="text-sm text-gray-400">
+                                      {Object.keys(customMCP.headers || {}).length > 0
+                                        ? `${Object.keys(customMCP.headers || {}).length} cabeçalhos configurados`
+                                        : "Sem cabeçalhos configurados"}
+                                    </p>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleOpenCustomMCPDialog(customMCP)}
+                                      className="flex items-center text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
+                                    >
+                                      <Settings className="h-4 w-4 mr-1" /> Configurar
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleRemoveCustomMCP(customMCP.url)}
+                                      className="text-red-500 hover:text-red-400 hover:bg-[#333]"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Botão para adicionar mais MCPs customizados */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenCustomMCPDialog()}
+                                className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                              >
+                                <Plus className="h-4 w-4 mr-1" /> Adicionar MCP Customizado
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
+                              <div>
+                                <p className="font-medium text-white">Sem MCPs customizados configurados</p>
+                                <p className="text-sm text-gray-400">Adicione MCPs customizados para este agente</p>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenCustomMCPDialog()}
                                 className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
                               >
                                 <Plus className="h-4 w-4 mr-1" /> Adicionar
@@ -1091,6 +1259,111 @@ export default function AgentsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Diálogo para configuração de MCP customizado */}
+        <Dialog open={isCustomMCPDialogOpen} onOpenChange={setIsCustomMCPDialogOpen}>
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
+            <DialogHeader>
+              <DialogTitle className="text-white">Configurar MCP Customizado</DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Configure a URL e os cabeçalhos HTTP para o servidor MCP personalizado.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-auto p-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="custom-mcp-url" className="text-gray-300">
+                    URL do MCP
+                  </Label>
+                  <Input
+                    id="custom-mcp-url"
+                    value={selectedCustomMCP?.url || ""}
+                    onChange={(e) => setSelectedCustomMCP({ ...selectedCustomMCP || {}, url: e.target.value })}
+                    className="bg-[#222] border-[#444] text-white"
+                    placeholder="https://meu-servidor-mcp.com/api"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-white">Cabeçalhos HTTP</h3>
+                  <div className="border border-[#444] rounded-md p-3 bg-[#222]">
+                    {Object.entries(customMCPHeaders).map(([key, value]) => (
+                      <div key={key} className="grid grid-cols-5 items-center gap-2 mb-2">
+                        <Input
+                          value={key}
+                          onChange={(e) => {
+                            const newHeaders = { ...customMCPHeaders };
+                            const oldValue = newHeaders[key];
+                            delete newHeaders[key];
+                            newHeaders[e.target.value] = oldValue;
+                            setCustomMCPHeaders(newHeaders);
+                          }}
+                          className="col-span-2 bg-[#333] border-[#444] text-white"
+                          placeholder="Nome do cabeçalho"
+                        />
+                        <Input
+                          value={value}
+                          onChange={(e) => {
+                            setCustomMCPHeaders({
+                              ...customMCPHeaders,
+                              [key]: e.target.value,
+                            });
+                          }}
+                          className="col-span-2 bg-[#333] border-[#444] text-white"
+                          placeholder="Valor do cabeçalho"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const newHeaders = { ...customMCPHeaders };
+                            delete newHeaders[key];
+                            setCustomMCPHeaders(newHeaders);
+                          }}
+                          className="col-span-1 h-8 text-red-500 hover:text-red-400 hover:bg-[#444]"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setCustomMCPHeaders({
+                          ...customMCPHeaders,
+                          [`header-${Object.keys(customMCPHeaders).length + 1}`]: "",
+                        });
+                      }}
+                      className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Adicionar Cabeçalho
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter className="p-4 pt-2 border-t border-[#333]">
+              <Button
+                variant="outline"
+                onClick={() => setIsCustomMCPDialogOpen(false)}
+                className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleAddCustomMCP} 
+                className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
+                disabled={!selectedCustomMCP?.url}
+              >
+                {selectedCustomMCP?.url ? "Salvar MCP Customizado" : "Adicionar MCP Customizado"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Grid de agentes ou mensagem quando não há agentes */}
@@ -1215,6 +1488,31 @@ export default function AgentsPage() {
                         <strong>Total de Ferramentas:</strong> {agent.config.mcp_servers.reduce((total, mcp) => total + (mcp.tools?.length || 0), 0)}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {agent.type === "llm" && agent.config?.custom_mcp_servers && agent.config.custom_mcp_servers.length > 0 && (
+                  <div className="mt-2">
+                    <div className="text-xs font-medium text-gray-300 mb-1">MCPs Customizados:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {agent.config.custom_mcp_servers.map((customMCP) => (
+                        <Badge 
+                          key={customMCP.url} 
+                          variant="outline" 
+                          className="text-xs border-[#444] text-white bg-[#333]"
+                        >
+                          <span className="flex items-center gap-1">
+                            <Server className="h-3 w-3 text-[#00ff9d]" />
+                            {customMCP.url.split('//')[1]?.split('/')[0] || customMCP.url}
+                            {Object.keys(customMCP.headers || {}).length > 0 && (
+                              <span className="ml-1 bg-[#00ff9d] text-black text-[9px] px-1 rounded-full">
+                                {Object.keys(customMCP.headers || {}).length}
+                              </span>
+                            )}
+                          </span>
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 )}
 
