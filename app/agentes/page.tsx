@@ -135,6 +135,7 @@ export default function AgentsPage() {
   const [isCustomMCPDialogOpen, setIsCustomMCPDialogOpen] = useState(false);
   const [selectedCustomMCP, setSelectedCustomMCP] = useState<CustomMCPServer | null>(null);
   const [customMCPHeaders, setCustomMCPHeaders] = useState<Record<string, string>>({});
+  const [customMCPHeadersList, setCustomMCPHeadersList] = useState<{id: string; key: string; value: string}[]>([]);
 
   // Tipos de agentes
   const agentTypes = [
@@ -501,10 +502,16 @@ export default function AgentsPage() {
   const handleOpenCustomMCPDialog = (customMCP?: CustomMCPServer) => {
     if (customMCP) {
       setSelectedCustomMCP(customMCP);
-      setCustomMCPHeaders(customMCP.headers || {});
+      // Converter o objeto de headers para um array de {id, key, value}
+      const headersList = Object.entries(customMCP.headers || {}).map(([key, value], index) => ({
+        id: `header-${index}`,
+        key,
+        value
+      }));
+      setCustomMCPHeadersList(headersList);
     } else {
       setSelectedCustomMCP(null);
-      setCustomMCPHeaders({});
+      setCustomMCPHeadersList([]);
     }
     setIsCustomMCPDialogOpen(true);
   };
@@ -522,9 +529,17 @@ export default function AgentsPage() {
 
     // Verificar se o config existe antes de adicionar MCPs
     if (newAgent.config) {
+      // Converter a lista de headers de volta para um objeto Record
+      const headersObject: Record<string, string> = {};
+      customMCPHeadersList.forEach(header => {
+        if (header.key.trim()) {
+          headersObject[header.key] = header.value;
+        }
+      });
+
       const customMCPConfig: CustomMCPServer = {
         url: selectedCustomMCP.url,
-        headers: customMCPHeaders,
+        headers: headersObject,
       };
 
       const existingCustomMCPIndex = newAgent.config.custom_mcp_servers?.findIndex(
@@ -1288,27 +1303,30 @@ export default function AgentsPage() {
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-white">Cabeçalhos HTTP</h3>
                   <div className="border border-[#444] rounded-md p-3 bg-[#222]">
-                    {Object.entries(customMCPHeaders).map(([key, value]) => (
-                      <div key={key} className="grid grid-cols-5 items-center gap-2 mb-2">
+                    {customMCPHeadersList.map((header, index) => (
+                      <div key={header.id} className="grid grid-cols-5 items-center gap-2 mb-2">
                         <Input
-                          value={key}
+                          value={header.key}
                           onChange={(e) => {
-                            const newHeaders = { ...customMCPHeaders };
-                            const oldValue = newHeaders[key];
-                            delete newHeaders[key];
-                            newHeaders[e.target.value] = oldValue;
-                            setCustomMCPHeaders(newHeaders);
+                            const updatedList = [...customMCPHeadersList];
+                            updatedList[index] = { 
+                              ...updatedList[index], 
+                              key: e.target.value 
+                            };
+                            setCustomMCPHeadersList(updatedList);
                           }}
                           className="col-span-2 bg-[#333] border-[#444] text-white"
                           placeholder="Nome do cabeçalho"
                         />
                         <Input
-                          value={value}
+                          value={header.value}
                           onChange={(e) => {
-                            setCustomMCPHeaders({
-                              ...customMCPHeaders,
-                              [key]: e.target.value,
-                            });
+                            const updatedList = [...customMCPHeadersList];
+                            updatedList[index] = { 
+                              ...updatedList[index], 
+                              value: e.target.value 
+                            };
+                            setCustomMCPHeadersList(updatedList);
                           }}
                           className="col-span-2 bg-[#333] border-[#444] text-white"
                           placeholder="Valor do cabeçalho"
@@ -1317,9 +1335,7 @@ export default function AgentsPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            const newHeaders = { ...customMCPHeaders };
-                            delete newHeaders[key];
-                            setCustomMCPHeaders(newHeaders);
+                            setCustomMCPHeadersList(customMCPHeadersList.filter((_, i) => i !== index));
                           }}
                           className="col-span-1 h-8 text-red-500 hover:text-red-400 hover:bg-[#444]"
                         >
@@ -1332,10 +1348,10 @@ export default function AgentsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        setCustomMCPHeaders({
-                          ...customMCPHeaders,
-                          [`header-${Object.keys(customMCPHeaders).length + 1}`]: "",
-                        });
+                        setCustomMCPHeadersList([
+                          ...customMCPHeadersList,
+                          { id: `header-${Date.now()}`, key: "", value: "" }
+                        ]);
                       }}
                       className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
                     >

@@ -324,10 +324,14 @@ export default function Chat() {
   // Gerar ID de contato (atualizado para remover timestamp)
   const generateContactId = () => {
     const now = new Date();
-    // Formato YYYYMMDD
+    // Formato YYYYMMDDHHMMSSmmm (ano, mês, dia, hora, minuto, segundo, milissegundo)
     return now.getFullYear().toString() +
            (now.getMonth() + 1).toString().padStart(2, "0") +
-           now.getDate().toString().padStart(2, "0");
+           now.getDate().toString().padStart(2, "0") +
+           now.getHours().toString().padStart(2, "0") +
+           now.getMinutes().toString().padStart(2, "0") +
+           now.getSeconds().toString().padStart(2, "0") +
+           now.getMilliseconds().toString().padStart(3, "0");
   };
 
   // Encontrar informações do agente atual
