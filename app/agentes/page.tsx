@@ -31,6 +31,9 @@ import {
   Server,
   X,
   Settings,
+  Copy,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -125,6 +128,7 @@ export default function AgentsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null)
 
+  const [isApiKeyVisible, setIsApiKeyVisible] = useState<boolean>(false);
 
   // Tipos de agentes
   const agentTypes = [
@@ -467,6 +471,23 @@ export default function AgentsPage() {
     }
   }
 
+  // Função para copiar texto para a área de transferência
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ 
+        title: "Copiado!",
+        description: "Valor copiado para a área de transferência"
+      });
+    }).catch(err => {
+      console.error('Erro ao copiar: ', err);
+      toast({ 
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o valor",
+        variant: "destructive"
+      });
+    });
+  };
+
   return (
     <div className="container mx-auto p-6 bg-[#121212] min-h-screen rounded-lg">
       <div className="flex justify-between items-center mb-6">
@@ -754,6 +775,56 @@ export default function AgentsPage() {
                           )}
                         </div>
                       </div>
+                      
+                      {/* API Key Display Section */}
+                      {editingAgent && (editingAgent.config?.api_key || "not defined") && (
+                        <div className="mt-6 space-y-2">
+                          <h3 className="text-lg font-medium text-white">Informações de Segurança</h3>
+                          <div className="border border-[#444] rounded-md p-4 bg-[#222]">
+                            <div className="space-y-4">
+                              <div>
+                                <Label className="text-gray-300 block mb-2">API Key</Label>
+                                <div className="flex items-center">
+                                  <div className="relative flex-1">
+                                    <div className="bg-[#1a1a1a] border border-[#444] rounded px-3 py-2 text-[#00ff9d] font-mono text-sm relative overflow-hidden">
+                                      {isApiKeyVisible 
+                                        ? (editingAgent.config?.api_key || "not defined")
+                                        : '•'.repeat(Math.min(16, (editingAgent.config?.api_key || "not defined" || "").length))}
+                                    </div>
+                                  </div>
+                                  <div className="flex ml-2 space-x-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 bg-[#333] text-white hover:bg-[#444] hover:text-[#00ff9d]"
+                                      onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
+                                      title={isApiKeyVisible ? "Ocultar API Key" : "Mostrar API Key"}
+                                    >
+                                      {isApiKeyVisible ? (
+                                        <EyeOff className="h-4 w-4" />
+                                      ) : (
+                                        <Eye className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 bg-[#333] text-white hover:bg-[#444] hover:text-[#00ff9d]"
+                                      onClick={() => copyToClipboard(editingAgent.config?.api_key || "not defined" || "")}
+                                      title="Copiar API Key"
+                                    >
+                                      <Copy className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                <p className="text-xs text-gray-400 mt-2">
+                                  Esta é a chave de API do seu agente. Mantenha-a segura e não compartilhe com terceiros.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
 
