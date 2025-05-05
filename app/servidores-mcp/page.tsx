@@ -172,9 +172,10 @@ export default function MCPServersPage() {
   }
 
   const handleAddTool = () => {
+    const name = "nova_ferramenta";
     const newTool: ToolConfig = {
-      id: `tool-${Date.now()}`,
-      name: "",
+      id: name,
+      name: name,
       description: "",
       tags: [],
       examples: [],
@@ -202,6 +203,11 @@ export default function MCPServersPage() {
       ...updatedTools[index],
       [field]: value,
     }
+    
+    if (field === 'name') {
+      updatedTools[index].id = value;
+    }
+    
     setServerData({
       ...serverData,
       tools: updatedTools,

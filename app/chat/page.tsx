@@ -13,6 +13,8 @@ import {
   Loader2,
   X,
   Filter,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +58,7 @@ export default function Chat() {
   const [isSending, setIsSending] = useState(false);
   const [isNewChatDialogOpen, setIsNewChatDialogOpen] = useState(false);
   const [showAgentFilter, setShowAgentFilter] = useState(false);
+  const [expandedFunctions, setExpandedFunctions] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   // Buscar ID do cliente do localStorage
@@ -297,7 +300,7 @@ export default function Chat() {
     // Verificar se há texto direto
     if (parts[0].text) return parts[0].text;
 
-    // Verificar se há function call (pensamento sequencial)
+    // Verificar se há função com argumento thought
     if (
       parts[0].functionCall &&
       parts[0].functionCall.args &&
@@ -306,8 +309,61 @@ export default function Chat() {
       return parts[0].functionCall.args.thought;
     }
 
-    // Fallback
-    return JSON.stringify(parts);
+    try {
+      // Verificar se há chamada de função (formato camelCase ou underscore)
+      if (parts[0].functionCall || parts[0].function_call) {
+        const funcCall = parts[0].functionCall || parts[0].function_call || {};
+        const args = funcCall.args || {};
+        const name = funcCall.name || "desconhecida";
+        const id = funcCall.id || "sem-id";
+        
+        return {
+          title: `📞 Chamada de função: ${name}`,
+          content: `ID: ${id}
+Args: ${Object.keys(args).length > 0 ? `\n${JSON.stringify(args, null, 2)}` : "{}"}`
+        };
+      }
+
+      // Verificar se há resposta de função (formato camelCase ou underscore)
+      if (parts[0].functionResponse || parts[0].function_response) {
+        const funcResponse = parts[0].functionResponse || parts[0].function_response || {};
+        const response = funcResponse.response || {};
+        const name = funcResponse.name || "desconhecida";
+        const id = funcResponse.id || "sem-id";
+        const status = response.status || "unknown";
+        const statusEmoji = status === "error" ? "❌" : "✅";
+        
+        let resultText = "";
+        if (status === "error") {
+          resultText = `Erro: ${response.error_message || "Erro desconhecido"}`;
+        } else if (response.report) {
+          resultText = `Resultado: ${response.report}`;
+        } else {
+          resultText = `Resultado:\n${JSON.stringify(response, null, 2)}`;
+        }
+        
+        return {
+          title: `${statusEmoji} Resposta da função: ${name}`,
+          content: `ID: ${id}
+${resultText}`
+        };
+      }
+
+      // Fallback
+      return JSON.stringify(parts, null, 2).replace(/\\n/g, '\n');
+    } catch (error) {
+      console.error("Erro ao processar mensagem:", error);
+      // Em caso de erro, retornar uma versão simplificada
+      return JSON.stringify(parts);
+    }
+  };
+
+  // Função para alternar a expansão de uma mensagem de função
+  const toggleFunctionExpansion = (messageId: string) => {
+    setExpandedFunctions(prev => ({
+      ...prev,
+      [messageId]: !prev[messageId]
+    }));
   };
 
   // Cores para agentes - mapeamento por nome
@@ -504,23 +560,27 @@ export default function Chat() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 w-full max-w-full">
                   {messages.map((message) => {
                     const isUser = message.author === "user";
                     const agentColor = getAgentColor(message.author);
-                    const messageText = getMessageText(message);
+                    const messageContent = getMessageText(message);
+                    const hasFunctionCall = message.content.parts[0]?.functionCall || message.content.parts[0]?.function_call;
+                    const hasFunctionResponse = message.content.parts[0]?.functionResponse || message.content.parts[0]?.function_response;
+                    const isFunctionMessage = hasFunctionCall || hasFunctionResponse;
+                    const isExpanded = expandedFunctions[message.id] || false;
 
                     return (
                       <div
                         key={message.id}
                         className={`flex ${
                           isUser ? "justify-end" : "justify-start"
-                        }`}
+                        } w-full`}
                       >
                         <div
-                          className={`flex gap-3 max-w-[80%] ${
+                          className={`flex gap-3 ${
                             isUser ? "flex-row-reverse" : ""
-                          }`}
+                          } max-w-[85%]`}
                         >
                           <Avatar className={isUser ? "bg-[#333]" : agentColor}>
                             <AvatarFallback>
@@ -529,12 +589,47 @@ export default function Chat() {
                           </Avatar>
                           <div
                             className={`rounded-lg p-3 ${
-                              isUser
+                              isFunctionMessage
+                                ? "bg-[#333] text-[#00ff9d] font-mono text-sm"
+                                : isUser
                                 ? "bg-[#00ff9d] text-black"
                                 : "bg-[#222] text-white"
-                            }`}
+                            } max-w-full`}
+                            style={{ wordBreak: "break-word" }}
                           >
-                            {messageText}
+                            {isFunctionMessage ? (
+                              <div className="w-full">
+                                <div 
+                                  className="flex items-center gap-2 cursor-pointer hover:bg-[#444] rounded px-1 py-0.5 transition-colors" 
+                                  onClick={() => toggleFunctionExpansion(message.id)}
+                                >
+                                  {typeof messageContent === 'object' && (
+                                    <>
+                                      <div className="flex-1 font-semibold">{messageContent.title}</div>
+                                      <div className="flex items-center justify-center w-5 h-5 text-[#00ff9d]">
+                                        {isExpanded ? (
+                                          <ChevronDown className="h-4 w-4" />
+                                        ) : (
+                                          <ChevronRight className="h-4 w-4" />
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                                
+                                {isExpanded && typeof messageContent === 'object' && (
+                                  <div className="mt-2 pt-2 border-t border-[#555]">
+                                    <pre className="whitespace-pre-wrap break-all overflow-hidden text-xs">
+                                      {messageContent.content}
+                                    </pre>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="break-words">
+                                {typeof messageContent === 'string' ? messageContent : JSON.stringify(messageContent)}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

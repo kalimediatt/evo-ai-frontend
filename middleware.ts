@@ -37,9 +37,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // Se for rota de cliente e for admin, redireciona para home
+  // Se for rota de cliente e for admin, redireciona para servidores-mcp
   if (isClientPath && isAdmin) {
-    return NextResponse.redirect(new URL('/', request.url))
+    return NextResponse.redirect(new URL('/servidores-mcp', request.url))
   }
 
   // Permite acesso normalmente

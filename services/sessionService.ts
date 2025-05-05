@@ -19,6 +19,20 @@ export interface ChatMessage {
       text?: string;
       functionCall?: any;
       functionResponse?: any;
+      function_call?: {
+        id: string;
+        name: string;
+        args?: Record<string, any>;
+      };
+      function_response?: {
+        id: string;
+        name: string;
+        response: {
+          status: string;
+          error_message?: string;
+          [key: string]: any;
+        };
+      };
       [key: string]: any;
     }>;
     role: string;
