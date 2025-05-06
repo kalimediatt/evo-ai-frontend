@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Canva from "./Canva";
 import { Agent } from '@/types/agent';
@@ -14,7 +14,7 @@ import { NodeDataProvider } from "@/contexts/NodeDataContext";
 import { SourceClickProvider } from "@/contexts/SourceClickContext";
 import { useToast } from '@/components/ui/use-toast';
 
-export default function FluxosPage() {
+function FluxosContent() {
   const searchParams = useSearchParams();
   const agentId = searchParams.get('agentId');
   const [agent, setAgent] = useState<Agent | null>(null);
@@ -163,5 +163,17 @@ export default function FluxosPage() {
         </SourceClickProvider>
       </NodeDataProvider>
     </div>
+  );
+}
+
+export default function FluxosPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto p-6 bg-[#121212] min-h-screen rounded-lg flex items-center justify-center">
+        <div className="text-white text-xl">Carregando...</div>
+      </div>
+    }>
+      <FluxosContent />
+    </Suspense>
   );
 }
