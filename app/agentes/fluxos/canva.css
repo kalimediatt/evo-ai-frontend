@@ -1,0 +1,16 @@
+.react-flow.dark {
+  --xy-background-color-default: transparent;
+}
+
+.react-flow__panel {
+  box-shadow: none;
+}
+
+.react-flow__controls-button{
+  padding: 10px;
+  width: 30px;
+  height: 30px;
+  margin: 5px 0;
+  border: solid 1px #ccc!important;
+  border-radius: 5px;
+}

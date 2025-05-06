@@ -1,6 +1,6 @@
 import { MCPServer } from '@/types/mcpServer';
 
-export type AgentType = "llm" | "a2a" | "sequential" | "parallel" | "loop";
+export type AgentType = "llm" | "a2a" | "sequential" | "parallel" | "loop" | "workflow";
 
 export interface ToolConfig {
   id: string;
@@ -52,6 +52,11 @@ export interface CustomTools {
   http_tools: HTTPTool[];
 }
 
+export interface WorkflowData {
+  nodes: any[];
+  edges: any[];
+}
+
 // Uma configuração unificada para todos os tipos de agentes
 export interface AgentConfig {
   // LLM config
@@ -67,6 +72,9 @@ export interface AgentConfig {
   // Loop config específico
   max_iterations?: number;
   condition?: string;
+  
+  // Workflow config
+  workflow?: WorkflowData;
 }
 
 export interface Agent {

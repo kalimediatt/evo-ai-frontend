@@ -32,7 +32,7 @@ export default function Sidebar() {
             icon: Grid3X3,
           },
           {
-            name: "Chat",
+            name: "Chat AI",
             href: "/chat",
             icon: MessageSquare,
           },

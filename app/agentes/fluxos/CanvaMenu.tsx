@@ -1,0 +1,151 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { Clock, FilterIcon, PlusIcon, Shuffle, User, Zap } from "lucide-react";
+import { useEffect, useRef } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+
+import { useDnD } from "@/contexts/DnDContext";
+
+function CanvaMenu({
+  externalOpen,
+  setExternalOpen,
+  handleAddNode,
+  isOpen,
+  setIsOpen,
+}: {
+  externalOpen: any;
+  setExternalOpen: (value: any) => void;
+  handleAddNode: (type: string, position: { x: number; y: number }) => void;
+  isOpen: boolean;
+  setIsOpen: (value: boolean) => void;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLDivElement>(null);
+
+  const { setType } = useDnD();
+
+  useEffect(() => {
+    if (externalOpen) {
+      setIsOpen(true);
+    }
+  }, [externalOpen, setIsOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+        setExternalOpen(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, setExternalOpen, setIsOpen]);
+
+  const toggleMenu = () => setIsOpen(!isOpen);
+
+  const handleDragStart = (event: any, nodeType: any) => {
+    setType(nodeType);
+    event.dataTransfer.effectAllowed = "move";
+
+    setTimeout(() => {
+      setIsOpen(false);
+      setExternalOpen(null);
+    }, 500);
+  };
+
+  const addNode = (type: string) => {
+    if (!externalOpen) {
+      console.log("externalOpen está vazio, não é possível adicionar node");
+      return;
+    }
+
+    // Verificar se externalOpen tem a propriedade position
+    if (!externalOpen.position) {
+      console.log("externalOpen não tem a propriedade position:", externalOpen);
+      return;
+    }
+
+    console.log("Adicionando node do tipo:", type, "com dados:", externalOpen);
+    handleAddNode(type, externalOpen);
+
+    setIsOpen(false);
+    setExternalOpen(null);
+  };
+
+  // Handle just click without drag (for mobile or easier use)
+  const handleItemClick = (type: string) => {
+    if (externalOpen) {
+      addNode(type);
+    } else {
+      console.log("Item clicado, mas sem dados de posição disponíveis");
+      setIsOpen(false);
+    }
+  };
+
+  return (
+    <>
+      <div ref={buttonRef}>
+        <Button
+          className="absolute right-4 top-4 z-50 flex h-12 w-12 items-center justify-center rounded-full text-2xl text-white shadow-lg  bg-gray-800 hover:bg-gray-700"
+          onClick={toggleMenu}
+        >
+          <PlusIcon size={32} />
+        </Button>
+      </div>
+      {isOpen && (
+        <div ref={menuRef}>
+          <Card className="absolute right-20 top-5 z-50 mr-5 w-96 p-2 pt-8 shadow-lg bg-gray-800 text-white">
+            <CardContent>
+              <div className="mb-4">
+                <h4 className="mb-4 text-sm font-medium">Conteúdo</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div
+                    className="flex cursor-pointer items-center justify-between rounded-lg border-2 border-dashed p-4 border-gray-700 hover:bg-gray-700"
+                    draggable={true}
+                    onDragStart={(event) => {
+                      handleDragStart(event, "agent-node");
+                    }}
+                    onClick={() => handleItemClick("agent-node")}
+                  >
+                    <User size={20} className="text-blue-500" />
+                    <span>Agente</span>
+                  </div>
+                </div>
+              </div>
+              <div className="mb-4">
+                <h4 className="mb-4 text-sm font-medium">Lógica</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div
+                    className="flex cursor-pointer items-center justify-between rounded-lg border-2 border-dashed p-4 border-gray-700 hover:bg-gray-700"
+                    draggable={true}
+                    onDragStart={(event) => {
+                      handleDragStart(event, "condition-node");
+                    }}
+                    onClick={() => handleItemClick("condition-node")}
+                  >
+                    <FilterIcon size={20} className="text-blue-500" />
+                    <span>Condição</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </>
+  );
+}
+
+export { CanvaMenu };

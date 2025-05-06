@@ -1,0 +1,224 @@
+/* eslint-disable jsx-a11y/alt-text */
+import { useEdges, useNodes } from "@xyflow/react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Agent } from "@/types/agent";
+import { listAgents } from "@/services/agentService";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { User, Loader2, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function AgentForm({
+  selectedNode,
+  handleUpdateNode,
+  setEdges,
+  setIsOpen,
+  setSelectedNode,
+}: {
+  selectedNode: any;
+  handleUpdateNode: any;
+  setEdges: any;
+  setIsOpen: any;
+  setSelectedNode: any;
+}) {
+  const [node, setNode] = useState(selectedNode);
+  const [loading, setLoading] = useState(false);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [allAgents, setAllAgents] = useState<Agent[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const edges = useEdges();
+  const nodes = useNodes();
+
+  const connectedNode = useMemo(() => {
+    const edge = edges.find((edge) => edge.source === selectedNode.id);
+    if (!edge) return null;
+    const node = nodes.find((node) => node.id === edge.target);
+    return node || null;
+  }, [edges, nodes, selectedNode.id]);
+  
+  // Buscar client_id do usuário logado
+  const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || '{}') : {};
+  const clientId = user?.client_id || "";
+  
+  // Obter o ID do agente atual do workflow
+  const currentAgent = typeof window !== "undefined" ? 
+    JSON.parse(localStorage.getItem("current_workflow_agent") || '{}') : {};
+  const currentAgentId = currentAgent?.id;
+
+  useEffect(() => {
+    if (selectedNode) {
+      setNode(selectedNode);
+    }
+  }, [selectedNode]);
+
+  // Buscar a lista de agentes
+  useEffect(() => {
+    if (!clientId) return;
+    setLoading(true);
+    listAgents(clientId)
+      .then((res) => {
+        // Filtrar a lista para remover o agente atual do workflow
+        const filteredAgents = res.data.filter((agent: Agent) => agent.id !== currentAgentId);
+        setAllAgents(filteredAgents);
+        setAgents(filteredAgents);
+      })
+      .catch((error) => console.error("Erro ao carregar agentes:", error))
+      .finally(() => setLoading(false));
+  }, [clientId, currentAgentId]);
+
+  // Filtrar agentes quando o termo de busca mudar
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setAgents(allAgents);
+    } else {
+      const filtered = allAgents.filter((agent) => 
+        agent.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setAgents(filtered);
+    }
+  }, [searchTerm, allAgents]);
+
+  const handleDeleteEdge = useCallback(() => {
+    const id = edges.find((edge: any) => edge.source === selectedNode.id)?.id;
+    setEdges((edges: any) => {
+      const left = edges.filter((edge: any) => edge.id !== id);
+      return left;
+    });
+  }, [nodes, edges, selectedNode, setEdges]);
+
+  const handleSelectAgent = (agent: Agent) => {
+    const updatedNode = {
+      ...node,
+      data: {
+        ...node.data,
+        agent,
+      },
+    };
+    setNode(updatedNode);
+    handleUpdateNode(updatedNode);
+  };
+
+  // Função para obter o ícone do tipo de agente
+  const getAgentTypeName = (type: string) => {
+    const agentTypes: Record<string, string> = {
+      llm: "LLM Agent",
+      a2a: "A2A Agent",
+      sequential: "Sequential Agent",
+      parallel: "Parallel Agent",
+      loop: "Loop Agent",
+    };
+    return agentTypes[type] || type;
+  };
+
+  const renderForm = () => {
+    return (
+      <div className="pb-4 pl-8 pr-8 pt-2 text-white">
+        <h3 className="text-lg font-medium mb-4">Selecione um Agente</h3>
+        
+        <div className="relative mb-4">
+          <Input
+            type="text"
+            placeholder="Buscar agente..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="bg-gray-700 border-gray-600 text-gray-200 focus:border-green-500 py-2 pl-10"
+          />
+          <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          {searchTerm && (
+            <button
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200"
+              onClick={() => setSearchTerm("")}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+        
+        {loading ? (
+          <div className="flex justify-center items-center py-8">
+            <Loader2 className="animate-spin h-8 w-8 text-gray-400" />
+          </div>
+        ) : agents.length > 0 ? (
+          <ScrollArea className="h-[350px] pr-4">
+            <div className="space-y-2">
+              {agents.map((agent) => (
+                <div
+                  key={agent.id}
+                  className={`p-3 rounded-md cursor-pointer transition-colors ${
+                    node.data.agent?.id === agent.id
+                      ? "bg-green-800 border border-green-600"
+                      : "bg-gray-700 hover:bg-gray-600"
+                  }`}
+                  onClick={() => handleSelectAgent(agent)}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <User size={16} className="text-gray-300" />
+                    <span className="font-medium">{agent.name}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <Badge
+                      variant="outline"
+                      className="text-xs border-gray-500 text-green-400"
+                    >
+                      {getAgentTypeName(agent.type)}
+                    </Badge>
+                    {agent.model && (
+                      <span className="text-xs text-gray-400">{agent.model}</span>
+                    )}
+                  </div>
+                  {agent.description && (
+                    <p className="text-xs text-gray-300 mt-2 line-clamp-2">
+                      {agent.description}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="text-center py-8 text-gray-400">
+            {searchTerm ? (
+              <p>Nenhum agente encontrado para "{searchTerm}"</p>
+            ) : (
+              <>
+                <p>Nenhum agente disponível</p>
+                <p className="text-sm mt-2">
+                  Crie agentes na tela de Gerenciamento de Agentes
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
+        {node.data.agent && (
+          <div className="mt-4 pt-4 border-t border-gray-700">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full border-red-500 text-red-500 hover:bg-red-900/20"
+              onClick={() => {
+                handleUpdateNode({
+                  ...node,
+                  data: {
+                    ...node.data,
+                    agent: undefined,
+                  },
+                });
+              }}
+            >
+              Remover Agente
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return renderForm();
+}
+
+export { AgentForm };

@@ -51,10 +51,12 @@ import { Agent, AgentCreate, AgentType, ToolConfig as AgentToolConfig, MCPServer
 import { MCPServer, ToolConfig } from "@/types/mcpServer"
 import { listAgents, createAgent, updateAgent, deleteAgent } from "@/services/agentService"
 import { listMCPServers } from "@/services/mcpServerService"
+import { useRouter } from "next/navigation"
 
 
 export default function AgentsPage() {
   const { toast } = useToast()
+  const router = useRouter()
 
   // Buscar client_id do usuário logado
   const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || '{}') : {}
@@ -144,6 +146,7 @@ export default function AgentsPage() {
     { value: "sequential", label: "Sequential Agent", icon: Workflow },
     { value: "parallel", label: "Parallel Agent", icon: GitBranch },
     { value: "loop", label: "Loop Agent", icon: RefreshCw },
+    { value: "workflow", label: "Workflow Agent", icon: Workflow },
   ]
 
   // Modelos disponíveis
@@ -211,6 +214,20 @@ export default function AgentsPage() {
           sub_agents: [],
           custom_mcp_servers: [],
         } // Usando AgentConfig unificado
+      }))
+    } else if (newAgent.type === "workflow") {
+      setNewAgent((prev) => ({
+        ...prev,
+        model: undefined,
+        instruction: undefined,
+        agent_card_url: undefined,
+        config: {
+          sub_agents: [],
+          workflow: {
+            nodes: [],
+            edges: [],
+          },
+        } // Configuração para workflow
       }))
     } else {
       // sequential ou parallel
@@ -773,27 +790,24 @@ export default function AgentsPage() {
                     </div>
                   )}
 
-                  {newAgent.type === "loop" && (
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="max_iterations" className="text-right text-gray-300">
-                        Máximo de Iterações
-                      </Label>
-                      <Input
-                        id="max_iterations"
-                        type="number"
-                        min="1"
-                        value={newAgent.config?.max_iterations || ""}
-                        onChange={(e) =>
-                          setNewAgent({
-                            ...newAgent,
-                            config: {
-                              ...newAgent.config,
-                              max_iterations: Number.parseInt(e.target.value) || 1,
-                            },
-                          } as Partial<Agent> & { config?: AgentConfig })
-                        }
-                        className="col-span-3 bg-[#222] border-[#444] text-white"
-                      />
+                  {newAgent.type === "loop" && newAgent.config?.max_iterations && (
+                    <div className="space-y-1 text-xs text-gray-400">
+                      <div>
+                        <strong>Máx. Iterações:</strong> {newAgent.config.max_iterations}
+                      </div>
+                    </div>
+                  )}
+
+                  {newAgent.type === "workflow" && (
+                    <div className="space-y-1 text-xs text-gray-400">
+                      <div>
+                        <strong>Tipo:</strong> Fluxo Visual
+                      </div>
+                      {newAgent.config?.workflow && (
+                        <div>
+                          <strong>Elementos:</strong> {(newAgent.config.workflow.nodes?.length || 0)} nós, {(newAgent.config.workflow.edges?.length || 0)} conexões
+                        </div>
+                      )}
                     </div>
                   )}
                 </TabsContent>
@@ -1011,7 +1025,7 @@ export default function AgentsPage() {
                     </>
                   )}
 
-                  {(newAgent.type === "sequential" || newAgent.type === "parallel" || newAgent.type === "loop") && (
+                  {(newAgent.type === "sequential" || newAgent.type === "parallel" || newAgent.type === "loop" || newAgent.type === "workflow") && (
                     <div className="flex items-center justify-center h-40">
                       <div className="text-center">
                         <p className="text-gray-400">Configure os sub-agentes na aba "Sub-Agentes"</p>
@@ -1408,6 +1422,16 @@ export default function AgentsPage() {
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
+                    {agent.type === "workflow" && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-white hover:bg-[#333]/50 hover:text-[#00ff9d]"
+                        onClick={() => router.push(`/agentes/fluxos?agentId=${agent.id}`)}
+                      >
+                        <Workflow className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -1452,6 +1476,19 @@ export default function AgentsPage() {
                     <div>
                       <strong>Máx. Iterações:</strong> {agent.config.max_iterations}
                     </div>
+                  </div>
+                )}
+
+                {agent.type === "workflow" && (
+                  <div className="space-y-1 text-xs text-gray-400">
+                    <div>
+                      <strong>Tipo:</strong> Fluxo Visual
+                    </div>
+                    {agent.config?.workflow && (
+                      <div>
+                        <strong>Elementos:</strong> {(agent.config.workflow.nodes?.length || 0)} nós, {(agent.config.workflow.edges?.length || 0)} conexões
+                      </div>
+                    )}
                   </div>
                 )}
 
