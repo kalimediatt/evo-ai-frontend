@@ -35,6 +35,13 @@ import {
   Eye,
   EyeOff,
   Search,
+  Folder,
+  FolderPlus,
+  MoveRight,
+  Home,
+  CircleEllipsis,
+  Key,
+  Info,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -50,9 +57,20 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Agent, AgentCreate, AgentType, ToolConfig as AgentToolConfig, MCPServerConfig, AgentConfig, CustomMCPServer } from "@/types/agent"
 import { MCPServer, ToolConfig } from "@/types/mcpServer"
-import { listAgents, createAgent, updateAgent, deleteAgent } from "@/services/agentService"
+import { listAgents, createAgent, updateAgent, deleteAgent, Folder as FolderType, listFolders, createFolder, updateFolder, deleteFolder, assignAgentToFolder, ApiKey, listApiKeys, createApiKey, updateApiKey, deleteApiKey } from "@/services/agentService"
 import { listMCPServers } from "@/services/mcpServerService"
 import { useRouter } from "next/navigation"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 
 export default function AgentsPage() {
@@ -63,8 +81,21 @@ export default function AgentsPage() {
   const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || '{}') : {}
   const clientId = user?.client_id || ""
 
+  // Estado para controlar a visibilidade do sidebar de pastas
+  const [isSidebarVisible, setIsSidebarVisible] = useState(false)
+
   // Lista de MCPs disponíveis
   const [availableMCPs, setAvailableMCPs] = useState<MCPServer[]>([])
+
+  // Estado para as API Keys
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
+  const [isApiKeysDialogOpen, setIsApiKeysDialogOpen] = useState(false)
+  const [isLoadingApiKeys, setIsLoadingApiKeys] = useState(false)
+  const [isAddingApiKey, setIsAddingApiKey] = useState(false)
+  const [isEditingApiKey, setIsEditingApiKey] = useState(false)
+  const [currentApiKey, setCurrentApiKey] = useState<Partial<ApiKey & { key_value?: string }>>({})
+  const [isDeleteApiKeyDialogOpen, setIsDeleteApiKeyDialogOpen] = useState(false)
+  const [apiKeyToDelete, setApiKeyToDelete] = useState<ApiKey | null>(null)
 
   // Estado para agentes
   const [agents, setAgents] = useState<Agent[]>([])
@@ -72,16 +103,48 @@ export default function AgentsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
+  // Estados para o sistema de pastas
+  const [folders, setFolders] = useState<FolderType[]>([])
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
+  const [isFolderDialogOpen, setIsFolderDialogOpen] = useState(false)
+  const [editingFolder, setEditingFolder] = useState<FolderType | null>(null)
+  const [newFolder, setNewFolder] = useState<{ name: string; description: string }>({
+    name: "",
+    description: "",
+  })
+  const [isFolderDeleteDialogOpen, setIsFolderDeleteDialogOpen] = useState(false)
+  const [folderToDelete, setFolderToDelete] = useState<FolderType | null>(null)
+  const [isMovingAgent, setIsMovingAgent] = useState(false)
+  const [agentToMove, setAgentToMove] = useState<Agent | null>(null)
+  const [isMovingDialogOpen, setIsMovingDialogOpen] = useState(false)
+
   // Carregar agentes da API
   useEffect(() => {
     if (!clientId) return
+    loadAgents()
+  }, [clientId, selectedFolderId])
+
+  // Função para carregar agentes com base na pasta selecionada
+  const loadAgents = async () => {
     setIsLoading(true)
-    listAgents(clientId)
-      .then(res => {
-        setAgents(res.data)
-        setFilteredAgents(res.data)
-      })
-      .catch(() => toast({ title: "Erro ao carregar agentes", variant: "destructive" }))
+    try {
+      const res = await listAgents(clientId, 0, 100, selectedFolderId || undefined)
+      setAgents(res.data)
+      setFilteredAgents(res.data)
+    } catch (error) {
+      toast({ title: "Erro ao carregar agentes", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Carregar pastas
+  useEffect(() => {
+    if (!clientId) return
+    setIsLoading(true)
+    listFolders(clientId)
+      .then(res => setFolders(res.data))
+      .catch(() => toast({ title: "Erro ao carregar pastas", variant: "destructive" }))
       .finally(() => setIsLoading(false))
   }, [clientId])
 
@@ -110,6 +173,197 @@ export default function AgentsPage() {
       .finally(() => setIsLoading(false))
   }, [])
 
+  // Carregar API Keys
+  useEffect(() => {
+    if (!clientId) return
+    loadApiKeys()
+  }, [clientId])
+
+  // Função para carregar chaves de API
+  const loadApiKeys = async () => {
+    setIsLoadingApiKeys(true)
+    try {
+      const res = await listApiKeys(clientId)
+      setApiKeys(res.data)
+    } catch (error) {
+      toast({ title: "Erro ao carregar chaves de API", variant: "destructive" })
+    } finally {
+      setIsLoadingApiKeys(false)
+    }
+  }
+
+  // Função para adicionar ou atualizar uma chave de API
+  const handleSaveApiKey = async () => {
+    if (!currentApiKey.name || !currentApiKey.provider || !currentApiKey.key_value) {
+      toast({ 
+        title: "Campos obrigatórios", 
+        description: "Nome, provedor e valor da chave são obrigatórios", 
+        variant: "destructive" 
+      })
+      return
+    }
+
+    try {
+      setIsLoadingApiKeys(true)
+      if (currentApiKey.id) {
+        // Atualizar chave existente
+        await updateApiKey(
+          currentApiKey.id, 
+          { 
+            name: currentApiKey.name, 
+            provider: currentApiKey.provider, 
+            key_value: currentApiKey.key_value,
+            is_active: currentApiKey.is_active
+          }, 
+          clientId
+        )
+        toast({ title: "Chave atualizada", description: "A chave de API foi atualizada com sucesso" })
+      } else {
+        // Criar nova chave
+        await createApiKey({
+          name: currentApiKey.name,
+          provider: currentApiKey.provider,
+          key_value: currentApiKey.key_value,
+          client_id: clientId
+        })
+        toast({ title: "Chave adicionada", description: "A chave de API foi adicionada com sucesso" })
+      }
+      
+      // Limpar formulário e recarregar lista
+      setCurrentApiKey({})
+      setIsAddingApiKey(false)
+      setIsEditingApiKey(false)
+      loadApiKeys()
+    } catch (error) {
+      toast({ title: "Erro", description: "Não foi possível salvar a chave de API", variant: "destructive" })
+    } finally {
+      setIsLoadingApiKeys(false)
+    }
+  }
+
+  // Função para excluir uma chave de API
+  const handleDeleteApiKey = async () => {
+    if (!apiKeyToDelete) return
+    try {
+      setIsLoadingApiKeys(true)
+      await deleteApiKey(apiKeyToDelete.id, clientId)
+      toast({ title: "Chave excluída", description: "A chave de API foi excluída com sucesso" })
+      
+      // Limpar e recarregar lista
+      setApiKeyToDelete(null)
+      setIsDeleteApiKeyDialogOpen(false)
+      loadApiKeys()
+    } catch (error) {
+      toast({ title: "Erro", description: "Não foi possível excluir a chave de API", variant: "destructive" })
+    } finally {
+      setIsLoadingApiKeys(false)
+    }
+  }
+
+  // Função para editar uma chave de API
+  const handleEditApiKey = (apiKey: ApiKey) => {
+    setCurrentApiKey({ ...apiKey, key_value: '' }) // Não incluímos o valor real da chave
+    setIsEditingApiKey(true)
+    setIsAddingApiKey(true)
+  }
+
+  // Funções para gerenciamento de pastas
+  
+  const handleAddFolder = async () => {
+    if (!newFolder.name) {
+      toast({ title: "Campo obrigatório", description: "Nome da pasta é obrigatório", variant: "destructive" })
+      return
+    }
+    try {
+      setIsLoading(true)
+      if (editingFolder) {
+        await updateFolder(editingFolder.id, newFolder, clientId)
+        toast({ title: "Pasta atualizada", description: `${newFolder.name} foi atualizada com sucesso` })
+      } else {
+        await createFolder({
+          ...newFolder,
+          client_id: clientId,
+        })
+        toast({ title: "Pasta criada", description: `${newFolder.name} foi criada com sucesso` })
+      }
+      // Recarregar pastas
+      const res = await listFolders(clientId)
+      setFolders(res.data)
+      setIsFolderDialogOpen(false)
+      resetFolderForm()
+    } catch (error) {
+      toast({ title: "Erro", description: "Não foi possível salvar a pasta", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  
+  const handleEditFolder = (folder: FolderType) => {
+    setEditingFolder(folder)
+    setNewFolder({
+      name: folder.name,
+      description: folder.description,
+    })
+    setIsFolderDialogOpen(true)
+  }
+  
+  const handleDeleteFolder = async () => {
+    if (!folderToDelete) return
+    try {
+      setIsLoading(true)
+      await deleteFolder(folderToDelete.id, clientId)
+      toast({ title: "Pasta excluída", description: "A pasta foi excluída com sucesso" })
+      // Recarregar pastas
+      const res = await listFolders(clientId)
+      setFolders(res.data)
+      // Se a pasta excluída era a selecionada, voltar para "Todos os agentes"
+      if (selectedFolderId === folderToDelete.id) {
+        setSelectedFolderId(null)
+      }
+      setFolderToDelete(null)
+      setIsFolderDeleteDialogOpen(false)
+    } catch (error) {
+      toast({ title: "Erro", description: "Não foi possível excluir a pasta", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  
+  const resetFolderForm = () => {
+    setNewFolder({
+      name: "",
+      description: "",
+    })
+    setEditingFolder(null)
+  }
+  
+  const handleMoveAgent = async (targetFolderId: string | null) => {
+    if (!agentToMove) return
+    try {
+      setIsLoading(true)
+      await assignAgentToFolder(agentToMove.id, targetFolderId, clientId)
+      toast({ 
+        title: "Agente movido", 
+        description: targetFolderId 
+          ? `Agente movido para a pasta com sucesso` 
+          : "Agente removido da pasta com sucesso" 
+      })
+      setIsMovingDialogOpen(false)
+      loadAgents()
+    } catch (error) {
+      toast({ title: "Erro", description: "Não foi possível mover o agente", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+      setAgentToMove(null)
+    }
+  }
+  
+  // Funções para iniciar o processo de mover um agente
+  const startMoveAgent = (agent: Agent) => {
+    setAgentToMove(agent)
+    setIsMovingDialogOpen(true)
+  }
+
   // Estado inicial
   const [newAgent, setNewAgent] = useState<Partial<Agent>>({
     client_id: clientId || "",
@@ -118,8 +372,8 @@ export default function AgentsPage() {
     type: "llm",
     model: "gpt-4.1-nano",
     instruction: "",
+    api_key_id: "",
     config: {
-      api_key: "",
       tools: [],
       mcp_servers: [],
       custom_mcp_servers: [],
@@ -127,7 +381,7 @@ export default function AgentsPage() {
         http_tools: [],
       },
       sub_agents: [],
-    } // Agora usando a tipagem unificada AgentConfig
+    } // Usando AgentConfig unificado
   })
 
   // Estado para controlar o diálogo
@@ -207,8 +461,8 @@ export default function AgentsPage() {
         model: prev.model || "gpt-4.1-nano",
         instruction: prev.instruction || "",
         agent_card_url: undefined,
+        api_key_id: prev.api_key_id || "",
         config: {
-          api_key: prev.api_key || "",
           tools: [],
           mcp_servers: [],
           custom_mcp_servers: [],
@@ -223,7 +477,8 @@ export default function AgentsPage() {
         ...prev,
         model: undefined,
         instruction: undefined,
-        agent_card_url: prev.agent_card_url || "http://localhost:8001/api/v1/a2a/agent/.well-known/agent.json",
+        agent_card_url: prev.agent_card_url || "",
+        api_key_id: undefined,
         config: undefined // A2A não precisa de config
       }))
     } else if (newAgent.type === "loop") {
@@ -232,6 +487,7 @@ export default function AgentsPage() {
         model: undefined,
         instruction: undefined,
         agent_card_url: undefined,
+        api_key_id: undefined,
         config: {
           sub_agents: [],
           custom_mcp_servers: [],
@@ -243,6 +499,7 @@ export default function AgentsPage() {
         model: undefined,
         instruction: undefined,
         agent_card_url: undefined,
+        api_key_id: undefined,
         config: {
           sub_agents: [],
           workflow: {
@@ -258,6 +515,7 @@ export default function AgentsPage() {
         model: undefined,
         instruction: undefined,
         agent_card_url: undefined,
+        api_key_id: undefined,
         config: {
           sub_agents: [],
           custom_mcp_servers: [],
@@ -272,21 +530,41 @@ export default function AgentsPage() {
       toast({ title: "Campo obrigatório", description: "Nome do agente é obrigatório", variant: "destructive" })
       return
     }
+
+    // Verificar se é um agente LLM e se a API Key é necessária
+    if (newAgent.type === "llm" && !newAgent.api_key_id) {
+      toast({ 
+        title: "API Key necessária", 
+        description: "Selecione uma chave de API para o agente", 
+        variant: "destructive" 
+      })
+      return
+    }
+
     try {
+      // Remover o campo api_key se estiver presente
+      const agentData = { ...newAgent }
+
       setIsLoading(true)
-    if (editingAgent) {
-        await updateAgent(editingAgent.id, { ...newAgent, client_id: clientId })
+      if (editingAgent) {
+        await updateAgent(editingAgent.id, { ...agentData, client_id: clientId })
         toast({ title: "Agente atualizado", description: `${newAgent.name} foi atualizado com sucesso` })
-    } else {
-        await createAgent({ ...(newAgent as AgentCreate), client_id: clientId })
+      } else {
+        const createdAgent = await createAgent({ ...(agentData as AgentCreate), client_id: clientId })
+        
+        // Se tiver uma pasta selecionada, adicionar o agente a ela
+        if (selectedFolderId && createdAgent.data.id) {
+          await assignAgentToFolder(createdAgent.data.id, selectedFolderId, clientId)
+        }
+        
         toast({ title: "Agente adicionado", description: `${newAgent.name} foi adicionado com sucesso` })
       }
       // Recarregar lista
-      const res = await listAgents(clientId)
-      setAgents(res.data)
-    setIsDialogOpen(false)
+      loadAgents()
+      setIsDialogOpen(false)
       resetForm()
-    } catch {
+    } catch (error) {
+      console.error("Erro ao salvar agente:", error)
       toast({ title: "Erro", description: "Não foi possível salvar o agente", variant: "destructive" })
     } finally {
       setIsLoading(false)
@@ -301,8 +579,7 @@ export default function AgentsPage() {
       await deleteAgent(agentToDelete.id)
       toast({ title: "Agente excluído", description: "O agente foi excluído com sucesso" })
       // Recarregar lista
-      const res = await listAgents(clientId)
-      setAgents(res.data)
+      loadAgents()
       setAgentToDelete(null)
       setIsDeleteDialogOpen(false)
     } catch {
@@ -329,8 +606,8 @@ export default function AgentsPage() {
       type: "llm",
       model: "gpt-4.1-nano",
       instruction: "",
+      api_key_id: "",
       config: {
-        api_key: "",
         tools: [],
         mcp_servers: [],
         custom_mcp_servers: [],
@@ -637,263 +914,559 @@ export default function AgentsPage() {
     });
   };
 
+  // Função para obter o nome de uma pasta pelo ID
+  const getFolderNameById = (id: string | null) => {
+    if (!id) return null
+    const folder = folders.find((f) => f.id === id)
+    return folder ? folder.name : null
+  }
+
+  // Função para obter o nome da chave de API pelo ID
+  const getApiKeyNameById = (id: string | undefined) => {
+    if (!id) return null
+    const apiKey = apiKeys.find((key) => key.id === id)
+    return apiKey ? apiKey.name : null
+  }
+
   return (
-    <div className="container mx-auto p-6 bg-[#121212] min-h-screen rounded-lg">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">Agentes</h1>
-        <div className="flex items-center gap-4">
+    <div className="container mx-auto p-6 bg-[#121212] min-h-screen flex relative">
+      {/* Botão para mostrar/esconder o sidebar */}
+      <button
+        onClick={() => setIsSidebarVisible(!isSidebarVisible)}
+        className={`absolute left-0 top-6 z-20 bg-[#222] p-2 rounded-r-md text-[#00ff9d] hover:bg-[#333] hover:text-[#00ff9d] shadow-md transition-all ${
+          isSidebarVisible ? 'left-64' : 'left-0'
+        }`}
+        aria-label={isSidebarVisible ? "Esconder pastas" : "Mostrar pastas"}
+      >
+        {isSidebarVisible ? (
+          <X className="h-5 w-5" />
+        ) : (
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              placeholder="Buscar agentes..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-[300px] bg-[#222] border-[#444] text-white focus:border-[#00ff9d] focus:ring-[#00ff9d]/10"
-            />
-            {searchTerm && (
-              <button
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                onClick={() => setSearchTerm("")}
-              >
-                <X className="h-4 w-4" />
-              </button>
+            <Folder className="h-5 w-5" />
+            {folders.length > 0 && (
+              <span className="absolute -top-1 -right-1 h-3 w-3 bg-[#00ff9d] rounded-full border-2 border-[#222]" />
             )}
           </div>
+        )}
+      </button>
 
-          <Dialog
-            open={isDialogOpen}
-            onOpenChange={(open) => {
-              setIsDialogOpen(open)
-              if (!open) resetForm()
-            }}
+      {/* Overlay escuro quando o sidebar estiver visível */}
+      {isSidebarVisible && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-10 transition-opacity duration-300"
+          onClick={() => setIsSidebarVisible(false)}
+        />
+      )}
+
+      {/* Sidebar para pastas com animação */}
+      <div 
+        className={`absolute top-0 left-0 h-full w-64 bg-[#1a1a1a] p-4 shadow-xl z-20 transition-all duration-300 ease-in-out ${
+          isSidebarVisible ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+      <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold text-white flex items-center">
+            <Folder className="h-5 w-5 mr-2 text-[#00ff9d]" />
+            Pastas
+          </h2>
+          <div className="flex space-x-1">
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0 text-gray-400 hover:text-[#00ff9d] hover:bg-[#222]"
+              onClick={() => {
+                resetFolderForm()
+                setIsFolderDialogOpen(true)
+              }}
+            >
+              <FolderPlus className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0 text-gray-400 hover:text-[#00ff9d] hover:bg-[#222]"
+              onClick={() => setIsSidebarVisible(false)}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+        
+        <div className="space-y-1">
+          <button
+            className={`w-full text-left px-3 py-2 rounded-md flex items-center ${
+              selectedFolderId === null
+                ? "bg-[#333] text-[#00ff9d]"
+                : "text-gray-300 hover:bg-[#222] hover:text-white"
+            }`}
+            onClick={() => setSelectedFolderId(null)}
           >
-            <DialogTrigger asChild>
-              <Button
-                onClick={() => {
-                  resetForm()
-                }}
-                className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
+            <Home className="h-4 w-4 mr-2" />
+            <span>Todos os agentes</span>
+          </button>
+          
+          {folders.map((folder) => (
+            <div key={folder.id} className="flex items-center group">
+              <button
+                className={`flex-1 text-left px-3 py-2 rounded-md flex items-center ${
+                  selectedFolderId === folder.id
+                    ? "bg-[#333] text-[#00ff9d]"
+                    : "text-gray-300 hover:bg-[#222] hover:text-white"
+                }`}
+                onClick={() => setSelectedFolderId(folder.id)}
               >
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Agente
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
-              <DialogHeader>
-                <DialogTitle className="text-white">{editingAgent ? "Editar Agente" : "Novo Agente"}</DialogTitle>
-                <DialogDescription className="text-gray-400">
-                  {editingAgent
-                    ? "Edite as informações do agente existente"
-                    : "Preencha as informações para criar um novo agente"}
-                </DialogDescription>
-              </DialogHeader>
+                <Folder className="h-4 w-4 mr-2" />
+                <span className="truncate">{folder.name}</span>
+              </button>
+              
+              <div className="opacity-0 group-hover:opacity-100">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 p-0 text-gray-400 hover:text-white hover:bg-[#222]"
+                    >
+                      <CircleEllipsis className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-[#222] border-[#333] text-white">
+                    <DropdownMenuItem
+                      className="cursor-pointer hover:bg-[#333] focus:bg-[#333]"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleEditFolder(folder)
+                      }}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer text-red-500 hover:bg-[#333] hover:text-red-400 focus:bg-[#333]"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setFolderToDelete(folder)
+                        setIsFolderDeleteDialogOpen(true)
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Conteúdo principal */}
+      <div className={`w-full transition-all duration-300 ease-in-out ${isSidebarVisible ? "pl-64" : "pl-0"}`}>
+        {/* Título da página e barra de pesquisa */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white flex items-center ml-4">
+              {selectedFolderId ? (
+                <>
+                  <Folder className="h-6 w-6 mr-2 text-[#00ff9d]" />
+                  {getFolderNameById(selectedFolderId)}
+                </>
+              ) : (
+                "Agentes"
+              )}
+            </h1>
+            {selectedFolderId && (
+              <p className="text-sm text-gray-400 mt-1">
+                {folders.find(f => f.id === selectedFolderId)?.description}
+              </p>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="Buscar agentes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-[300px] bg-[#222] border-[#444] text-white focus:border-[#00ff9d] focus:ring-[#00ff9d]/10"
+              />
+              {searchTerm && (
+                <button
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                  onClick={() => setSearchTerm("")}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
 
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-                <TabsList className="grid grid-cols-3 bg-[#222]">
-                  <TabsTrigger value="basic" className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]">
-                    Informações Básicas
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="config"
-                    className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
-                  >
-                    Configuração
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="subagents"
-                    className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
-                  >
-                    Sub-Agentes
-                  </TabsTrigger>
-                </TabsList>
+            <Button
+              onClick={() => setIsApiKeysDialogOpen(true)}
+              className="bg-[#222] text-white hover:bg-[#333] border border-[#444]"
+            >
+              <Key className="mr-2 h-4 w-4 text-[#00ff9d]" />
+              Chaves API
+            </Button>
 
-                <ScrollArea className="flex-1 overflow-auto">
-                  <TabsContent value="basic" className="p-4 space-y-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="type" className="text-right text-gray-300">
-                        Tipo de Agente
-                      </Label>
-                      <Select
-                        value={newAgent.type}
-                        onValueChange={(value: AgentType) => setNewAgent({ ...newAgent, type: value } as Partial<Agent> & { type?: string })}
-                      >
-                        <SelectTrigger className="col-span-3 bg-[#222] border-[#444] text-white">
-                          <SelectValue placeholder="Selecione o tipo" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#222] border-[#444] text-white">
-                          {agentTypes.map((type) => (
-                            <SelectItem 
-                              key={type.value} 
-                              value={type.value}
-                              className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
-                            >
-                              <div className="flex items-center gap-2">
-                                <type.icon className="h-4 w-4 text-[#00ff9d]" />
-                                {type.label}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+            <Dialog
+              open={isDialogOpen}
+              onOpenChange={(open) => {
+                setIsDialogOpen(open)
+                if (!open) resetForm()
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button
+                  onClick={() => {
+                    resetForm()
+                  }}
+                  className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Agente
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
+                <DialogHeader>
+                  <DialogTitle className="text-white">{editingAgent ? "Editar Agente" : "Novo Agente"}</DialogTitle>
+                  <DialogDescription className="text-gray-400">
+                    {editingAgent
+                      ? "Edite as informações do agente existente"
+                      : "Preencha as informações para criar um novo agente"}
+                  </DialogDescription>
+                </DialogHeader>
 
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="name" className="text-right text-gray-300">
-                        Nome
-                      </Label>
-                      <Input
-                        id="name"
-                        value={newAgent.name || ""}
-                        onChange={(e) => setNewAgent({ ...newAgent, name: e.target.value } as Partial<Agent> & { name?: string })}
-                        className="col-span-3 bg-[#222] border-[#444] text-white"
-                      />
-                    </div>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
+                  <TabsList className="grid grid-cols-3 bg-[#222]">
+                    <TabsTrigger value="basic" className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]">
+                      Informações Básicas
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="config"
+                      className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
+                    >
+                      Configuração
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="subagents"
+                      className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
+                    >
+                      Sub-Agentes
+                    </TabsTrigger>
+                  </TabsList>
 
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="description" className="text-right text-gray-300">
-                        Descrição
-                      </Label>
-                      <Input
-                        id="description"
-                        value={newAgent.description || ""}
-                        onChange={(e) => setNewAgent({ ...newAgent, description: e.target.value } as Partial<Agent> & { description?: string })}
-                        className="col-span-3 bg-[#222] border-[#444] text-white"
-                      />
-                    </div>
-
-                    {newAgent.type === "llm" && (
-                      <>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="model" className="text-right text-gray-300">
-                            Modelo
-                          </Label>
-                          <Select
-                            value={newAgent.model}
-                            onValueChange={(value) => setNewAgent({ ...newAgent, model: value } as Partial<Agent> & { model?: string })}
-                          >
-                            <SelectTrigger className="col-span-3 bg-[#222] border-[#444] text-white">
-                              <SelectValue placeholder="Selecione o modelo" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#222] border-[#444] text-white">
-                              {availableModels.map((model) => (
-                                <SelectItem 
-                                  key={model.value} 
-                                  value={model.value}
-                                  className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
-                                >
-                                  {model.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="api_key" className="text-right text-gray-300">
-                            API Key
-                          </Label>
-                          <Input
-                            id="api_key"
-                            value={newAgent.api_key || ""}
-                            onChange={(e) => setNewAgent({ ...newAgent, api_key: e.target.value } as Partial<Agent> & { api_key?: string })}
-                            className="col-span-3 bg-[#222] border-[#444] text-white"
-                            type="password"
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-4 items-start gap-4">
-                          <Label htmlFor="instruction" className="text-right pt-2 text-gray-300">
-                            Instruções
-                          </Label>
-                          <Textarea
-                            id="instruction"
-                            value={newAgent.instruction || ""}
-                            onChange={(e) => setNewAgent({ ...newAgent, instruction: e.target.value } as Partial<Agent> & { instruction?: string })}
-                            className="col-span-3 bg-[#222] border-[#444] text-white"
-                            rows={4}
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {newAgent.type === "a2a" && (
+                  <ScrollArea className="flex-1 overflow-auto">
+                    <TabsContent value="basic" className="p-4 space-y-4">
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="agent_card_url" className="text-right text-gray-300">
-                          URL do Agent Card
+                        <Label htmlFor="type" className="text-right text-gray-300">
+                          Tipo de Agente
+                        </Label>
+                        <Select
+                          value={newAgent.type}
+                          onValueChange={(value: AgentType) => setNewAgent({ ...newAgent, type: value } as Partial<Agent> & { type?: string })}
+                        >
+                          <SelectTrigger className="col-span-3 bg-[#222] border-[#444] text-white">
+                            <SelectValue placeholder="Selecione o tipo" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#222] border-[#444] text-white">
+                            {agentTypes.map((type) => (
+                              <SelectItem 
+                                key={type.value} 
+                                value={type.value}
+                                className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <type.icon className="h-4 w-4 text-[#00ff9d]" />
+                                  {type.label}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="name" className="text-right text-gray-300">
+                          Nome
                         </Label>
                         <Input
-                          id="agent_card_url"
-                          value={newAgent.agent_card_url || ""}
-                          onChange={(e) => setNewAgent({ ...newAgent, agent_card_url: e.target.value } as Partial<Agent> & { agent_card_url?: string })}
+                          id="name"
+                          value={newAgent.name || ""}
+                          onChange={(e) => setNewAgent({ ...newAgent, name: e.target.value } as Partial<Agent> & { name?: string })}
                           className="col-span-3 bg-[#222] border-[#444] text-white"
                         />
                       </div>
-                    )}
 
-                    {newAgent.type === "loop" && newAgent.config?.max_iterations && (
-                      <div className="space-y-1 text-xs text-gray-400">
-                        <div>
-                          <strong>Máx. Iterações:</strong> {newAgent.config.max_iterations}
-                        </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="description" className="text-right text-gray-300">
+                          Descrição
+                        </Label>
+                        <Input
+                          id="description"
+                          value={newAgent.description || ""}
+                          onChange={(e) => setNewAgent({ ...newAgent, description: e.target.value } as Partial<Agent> & { description?: string })}
+                          className="col-span-3 bg-[#222] border-[#444] text-white"
+                        />
                       </div>
-                    )}
 
-                    {newAgent.type === "workflow" && (
-                      <div className="space-y-1 text-xs text-gray-400">
-                        <div>
-                          <strong>Tipo:</strong> Fluxo Visual
-                        </div>
-                        {newAgent.config?.workflow && (
-                          <div>
-                            <strong>Elementos:</strong> {(newAgent.config.workflow.nodes?.length || 0)} nós, {(newAgent.config.workflow.edges?.length || 0)} conexões
+                      {newAgent.type === "llm" && (
+                        <>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="model" className="text-right text-gray-300">
+                              Modelo
+                            </Label>
+                            <Select
+                              value={newAgent.model}
+                              onValueChange={(value) => setNewAgent({ ...newAgent, model: value } as Partial<Agent> & { model?: string })}
+                            >
+                              <SelectTrigger className="col-span-3 bg-[#222] border-[#444] text-white">
+                                <SelectValue placeholder="Selecione o modelo" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-[#222] border-[#444] text-white">
+                                {availableModels.map((model) => (
+                                  <SelectItem 
+                                    key={model.value} 
+                                    value={model.value}
+                                    className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
+                                  >
+                                    {model.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </TabsContent>
 
-                  <TabsContent value="config" className="p-4 space-y-4">
-                    {newAgent.type === "llm" && (
-                      <>
-                        <div className="space-y-4">
-                          <h3 className="text-lg font-medium text-white">Servidores MCP</h3>
-                          <div className="border border-[#444] rounded-md p-4 bg-[#222]">
-                            <p className="text-sm text-gray-400 mb-4">
-                              Configure os servidores MCP que este agente pode utilizar.
-                            </p>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="api_key" className="text-right text-gray-300">
+                              API Key
+                            </Label>
+                            <div className="col-span-3 space-y-4">
+                              <div className="flex items-center">
+                                <Select
+                                  value={newAgent.api_key_id || ""}
+                                  onValueChange={(value) => setNewAgent({
+                                    ...newAgent,
+                                    api_key_id: value,
+                                  })}
+                                >
+                                  <SelectTrigger className="flex-1 bg-[#222] border-[#444] text-white">
+                                    <SelectValue placeholder="Selecione uma chave de API" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-[#222] border-[#444] text-white">
+                                    {apiKeys.length > 0 ? (
+                                      apiKeys
+                                        .filter(key => key.is_active !== false)
+                                        .map((key) => (
+                                          <SelectItem
+                                            key={key.id}
+                                            value={key.id}
+                                            className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
+                                          >
+                                            <div className="flex items-center">
+                                              <span>{key.name}</span>
+                                              <Badge className="ml-2 bg-[#333] text-[#00ff9d] text-xs">
+                                                {key.provider}
+                                              </Badge>
+                                            </div>
+                                          </SelectItem>
+                                        ))
+                                    ) : (
+                                      <div className="text-gray-500 px-2 py-1.5 pl-8">
+                                        Nenhuma chave disponível
+                                      </div>
+                                    )}
+                                  </SelectContent>
+                                </Select>
 
-                            {newAgent.config?.mcp_servers && newAgent.config.mcp_servers.length > 0 ? (
-                              <div className="space-y-2">
-                                {newAgent.config.mcp_servers.map((mcpConfig) => {
-                                  // Encontrar o servidor MCP correspondente para obter name e description
-                                  const mcpServer = availableMCPs.find(mcp => mcp.id === mcpConfig.id);
-                                  return (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setIsApiKeysDialogOpen(true)}
+                                  className="ml-2 bg-[#222] text-[#00ff9d] hover:bg-[#333]"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+
+                              {apiKeys.length === 0 && (
+                                <div className="flex items-center text-xs text-gray-400">
+                                  <Info className="h-3 w-3 mr-1 inline" />
+                                  <span>
+                                    Você precisa <Button variant="link" onClick={() => setIsApiKeysDialogOpen(true)} className="h-auto p-0 text-xs text-[#00ff9d]">
+                                      cadastrar chaves de API
+                                    </Button> antes de criar um agente.
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="instruction" className="text-right text-gray-300">
+                              Instruções
+                            </Label>
+                            <Textarea
+                              id="instruction"
+                              value={newAgent.instruction || ""}
+                              onChange={(e) => setNewAgent({ ...newAgent, instruction: e.target.value } as Partial<Agent> & { instruction?: string })}
+                              className="col-span-3 bg-[#222] border-[#444] text-white"
+                              rows={4}
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {newAgent.type === "a2a" && (
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="agent_card_url" className="text-right text-gray-300">
+                            URL do Agent Card
+                          </Label>
+                          <Input
+                            id="agent_card_url"
+                            value={newAgent.agent_card_url || ""}
+                            onChange={(e) => setNewAgent({ ...newAgent, agent_card_url: e.target.value } as Partial<Agent> & { agent_card_url?: string })}
+                            className="col-span-3 bg-[#222] border-[#444] text-white"
+                          />
+                        </div>
+                      )}
+
+                      {newAgent.type === "loop" && newAgent.config?.max_iterations && (
+                        <div className="space-y-1 text-xs text-gray-400">
+                          <div>
+                            <strong>Máx. Iterações:</strong> {newAgent.config.max_iterations}
+                          </div>
+                        </div>
+                      )}
+
+                      {newAgent.type === "workflow" && (
+                        <div className="space-y-1 text-xs text-gray-400">
+                          <div>
+                            <strong>Tipo:</strong> Fluxo Visual
+                          </div>
+                          {newAgent.config?.workflow && (
+                            <div>
+                              <strong>Elementos:</strong> {(newAgent.config.workflow.nodes?.length || 0)} nós, {(newAgent.config.workflow.edges?.length || 0)} conexões
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="config" className="p-4 space-y-4">
+                      {newAgent.type === "llm" && (
+                        <>
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-medium text-white">Servidores MCP</h3>
+                            <div className="border border-[#444] rounded-md p-4 bg-[#222]">
+                              <p className="text-sm text-gray-400 mb-4">
+                                Configure os servidores MCP que este agente pode utilizar.
+                              </p>
+
+                              {newAgent.config?.mcp_servers && newAgent.config.mcp_servers.length > 0 ? (
+                                <div className="space-y-2">
+                                  {newAgent.config.mcp_servers.map((mcpConfig) => {
+                                    // Encontrar o servidor MCP correspondente para obter name e description
+                                    const mcpServer = availableMCPs.find(mcp => mcp.id === mcpConfig.id);
+                                    return (
+                                      <div
+                                        key={mcpConfig.id}
+                                        className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md"
+                                      >
+                                        <div>
+                                          <p className="font-medium text-white">{mcpServer?.name || mcpConfig.id}</p>
+                                          <p className="text-sm text-gray-400">{mcpServer?.description?.substring(0, 100)}...</p>
+                                          {mcpConfig.tools && mcpConfig.tools.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {mcpConfig.tools.map((toolId) => (
+                                                <Badge
+                                                  key={toolId}
+                                                  variant="outline"
+                                                  className="text-xs bg-[#333] text-[#00ff9d] border-[#00ff9d]/30"
+                                                >
+                                                  {toolId}
+                                                </Badge>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleOpenMCPDialog(mcpConfig)}
+                                            className="flex items-center text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
+                                          >
+                                            <Settings className="h-4 w-4 mr-1" /> Configurar
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleRemoveMCP(mcpConfig.id)}
+                                            className="text-red-500 hover:text-red-400 hover:bg-[#333]"
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+
+                                  {/* Botão para adicionar mais servidores MCP, sempre visível */}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleOpenMCPDialog()}
+                                    className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                                  >
+                                    <Plus className="h-4 w-4 mr-1" /> Adicionar Servidor MCP
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
+                                  <div>
+                                    <p className="font-medium text-white">Sem servidores MCP configurados</p>
+                                    <p className="text-sm text-gray-400">Adicione servidores MCP para este agente</p>
+                                  </div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleOpenMCPDialog()}
+                                    className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                                  >
+                                    <Plus className="h-4 w-4 mr-1" /> Adicionar
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Nova seção para MCPs customizados */}
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-medium text-white">Servidores MCP Customizados</h3>
+                            <div className="border border-[#444] rounded-md p-4 bg-[#222]">
+                              <p className="text-sm text-gray-400 mb-4">
+                                Configure servidores MCP personalizados com URL e cabeçalhos HTTP.
+                              </p>
+
+                              {newAgent.config?.custom_mcp_servers && newAgent.config.custom_mcp_servers.length > 0 ? (
+                                <div className="space-y-2">
+                                  {newAgent.config.custom_mcp_servers.map((customMCP) => (
                                     <div
-                                      key={mcpConfig.id}
+                                      key={customMCP.url}
                                       className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md"
                                     >
                                       <div>
-                                        <p className="font-medium text-white">{mcpServer?.name || mcpConfig.id}</p>
-                                        <p className="text-sm text-gray-400">{mcpServer?.description?.substring(0, 100)}...</p>
-                                        {mcpConfig.tools && mcpConfig.tools.length > 0 && (
-                                          <div className="flex flex-wrap gap-1 mt-1">
-                                            {mcpConfig.tools.map((toolId) => (
-                                              <Badge
-                                                key={toolId}
-                                                variant="outline"
-                                                className="text-xs bg-[#333] text-[#00ff9d] border-[#00ff9d]/30"
-                                              >
-                                                {toolId}
-                                              </Badge>
-                                            ))}
-                                          </div>
-                                        )}
+                                        <p className="font-medium text-white">{customMCP.url}</p>
+                                        <p className="text-sm text-gray-400">
+                                          {Object.keys(customMCP.headers || {}).length > 0
+                                            ? `${Object.keys(customMCP.headers || {}).length} cabeçalhos configurados`
+                                            : "Sem cabeçalhos configurados"}
+                                        </p>
                                       </div>
                                       <div className="flex gap-2">
                                         <Button
                                           variant="ghost"
                                           size="sm"
-                                          onClick={() => handleOpenMCPDialog(mcpConfig)}
+                                          onClick={() => handleOpenCustomMCPDialog(customMCP)}
                                           className="flex items-center text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
                                         >
                                           <Settings className="h-4 w-4 mr-1" /> Configurar
@@ -901,549 +1474,218 @@ export default function AgentsPage() {
                                         <Button
                                           variant="ghost"
                                           size="sm"
-                                          onClick={() => handleRemoveMCP(mcpConfig.id)}
+                                          onClick={() => handleRemoveCustomMCP(customMCP.url)}
                                           className="text-red-500 hover:text-red-400 hover:bg-[#333]"
                                         >
                                           <X className="h-4 w-4" />
                                         </Button>
                                       </div>
                                     </div>
-                                  );
-                                })}
+                                  ))}
 
-                                {/* Botão para adicionar mais servidores MCP, sempre visível */}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleOpenMCPDialog()}
-                                  className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
-                                >
-                                  <Plus className="h-4 w-4 mr-1" /> Adicionar Servidor MCP
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
-                                <div>
-                                  <p className="font-medium text-white">Sem servidores MCP configurados</p>
-                                  <p className="text-sm text-gray-400">Adicione servidores MCP para este agente</p>
-                                </div>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleOpenMCPDialog()}
-                                  className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
-                                >
-                                  <Plus className="h-4 w-4 mr-1" /> Adicionar
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Nova seção para MCPs customizados */}
-                        <div className="space-y-4">
-                          <h3 className="text-lg font-medium text-white">Servidores MCP Customizados</h3>
-                          <div className="border border-[#444] rounded-md p-4 bg-[#222]">
-                            <p className="text-sm text-gray-400 mb-4">
-                              Configure servidores MCP personalizados com URL e cabeçalhos HTTP.
-                            </p>
-
-                            {newAgent.config?.custom_mcp_servers && newAgent.config.custom_mcp_servers.length > 0 ? (
-                              <div className="space-y-2">
-                                {newAgent.config.custom_mcp_servers.map((customMCP) => (
-                                  <div
-                                    key={customMCP.url}
-                                    className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md"
+                                  {/* Botão para adicionar mais MCPs customizados */}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleOpenCustomMCPDialog()}
+                                    className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
                                   >
-                                    <div>
-                                      <p className="font-medium text-white">{customMCP.url}</p>
-                                      <p className="text-sm text-gray-400">
-                                        {Object.keys(customMCP.headers || {}).length > 0
-                                          ? `${Object.keys(customMCP.headers || {}).length} cabeçalhos configurados`
-                                          : "Sem cabeçalhos configurados"}
-                                      </p>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleOpenCustomMCPDialog(customMCP)}
-                                        className="flex items-center text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
-                                      >
-                                        <Settings className="h-4 w-4 mr-1" /> Configurar
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleRemoveCustomMCP(customMCP.url)}
-                                        className="text-red-500 hover:text-red-400 hover:bg-[#333]"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ))}
-
-                                {/* Botão para adicionar mais MCPs customizados */}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleOpenCustomMCPDialog()}
-                                  className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
-                                >
-                                  <Plus className="h-4 w-4 mr-1" /> Adicionar MCP Customizado
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
-                                <div>
-                                  <p className="font-medium text-white">Sem MCPs customizados configurados</p>
-                                  <p className="text-sm text-gray-400">Adicione MCPs customizados para este agente</p>
+                                    <Plus className="h-4 w-4 mr-1" /> Adicionar MCP Customizado
+                                  </Button>
                                 </div>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleOpenCustomMCPDialog()}
-                                  className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
-                                >
-                                  <Plus className="h-4 w-4 mr-1" /> Adicionar
-                                </Button>
-                              </div>
-                            )}
+                              ) : (
+                                <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
+                                  <div>
+                                    <p className="font-medium text-white">Sem MCPs customizados configurados</p>
+                                    <p className="text-sm text-gray-400">Adicione MCPs customizados para este agente</p>
+                                  </div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleOpenCustomMCPDialog()}
+                                    className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                                  >
+                                    <Plus className="h-4 w-4 mr-1" /> Adicionar
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        
-                        {/* API Key Display Section */}
-                        {editingAgent && (editingAgent.config?.api_key || "not defined") && (
-                          <div className="mt-6 space-y-2">
-                            <h3 className="text-lg font-medium text-white">Informações de Segurança</h3>
-                            <div className="border border-[#444] rounded-md p-4 bg-[#222]">
-                              <div className="space-y-4">
-                                <div>
-                                  <Label className="text-gray-300 block mb-2">API Key</Label>
-                                  <div className="flex items-center">
-                                    <div className="relative flex-1">
-                                      <div className="bg-[#1a1a1a] border border-[#444] rounded px-3 py-2 text-[#00ff9d] font-mono text-sm relative overflow-hidden">
-                                        {isApiKeyVisible 
-                                          ? (editingAgent.config?.api_key || "not defined")
-                                          : '•'.repeat(Math.min(16, (editingAgent.config?.api_key || "not defined" || "").length))}
+                          
+                          {/* API Key Display Section */}
+                          {editingAgent && (editingAgent.config?.api_key || "not defined") && (
+                            <div className="mt-6 space-y-2">
+                              <h3 className="text-lg font-medium text-white">Informações de Segurança</h3>
+                              <div className="border border-[#444] rounded-md p-4 bg-[#222]">
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label className="text-gray-300 block mb-2">API Key</Label>
+                                    <div className="flex items-center">
+                                      <div className="relative flex-1">
+                                        <div className="bg-[#1a1a1a] border border-[#444] rounded px-3 py-2 text-[#00ff9d] font-mono text-sm relative overflow-hidden">
+                                          {isApiKeyVisible 
+                                            ? (editingAgent.config?.api_key || "not defined")
+                                            : '•'.repeat(Math.min(16, (editingAgent.config?.api_key || "not defined" || "").length))}
+                                        </div>
+                                      </div>
+                                      <div className="flex ml-2 space-x-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8 bg-[#333] text-white hover:bg-[#444] hover:text-[#00ff9d]"
+                                          onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
+                                          title={isApiKeyVisible ? "Ocultar API Key" : "Mostrar API Key"}
+                                        >
+                                          {isApiKeyVisible ? (
+                                            <EyeOff className="h-4 w-4" />
+                                          ) : (
+                                            <Eye className="h-4 w-4" />
+                                          )}
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8 bg-[#333] text-white hover:bg-[#444] hover:text-[#00ff9d]"
+                                          onClick={() => copyToClipboard(editingAgent.config?.api_key || "not defined" || "")}
+                                          title="Copiar API Key"
+                                        >
+                                          <Copy className="h-4 w-4" />
+                                        </Button>
                                       </div>
                                     </div>
-                                    <div className="flex ml-2 space-x-1">
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 bg-[#333] text-white hover:bg-[#444] hover:text-[#00ff9d]"
-                                        onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
-                                        title={isApiKeyVisible ? "Ocultar API Key" : "Mostrar API Key"}
-                                      >
-                                        {isApiKeyVisible ? (
-                                          <EyeOff className="h-4 w-4" />
-                                        ) : (
-                                          <Eye className="h-4 w-4" />
-                                        )}
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 bg-[#333] text-white hover:bg-[#444] hover:text-[#00ff9d]"
-                                        onClick={() => copyToClipboard(editingAgent.config?.api_key || "not defined" || "")}
-                                        title="Copiar API Key"
-                                      >
-                                        <Copy className="h-4 w-4" />
-                                      </Button>
-                                    </div>
+                                    <p className="text-xs text-gray-400 mt-2">
+                                      Esta é a chave de API do seu agente. Mantenha-a segura e não compartilhe com terceiros.
+                                    </p>
                                   </div>
-                                  <p className="text-xs text-gray-400 mt-2">
-                                    Esta é a chave de API do seu agente. Mantenha-a segura e não compartilhe com terceiros.
-                                  </p>
                                 </div>
                               </div>
                             </div>
+                          )}
+                        </>
+                      )}
+
+                      {(newAgent.type === "sequential" || newAgent.type === "parallel" || newAgent.type === "loop" || newAgent.type === "workflow") && (
+                        <div className="flex items-center justify-center h-40">
+                          <div className="text-center">
+                            <p className="text-gray-400">Configure os sub-agentes na aba "Sub-Agentes"</p>
                           </div>
-                        )}
-                      </>
-                    )}
-
-                    {(newAgent.type === "sequential" || newAgent.type === "parallel" || newAgent.type === "loop" || newAgent.type === "workflow") && (
-                      <div className="flex items-center justify-center h-40">
-                        <div className="text-center">
-                          <p className="text-gray-400">Configure os sub-agentes na aba "Sub-Agentes"</p>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {newAgent.type === "a2a" && (
-                      <div className="flex items-center justify-center h-40">
-                        <div className="text-center">
-                          <p className="text-gray-400">Agentes A2A são configurados através do Agent Card URL</p>
-                          <p className="text-sm text-gray-500 mt-2">
-                            Sub-agentes podem ser configurados na aba "Sub-Agentes"
+                      {newAgent.type === "a2a" && (
+                        <div className="flex items-center justify-center h-40">
+                          <div className="text-center">
+                            <p className="text-gray-400">Agentes A2A são configurados através do Agent Card URL</p>
+                            <p className="text-sm text-gray-500 mt-2">
+                              Sub-agentes podem ser configurados na aba "Sub-Agentes"
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="subagents" className="p-4 space-y-4">
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-lg font-medium text-white">Sub-Agentes</h3>
+                          <div className="text-sm text-gray-400">
+                            {newAgent.config?.sub_agents?.length || 0} sub-agentes selecionados
+                          </div>
+                        </div>
+
+                        <div className="border border-[#444] rounded-md p-4 bg-[#222]">
+                          <p className="text-sm text-gray-400 mb-4">
+                            Selecione os agentes que serão utilizados como sub-agentes.
                           </p>
-                        </div>
-                      </div>
-                    )}
-                  </TabsContent>
 
-                  <TabsContent value="subagents" className="p-4 space-y-4">
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-medium text-white">Sub-Agentes</h3>
-                        <div className="text-sm text-gray-400">
-                          {newAgent.config?.sub_agents?.length || 0} sub-agentes selecionados
-                        </div>
-                      </div>
-
-                      <div className="border border-[#444] rounded-md p-4 bg-[#222]">
-                        <p className="text-sm text-gray-400 mb-4">
-                          Selecione os agentes que serão utilizados como sub-agentes.
-                        </p>
-
-                        {/* Lista de sub-agentes selecionados */}
-                        {newAgent.config?.sub_agents && newAgent.config.sub_agents.length > 0 ? (
-                          <div className="space-y-2 mb-4">
-                            <h4 className="text-sm font-medium text-white">Sub-agentes selecionados:</h4>
-                            <div className="flex flex-wrap gap-2">
-                              {newAgent.config.sub_agents.map((agentId) => (
-                                <Badge
-                                  key={agentId}
-                                  variant="secondary"
-                                  className="flex items-center gap-1 bg-[#333] text-[#00ff9d]"
-                                >
-                                  {getAgentNameById(agentId)}
-                                  <button
-                                    onClick={() => handleRemoveSubAgent(agentId)}
-                                    className="ml-1 h-4 w-4 rounded-full hover:bg-[#444] inline-flex items-center justify-center"
+                          {/* Lista de sub-agentes selecionados */}
+                          {newAgent.config?.sub_agents && newAgent.config.sub_agents.length > 0 ? (
+                            <div className="space-y-2 mb-4">
+                              <h4 className="text-sm font-medium text-white">Sub-agentes selecionados:</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {newAgent.config.sub_agents.map((agentId) => (
+                                  <Badge
+                                    key={agentId}
+                                    variant="secondary"
+                                    className="flex items-center gap-1 bg-[#333] text-[#00ff9d]"
                                   >
-                                    ×
-                                  </button>
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-center py-4 text-gray-400 mb-4">Nenhum sub-agente selecionado</div>
-                        )}
-
-                        {/* Lista de agentes disponíveis */}
-                        <h4 className="text-sm font-medium text-white mb-2">Agentes disponíveis:</h4>
-                        <div className="space-y-2 max-h-60 overflow-y-auto">
-                          {agents
-                            .filter((agent) => agent.id !== editingAgent?.id) // Não mostrar o próprio agente sendo editado
-                            .map((agent) => (
-                              <div
-                                key={agent.id}
-                                className="flex items-center justify-between p-2 hover:bg-[#2a2a2a] rounded-md"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-white">{agent.name}</span>
-                                  <Badge variant="outline" className="ml-2 border-[#444] text-[#00ff9d]">
-                                    {getAgentTypeName(agent.type)}
+                                    {getAgentNameById(agentId)}
+                                    <button
+                                      onClick={() => handleRemoveSubAgent(agentId)}
+                                      className="ml-1 h-4 w-4 rounded-full hover:bg-[#444] inline-flex items-center justify-center"
+                                    >
+                                      ×
+                                    </button>
                                   </Badge>
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleAddSubAgent(agent.id)}
-                                  disabled={newAgent.config?.sub_agents?.includes(agent.id)}
-                                  className={
-                                    newAgent.config?.sub_agents?.includes(agent.id)
-                                      ? "text-gray-500 bg-[#222] hover:bg-[#333]"
-                                      : "text-[#00ff9d] hover:bg-[#333] bg-[#222]"
-                                  }
-                                >
-                                  {newAgent.config?.sub_agents?.includes(agent.id) ? "Adicionado" : "Adicionar"}
-                                </Button>
+                                ))}
                               </div>
-                            ))}
-                        </div>
-                      </div>
-                    </div>
-                  </TabsContent>
-                </ScrollArea>
-              </Tabs>
+                            </div>
+                          ) : (
+                            <div className="text-center py-4 text-gray-400 mb-4">Nenhum sub-agente selecionado</div>
+                          )}
 
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                  className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
-                >
-                  Cancelar
-                </Button>
-                <Button onClick={handleAddAgent} className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]">
-                  {editingAgent ? "Salvar Alterações" : "Adicionar Agente"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="bg-[#1a1a1a] border-[#333] text-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
-              Tem certeza que deseja excluir o agente "{agentToDelete?.name}"? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white">
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteAgent} className="bg-red-600 text-white hover:bg-red-700">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Diálogo para configuração de MCP */}
-      <Dialog open={isMCPDialogOpen} onOpenChange={setIsMCPDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
-          <DialogHeader>
-            <DialogTitle className="text-white">Configurar Servidor MCP</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Selecione um servidor MCP e configure suas ferramentas.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-auto p-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="mcp-select" className="text-gray-300">
-                  Servidor MCP
-                </Label>
-                <Select
-                  value={selectedMCP?.id}
-                  onValueChange={(value) => {
-                    const mcp = availableMCPs.find((m) => m.id === value)
-                    if (mcp) {
-                      setSelectedMCP(mcp)
-                      // Inicializar variáveis de ambiente
-                      const initialEnvs: Record<string, string> = {}
-                      Object.keys(mcp.environments).forEach((key) => {
-                        initialEnvs[key] = ""
-                      })
-                      setMcpEnvs(initialEnvs)
-                      setSelectedMCPTools([])
-                    }
-                  }}
-                >
-                  <SelectTrigger className="bg-[#222] border-[#444] text-white">
-                    <SelectValue placeholder="Selecione um servidor MCP" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#222] border-[#444] text-white">
-                    {availableMCPs.map((mcp) => (
-                      <SelectItem 
-                        key={mcp.id} 
-                        value={mcp.id}
-                        className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Server className="h-4 w-4 text-[#00ff9d]" />
-                          {mcp.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedMCP && (
-                <>
-                  <div className="border border-[#444] rounded-md p-3 bg-[#222]">
-                    <p className="font-medium text-white">{selectedMCP.name}</p>
-                    <p className="text-sm text-gray-400">{selectedMCP.description?.substring(0, 100)}...</p>
-                    <div className="mt-2 text-xs text-gray-400">
-                      <p>
-                        <strong>Tipo:</strong> {selectedMCP.type}
-                      </p>
-                      <p>
-                        <strong>Configuração:</strong> {selectedMCP.config_type === "sse" ? "SSE" : "Studio"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Variáveis de ambiente */}
-                  {selectedMCP.environments && Object.keys(selectedMCP.environments).length > 0 && (
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-medium text-white">Variáveis de Ambiente</h3>
-                      {Object.entries(selectedMCP.environments || {}).map(([key, value]) => (
-                        <div key={key} className="grid grid-cols-3 items-center gap-4">
-                          <Label htmlFor={`env-${key}`} className="text-right text-gray-300">
-                            {key}
-                          </Label>
-                          <Input
-                            id={`env-${key}`}
-                            value={mcpEnvs[key] || ""}
-                            onChange={(e) => setMcpEnvs({ ...mcpEnvs, [key]: e.target.value })}
-                            className="col-span-2 bg-[#222] border-[#444] text-white"
-                            placeholder={value as string}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Ferramentas disponíveis */}
-                  {selectedMCP.tools && selectedMCP.tools.length > 0 && (
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-medium text-white">Ferramentas Disponíveis</h3>
-                      <div className="border border-[#444] rounded-md p-3 bg-[#222]">
-                        {selectedMCP.tools.map((tool) => (
-                          <div key={tool.id} className="flex items-center space-x-2 py-1">
-                            <Checkbox
-                              id={`tool-${tool.id}`}
-                              checked={selectedMCPTools.includes(tool.id)}
-                              onCheckedChange={() => toggleMCPTool(tool.id)}
-                            />
-                            <Label htmlFor={`tool-${tool.id}`} className="text-sm text-gray-300">
-                              {tool.name}
-                            </Label>
+                          {/* Lista de agentes disponíveis */}
+                          <h4 className="text-sm font-medium text-white mb-2">Agentes disponíveis:</h4>
+                          <div className="space-y-2 max-h-60 overflow-y-auto">
+                            {agents
+                              .filter((agent) => agent.id !== editingAgent?.id) // Não mostrar o próprio agente sendo editado
+                              .map((agent) => (
+                                <div
+                                  key={agent.id}
+                                  className="flex items-center justify-between p-2 hover:bg-[#2a2a2a] rounded-md"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-white">{agent.name}</span>
+                                    <Badge variant="outline" className="ml-2 border-[#444] text-[#00ff9d]">
+                                      {getAgentTypeName(agent.type)}
+                                    </Badge>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleAddSubAgent(agent.id)}
+                                    disabled={newAgent.config?.sub_agents?.includes(agent.id)}
+                                    className={
+                                      newAgent.config?.sub_agents?.includes(agent.id)
+                                        ? "text-gray-500 bg-[#222] hover:bg-[#333]"
+                                        : "text-[#00ff9d] hover:bg-[#333] bg-[#222]"
+                                    }
+                                  >
+                                    {newAgent.config?.sub_agents?.includes(agent.id) ? "Adicionado" : "Adicionar"}
+                                  </Button>
+                                </div>
+                              ))}
                           </div>
-                        ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-          
-          <DialogFooter className="p-4 pt-2 border-t border-[#333]">
-            <Button
-              variant="outline"
-              onClick={() => setIsMCPDialogOpen(false)}
-              className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleAddMCP} 
-              className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
-              disabled={!selectedMCP}
-            >
-              Adicionar MCP
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                    </TabsContent>
+                  </ScrollArea>
+                </Tabs>
 
-      {/* Diálogo para configuração de MCP customizado */}
-      <Dialog open={isCustomMCPDialogOpen} onOpenChange={setIsCustomMCPDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
-          <DialogHeader>
-            <DialogTitle className="text-white">Configurar MCP Customizado</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Configure a URL e os cabeçalhos HTTP para o servidor MCP personalizado.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-auto p-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="custom-mcp-url" className="text-gray-300">
-                  URL do MCP
-                </Label>
-                <Input
-                  id="custom-mcp-url"
-                  value={selectedCustomMCP?.url || ""}
-                  onChange={(e) => setSelectedCustomMCP({ ...selectedCustomMCP || {}, url: e.target.value })}
-                  className="bg-[#222] border-[#444] text-white"
-                  placeholder="https://meu-servidor-mcp.com/api"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium text-white">Cabeçalhos HTTP</h3>
-                <div className="border border-[#444] rounded-md p-3 bg-[#222]">
-                  {customMCPHeadersList.map((header, index) => (
-                    <div key={header.id} className="grid grid-cols-5 items-center gap-2 mb-2">
-                      <Input
-                        value={header.key}
-                        onChange={(e) => {
-                          const updatedList = [...customMCPHeadersList];
-                          updatedList[index] = { 
-                            ...updatedList[index], 
-                            key: e.target.value 
-                          };
-                          setCustomMCPHeadersList(updatedList);
-                        }}
-                        className="col-span-2 bg-[#333] border-[#444] text-white"
-                        placeholder="Nome do cabeçalho"
-                      />
-                      <Input
-                        value={header.value}
-                        onChange={(e) => {
-                          const updatedList = [...customMCPHeadersList];
-                          updatedList[index] = { 
-                            ...updatedList[index], 
-                            value: e.target.value 
-                          };
-                          setCustomMCPHeadersList(updatedList);
-                        }}
-                        className="col-span-2 bg-[#333] border-[#444] text-white"
-                        placeholder="Valor do cabeçalho"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setCustomMCPHeadersList(customMCPHeadersList.filter((_, i) => i !== index));
-                        }}
-                        className="col-span-1 h-8 text-red-500 hover:text-red-400 hover:bg-[#444]"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-
+                <DialogFooter>
                   <Button
                     variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setCustomMCPHeadersList([
-                        ...customMCPHeadersList,
-                        { id: `header-${Date.now()}`, key: "", value: "" }
-                      ]);
-                    }}
-                    className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                    onClick={() => setIsDialogOpen(false)}
+                    className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
                   >
-                    <Plus className="h-4 w-4 mr-1" /> Adicionar Cabeçalho
+                    Cancelar
                   </Button>
+                  <Button onClick={handleAddAgent} className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]">
+                    {editingAgent ? "Salvar Alterações" : "Adicionar Agente"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+                          </div>
                 </div>
-              </div>
-            </div>
-          </div>
-          
-          <DialogFooter className="p-4 pt-2 border-t border-[#333]">
-            <Button
-              variant="outline"
-              onClick={() => setIsCustomMCPDialogOpen(false)}
-              className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleAddCustomMCP} 
-              className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
-              disabled={!selectedCustomMCP?.url}
-            >
-              {selectedCustomMCP?.url ? "Salvar MCP Customizado" : "Adicionar MCP Customizado"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00ff9d]"></div>
-        </div>
-      ) : filteredAgents.length > 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center h-[60vh]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00ff9d]"></div>
+                      </div>
+        ) : filteredAgents.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAgents.map((agent) => (
+            {filteredAgents.map((agent) => (
             <Card
               key={agent.id}
               className="overflow-hidden bg-[#1a1a1a] border-[#333] hover:border-[#00ff9d]/50 hover:shadow-[0_0_15px_rgba(0,255,157,0.15)] transition-all rounded-xl"
@@ -1466,27 +1708,46 @@ export default function AgentsPage() {
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    {agent.type === "workflow" && (
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-white hover:bg-[#333]/50 hover:text-[#00ff9d]"
-                        onClick={() => router.push(`/agentes/fluxos?agentId=${agent.id}`)}
                       >
-                        <Workflow className="h-4 w-4" />
+                            <CircleEllipsis className="h-4 w-4" />
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-white hover:bg-[#333]/50 hover:text-[#00ff9d]"
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-[#222] border-[#333] text-white">
+                          {agent.type === "workflow" && (
+                            <DropdownMenuItem
+                              className="cursor-pointer hover:bg-[#333] focus:bg-[#333]"
+                              onClick={() => router.push(`/agentes/fluxos?agentId=${agent.id}`)}
+                            >
+                              <Workflow className="h-4 w-4 mr-2" />
+                              Editor de Fluxo
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            className="cursor-pointer hover:bg-[#333] focus:bg-[#333]"
+                            onClick={() => startMoveAgent(agent)}
+                          >
+                            <MoveRight className="h-4 w-4 mr-2" />
+                            Mover para Pasta
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer text-red-500 hover:bg-[#333] hover:text-red-400 focus:bg-[#333]"
                       onClick={() => {
                         setAgentToDelete(agent);
                         setIsDeleteDialogOpen(true);
                       }}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                   </div>
                 </div>
               </CardHeader>
@@ -1498,6 +1759,14 @@ export default function AgentsPage() {
                     <div>
                       <strong>Modelo:</strong> {agent.model}
                     </div>
+                    {agent.api_key_id && (
+                      <div>
+                        <strong>API Key:</strong>{" "}
+                        <Badge className="text-xs bg-[#333] text-[#00ff9d] border-[#00ff9d]/30">
+                          {getApiKeyNameById(agent.api_key_id)}
+                        </Badge>
+                      </div>
+                    )}
                     {agent.instruction && (
                       <div>
                         <strong>Instruções:</strong>{" "}
@@ -1636,30 +1905,38 @@ export default function AgentsPage() {
             </Card>
           ))}
         </div>
-      ) : searchTerm ? (
-        <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-          <div className="mb-6 p-8 rounded-full bg-[#1a1a1a] border border-[#333]">
-            <Search className="h-16 w-16 text-[#00ff9d]" />
+        ) : searchTerm ? (
+          <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+            <div className="mb-6 p-8 rounded-full bg-[#1a1a1a] border border-[#333]">
+              <Search className="h-16 w-16 text-[#00ff9d]" />
+            </div>
+            <h2 className="text-2xl font-semibold text-white mb-3">Nenhum agente encontrado</h2>
+            <p className="text-gray-300 mb-6 max-w-md">
+              Não encontramos nenhum agente que corresponda à sua busca: "{searchTerm}"
+            </p>
+            <Button
+              onClick={() => setSearchTerm("")}
+              className="bg-[#222] text-white hover:bg-[#333]"
+            >
+              Limpar busca
+            </Button>
           </div>
-          <h2 className="text-2xl font-semibold text-white mb-3">Nenhum agente encontrado</h2>
-          <p className="text-gray-300 mb-6 max-w-md">
-            Não encontramos nenhum agente que corresponda à sua busca: "{searchTerm}"
-          </p>
-          <Button
-            onClick={() => setSearchTerm("")}
-            className="bg-[#222] text-white hover:bg-[#333]"
-          >
-            Limpar busca
-          </Button>
-        </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-[60vh] text-center">
           <div className="mb-6 p-8 rounded-full bg-[#1a1a1a] border border-[#333]">
+              {selectedFolderId ? (
+                <Folder className="h-16 w-16 text-[#00ff9d]" />
+              ) : (
             <Server className="h-16 w-16 text-[#00ff9d]" />
+              )}
           </div>
-          <h2 className="text-2xl font-semibold text-white mb-3">Nenhum agente encontrado</h2>
+            <h2 className="text-2xl font-semibold text-white mb-3">
+              {selectedFolderId ? "Pasta vazia" : "Nenhum agente encontrado"}
+            </h2>
           <p className="text-gray-300 mb-6 max-w-md">
-            Você ainda não tem nenhum agente configurado. Crie seu primeiro agente para começar!
+              {selectedFolderId 
+                ? "Esta pasta ainda não contém nenhum agente. Adicione agentes ou crie um novo."
+                : "Você ainda não tem nenhum agente configurado. Crie seu primeiro agente para começar!"}
           </p>
           <Button
             onClick={() => {
@@ -1673,6 +1950,413 @@ export default function AgentsPage() {
           </Button>
         </div>
       )}
+      </div>
+      
+      {/* Diálogo para criar/editar pastas */}
+      <Dialog open={isFolderDialogOpen} onOpenChange={setIsFolderDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] bg-[#1a1a1a] border-[#333] text-white">
+          <DialogHeader>
+            <DialogTitle>{editingFolder ? "Editar Pasta" : "Nova Pasta"}</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              {editingFolder
+                ? "Atualize as informações da pasta existente"
+                : "Preencha as informações para criar uma nova pasta"}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="folder-name" className="text-gray-300">
+                Nome da pasta
+              </Label>
+              <Input
+                id="folder-name"
+                value={newFolder.name}
+                onChange={(e) => setNewFolder({ ...newFolder, name: e.target.value })}
+                className="bg-[#222] border-[#444] text-white"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="folder-description" className="text-gray-300">
+                Descrição (opcional)
+              </Label>
+              <Textarea
+                id="folder-description"
+                value={newFolder.description}
+                onChange={(e) => setNewFolder({ ...newFolder, description: e.target.value })}
+                className="bg-[#222] border-[#444] text-white resize-none h-20"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsFolderDialogOpen(false)}
+              className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleAddFolder} className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]">
+              {editingFolder ? "Salvar Alterações" : "Criar Pasta"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Diálogo para confirmar exclusão de pasta */}
+      <AlertDialog open={isFolderDeleteDialogOpen} onOpenChange={setIsFolderDeleteDialogOpen}>
+        <AlertDialogContent className="bg-[#1a1a1a] border-[#333] text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Tem certeza que deseja excluir a pasta "{folderToDelete?.name}"? Os agentes não serão excluídos, apenas removidos da pasta.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteFolder} className="bg-red-600 text-white hover:bg-red-700">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Diálogo para mover agente para outra pasta */}
+      <Dialog open={isMovingDialogOpen} onOpenChange={setIsMovingDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] bg-[#1a1a1a] border-[#333] text-white">
+          <DialogHeader>
+            <DialogTitle>Mover Agente</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Escolha uma pasta para mover o agente "{agentToMove?.name}"
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="space-y-2">
+              <button
+                className="w-full text-left px-4 py-3 rounded-md flex items-center bg-[#222] border border-[#444] hover:bg-[#333] hover:border-[#00ff9d]/50 transition-colors"
+                onClick={() => handleMoveAgent(null)}
+              >
+                <Home className="h-5 w-5 mr-3 text-gray-400" />
+                <div>
+                  <div className="font-medium">Remover da pasta</div>
+                  <p className="text-sm text-gray-400">O agente será visível em "Todos os agentes"</p>
+                </div>
+              </button>
+              
+              {folders.map((folder) => (
+                <button
+                  key={folder.id}
+                  className="w-full text-left px-4 py-3 rounded-md flex items-center bg-[#222] border border-[#444] hover:bg-[#333] hover:border-[#00ff9d]/50 transition-colors"
+                  onClick={() => handleMoveAgent(folder.id)}
+                >
+                  <Folder className="h-5 w-5 mr-3 text-[#00ff9d]" />
+                  <div>
+                    <div className="font-medium">{folder.name}</div>
+                    {folder.description && (
+                      <p className="text-sm text-gray-400 truncate">{folder.description}</p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsMovingDialogOpen(false)}
+              className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
+            >
+              Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para gerenciar chaves de API */}
+      <Dialog open={isApiKeysDialogOpen} onOpenChange={setIsApiKeysDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
+          <DialogHeader>
+            <DialogTitle className="text-white">Gerenciar Chaves de API</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Adicione e gerencie chaves de API para uso nos seus agentes
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto p-1">
+            {isAddingApiKey ? (
+              <div className="space-y-4 p-4 bg-[#222] rounded-md">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium text-white">
+                    {isEditingApiKey ? "Editar Chave" : "Nova Chave"}
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setIsAddingApiKey(false)
+                      setIsEditingApiKey(false)
+                      setCurrentApiKey({})
+                    }}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="name" className="text-right text-gray-300">
+                      Nome
+                    </Label>
+                    <Input
+                      id="name"
+                      value={currentApiKey.name || ""}
+                      onChange={(e) => setCurrentApiKey({ ...currentApiKey, name: e.target.value })}
+                      className="col-span-3 bg-[#333] border-[#444] text-white"
+                      placeholder="OpenAI GPT-4"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="provider" className="text-right text-gray-300">
+                      Provedor
+                    </Label>
+                    <Select
+                      value={currentApiKey.provider}
+                      onValueChange={(value) => setCurrentApiKey({ ...currentApiKey, provider: value })}
+                    >
+                      <SelectTrigger className="col-span-3 bg-[#333] border-[#444] text-white">
+                        <SelectValue placeholder="Selecione o provedor" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#222] border-[#444] text-white">
+                        <SelectItem
+                          value="openai"
+                          className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
+                        >
+                          OpenAI
+                        </SelectItem>
+                        <SelectItem
+                          value="anthropic"
+                          className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
+                        >
+                          Anthropic
+                        </SelectItem>
+                        <SelectItem
+                          value="cohere"
+                          className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
+                        >
+                          Cohere
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="key_value" className="text-right text-gray-300">
+                      Valor da Chave
+                    </Label>
+                    <div className="col-span-3 relative">
+                      <Input
+                        id="key_value"
+                        value={currentApiKey.key_value || ""}
+                        onChange={(e) => setCurrentApiKey({ ...currentApiKey, key_value: e.target.value })}
+                        className="bg-[#333] border-[#444] text-white pr-10"
+                        type="password"
+                        placeholder={isEditingApiKey ? "Deixe em branco para manter o valor atual" : "sk-..."} 
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 text-gray-400 hover:text-white"
+                        onClick={() => {
+                          const input = document.getElementById("key_value") as HTMLInputElement;
+                          if (input) {
+                            input.type = input.type === "password" ? "text" : "password";
+                          }
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {isEditingApiKey && (
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="is_active" className="text-right text-gray-300">
+                        Status
+                      </Label>
+                      <div className="col-span-3 flex items-center">
+                        <Checkbox
+                          id="is_active"
+                          checked={currentApiKey.is_active !== false}
+                          onCheckedChange={(checked) => setCurrentApiKey({ ...currentApiKey, is_active: !!checked })}
+                          className="mr-2 data-[state=checked]:bg-[#00ff9d] data-[state=checked]:border-[#00ff9d]"
+                        />
+                        <Label htmlFor="is_active" className="text-gray-300">
+                          Ativa
+                        </Label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsAddingApiKey(false)
+                      setIsEditingApiKey(false)
+                      setCurrentApiKey({})
+                    }}
+                    className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSaveApiKey} className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]">
+                    {isEditingApiKey ? "Atualizar" : "Adicionar"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium text-white">Chaves disponíveis</h3>
+                  <Button
+                    onClick={() => {
+                      setIsAddingApiKey(true)
+                      setIsEditingApiKey(false)
+                      setCurrentApiKey({})
+                    }}
+                    className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nova Chave
+                  </Button>
+                </div>
+
+                {isLoadingApiKeys ? (
+                  <div className="flex items-center justify-center h-40">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#00ff9d]"></div>
+                  </div>
+                ) : apiKeys.length > 0 ? (
+                  <div className="space-y-2">
+                    {apiKeys.map((apiKey) => (
+                      <div
+                        key={apiKey.id}
+                        className="flex items-center justify-between p-3 bg-[#222] rounded-md border border-[#333] hover:border-[#00ff9d]/30"
+                      >
+                        <div>
+                          <p className="font-medium text-white">{apiKey.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge
+                              variant="outline"
+                              className="bg-[#333] text-[#00ff9d] border-[#00ff9d]/30"
+                            >
+                              {apiKey.provider.toUpperCase()}
+                            </Badge>
+                            <p className="text-xs text-gray-400">
+                              Criada em {new Date(apiKey.created_at).toLocaleDateString()}
+                            </p>
+                            {!apiKey.is_active && (
+                              <Badge variant="outline" className="bg-[#333] text-red-400 border-red-400/30">
+                                Inativa
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditApiKey(apiKey)}
+                            className="text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setApiKeyToDelete(apiKey)
+                              setIsDeleteApiKeyDialogOpen(true)
+                            }}
+                            className="text-red-500 hover:text-red-400 hover:bg-[#333]"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-10 border border-dashed border-[#333] rounded-md bg-[#222] text-gray-400">
+                    <Key className="mx-auto h-10 w-10 text-gray-500 mb-3" />
+                    <p>Você ainda não tem nenhuma chave de API cadastrada</p>
+                    <p className="text-sm mt-1">
+                      Adicione suas chaves de API para poder utilizá-las nos seus agentes
+                    </p>
+                    <Button
+                      onClick={() => {
+                        setIsAddingApiKey(true)
+                        setIsEditingApiKey(false)
+                        setCurrentApiKey({})
+                      }}
+                      className="mt-4 bg-[#333] text-[#00ff9d] hover:bg-[#444]"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Adicionar chave
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="border-t border-[#333] pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsApiKeysDialogOpen(false)}
+              className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
+            >
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para confirmar exclusão de chave de API */}
+      <AlertDialog
+        open={isDeleteApiKeyDialogOpen}
+        onOpenChange={setIsDeleteApiKeyDialogOpen}
+      >
+        <AlertDialogContent className="bg-[#1a1a1a] border-[#333] text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Tem certeza que deseja excluir a chave "{apiKeyToDelete?.name}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteApiKey}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -185,10 +185,10 @@ function AgentForm({
               <p>Nenhum agente encontrado para "{searchTerm}"</p>
             ) : (
               <>
-                <p>Nenhum agente disponível</p>
-                <p className="text-sm mt-2">
-                  Crie agentes na tela de Gerenciamento de Agentes
-                </p>
+            <p>Nenhum agente disponível</p>
+            <p className="text-sm mt-2">
+              Crie agentes na tela de Gerenciamento de Agentes
+            </p>
               </>
             )}
           </div>
