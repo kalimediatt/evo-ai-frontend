@@ -1708,6 +1708,17 @@ export default function AgentsPage() {
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
+                    
+                    {agent.type === "workflow" && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-white hover:bg-[#333]/50 hover:text-[#00ff9d]"
+                        onClick={() => router.push(`/agentes/fluxos?agentId=${agent.id}`)}
+                      >
+                        <Workflow className="h-4 w-4" />
+                      </Button>
+                    )}
                       
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -1720,15 +1731,6 @@ export default function AgentsPage() {
                       </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-[#222] border-[#333] text-white">
-                          {agent.type === "workflow" && (
-                            <DropdownMenuItem
-                              className="cursor-pointer hover:bg-[#333] focus:bg-[#333]"
-                              onClick={() => router.push(`/agentes/fluxos?agentId=${agent.id}`)}
-                            >
-                              <Workflow className="h-4 w-4 mr-2" />
-                              Editor de Fluxo
-                            </DropdownMenuItem>
-                          )}
                           <DropdownMenuItem
                             className="cursor-pointer hover:bg-[#333] focus:bg-[#333]"
                             onClick={() => startMoveAgent(agent)}
