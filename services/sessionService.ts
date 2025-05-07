@@ -42,8 +42,8 @@ export interface ChatMessage {
   [key: string]: any;
 }
 
-// Gerar um contact_id baseado na data/hora atual
-export const generateContactId = () => {
+// Gerar um external_id baseado na data/hora atual
+export const generateExternalId = () => {
   const now = new Date();
   // Formato: YYYYMMDD_HHMMSS (sem caracteres especiais ou espaços)
   return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
@@ -59,8 +59,8 @@ export const getSessionMessages = (sessionId: string) =>
 
 // Criar uma nova sessão de chat
 export const createSession = (clientId: string, agentId: string) => {
-  const contactId = generateContactId();
-  const sessionId = `${contactId}_${agentId}`;
+  const externalId = generateExternalId();
+  const sessionId = `${externalId}_${agentId}`;
   
   return api.post<ChatSession>(`/api/v1/sessions/`, {
     id: sessionId,
@@ -75,12 +75,12 @@ export const deleteSession = (sessionId: string) => {
 
 // Enviar uma mensagem para uma sessão
 export const sendMessage = (sessionId: string, agentId: string, message: string) => {
-  // Extrair o contact_id do session_id (formato é contactId_agentId)
-  const contactId = sessionId.split('_')[0];
+  // Extrair o external_id do session_id (formato é externalId_agentId)
+  const externalId = sessionId.split('_')[0];
   
   return api.post<ChatMessage>(`/api/v1/chat`, {
     agent_id: agentId,
-    contact_id: contactId,
+    external_id: externalId,
     message: message
   });
 }; 

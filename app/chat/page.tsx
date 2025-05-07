@@ -41,7 +41,7 @@ import {
   listSessions,
   getSessionMessages,
   sendMessage,
-  generateContactId,
+  generateExternalId,
   ChatSession,
   ChatMessage,
   deleteSession,
@@ -223,9 +223,9 @@ export default function Chat() {
 
       // Se não houver sessão selecionada, criar uma nova sessão implicitamente
       if (!selectedSession) {
-        const contactId = generateContactId();
-        // Formato simplificado: contactId_agentId (sem timestamp)
-        const newSessionId = `${contactId}_${currentAgentId}`;
+        const externalId = generateExternalId();
+        // Formato simplificado: externalId_agentId (sem timestamp)
+        const newSessionId = `${externalId}_${currentAgentId}`;
         setSelectedSession(newSessionId);
         sessionId = newSessionId;
       }
@@ -293,15 +293,15 @@ export default function Chat() {
           // Se não conseguir buscar com o ID atual, tentar com um formato alternativo
           if (sessionId && sessionId.includes("_")) {
             try {
-              // Extrair contactId e agentId do sessionId atual
+              // Extrair externalId e agentId do sessionId atual
               const parts = sessionId.split("_");
-              // Para lidar com múltiplos underscores, pegamos o primeiro elemento como contactId
+              // Para lidar com múltiplos underscores, pegamos o primeiro elemento como externalId
               // e o último como agentId
-              const contactId = parts[0];
+              const externalId = parts[0];
               const agentId = parts[parts.length - 1];
               
               // Tentar com o formato simplificado
-              const alternativeId = `${contactId}_${agentId}`;
+              const alternativeId = `${externalId}_${agentId}`;
               
               if (alternativeId !== sessionId) {
                 console.log("Tentando formato alternativo de ID:", alternativeId);
@@ -321,8 +321,8 @@ export default function Chat() {
     }
   };
 
-  // Gerar ID de contato (atualizado para remover timestamp)
-  const generateContactId = () => {
+  // Gerar ID de externo (atualizado para remover timestamp)
+  const generateExternalId = () => {
     const now = new Date();
     // Formato YYYYMMDDHHMMSSmmm (ano, mês, dia, hora, minuto, segundo, milissegundo)
     return now.getFullYear().toString() +
@@ -341,11 +341,11 @@ export default function Chat() {
   const getCurrentSessionInfo = () => {
     if (!selectedSession) return null;
 
-    // O formato do sessionId é contactId_agentId
+    // O formato do sessionId é externalId_agentId
     const parts = selectedSession.split("_");
 
     try {
-      // Tentar extrair data do contactId se estiver no formato correto (YYYYMMDD_HHMMSS)
+      // Tentar extrair data do externalId se estiver no formato correto (YYYYMMDD_HHMMSS)
       const dateStr = parts[0];
       if (dateStr.length >= 8) {
         const year = dateStr.substring(0, 4);
@@ -353,7 +353,7 @@ export default function Chat() {
         const day = dateStr.substring(6, 8);
 
         return {
-          contactId: parts[0],
+          externalId: parts[0],
           agentId: parts[1],
           displayDate: `${day}/${month}/${year}`,
         };
@@ -363,14 +363,14 @@ export default function Chat() {
     }
 
     return {
-      contactId: parts[0],
+      externalId: parts[0],
       agentId: parts[1],
       displayDate: "Sessão",
     };
   };
 
-  // Extrair contactId de um ID de sessão
-  const getContactId = (sessionId: string) => {
+  // Extrair externalId de um ID de sessão
+  const getExternalId = (sessionId: string) => {
     return sessionId.split("_")[0];
   };
 
@@ -683,7 +683,7 @@ Args: ${
                 // Extrair ID do agente do ID da sessão
                 const agentId = session.id.split("_")[1];
                 const agentInfo = agents.find((a) => a.id === agentId);
-                const contactId = getContactId(session.id);
+                const externalId = getExternalId(session.id);
 
                 return (
                   <div
@@ -697,7 +697,7 @@ Args: ${
                       <div className="flex items-center">
                         <div className="w-2 h-2 rounded-full bg-[#00ff9d] mr-2"></div>
                         <div className="text-white font-medium truncate max-w-[200px]">
-                          {contactId}
+                          {externalId}
                         </div>
                       </div>
                       {agentInfo && (
@@ -742,7 +742,7 @@ Args: ${
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
                       <MessageSquare className="h-5 w-5 text-[#00ff9d]" />
                       {selectedSession
-                        ? `Sessão ${sessionInfo?.contactId || selectedSession}`
+                        ? `Sessão ${sessionInfo?.externalId || selectedSession}`
                         : "Nova Conversa"}
                     </h2>
 

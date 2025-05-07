@@ -34,6 +34,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Search,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -67,6 +68,8 @@ export default function AgentsPage() {
 
   // Estado para agentes
   const [agents, setAgents] = useState<Agent[]>([])
+  const [filteredAgents, setFilteredAgents] = useState<Agent[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
   // Carregar agentes da API
@@ -74,10 +77,29 @@ export default function AgentsPage() {
     if (!clientId) return
     setIsLoading(true)
     listAgents(clientId)
-      .then(res => setAgents(res.data))
+      .then(res => {
+        setAgents(res.data)
+        setFilteredAgents(res.data)
+      })
       .catch(() => toast({ title: "Erro ao carregar agentes", variant: "destructive" }))
       .finally(() => setIsLoading(false))
   }, [clientId])
+
+  // Filtrar agentes quando o termo de busca mudar
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setFilteredAgents(agents)
+    } else {
+      const lowercaseSearch = searchTerm.toLowerCase()
+      const filtered = agents.filter(
+        agent => 
+          agent.name.toLowerCase().includes(lowercaseSearch) || 
+          agent.description?.toLowerCase().includes(lowercaseSearch) ||
+          getAgentTypeName(agent.type).toLowerCase().includes(lowercaseSearch)
+      )
+      setFilteredAgents(filtered)
+    }
+  }, [searchTerm, agents])
 
   // Carregar MCPs da API
   useEffect(() => {
@@ -617,243 +639,335 @@ export default function AgentsPage() {
 
   return (
     <div className="container mx-auto p-6 bg-[#121212] min-h-screen rounded-lg">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-white">Gerenciamento de Agentes</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-white">Agentes</h1>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              placeholder="Buscar agentes..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-[300px] bg-[#222] border-[#444] text-white focus:border-[#00ff9d] focus:ring-[#00ff9d]/10"
+            />
+            {searchTerm && (
+              <button
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                onClick={() => setSearchTerm("")}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
 
-        <Dialog
-          open={isDialogOpen}
-          onOpenChange={(open) => {
-            setIsDialogOpen(open)
-            if (!open) resetForm()
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button
-              onClick={() => {
-                resetForm()
-              }}
-              className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Agente
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
-            <DialogHeader>
-              <DialogTitle className="text-white">{editingAgent ? "Editar Agente" : "Novo Agente"}</DialogTitle>
-              <DialogDescription className="text-gray-400">
-                {editingAgent
-                  ? "Edite as informações do agente existente"
-                  : "Preencha as informações para criar um novo agente"}
-              </DialogDescription>
-            </DialogHeader>
+          <Dialog
+            open={isDialogOpen}
+            onOpenChange={(open) => {
+              setIsDialogOpen(open)
+              if (!open) resetForm()
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button
+                onClick={() => {
+                  resetForm()
+                }}
+                className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Agente
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
+              <DialogHeader>
+                <DialogTitle className="text-white">{editingAgent ? "Editar Agente" : "Novo Agente"}</DialogTitle>
+                <DialogDescription className="text-gray-400">
+                  {editingAgent
+                    ? "Edite as informações do agente existente"
+                    : "Preencha as informações para criar um novo agente"}
+                </DialogDescription>
+              </DialogHeader>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-              <TabsList className="grid grid-cols-3 bg-[#222]">
-                <TabsTrigger value="basic" className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]">
-                  Informações Básicas
-                </TabsTrigger>
-                <TabsTrigger
-                  value="config"
-                  className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
-                >
-                  Configuração
-                </TabsTrigger>
-                <TabsTrigger
-                  value="subagents"
-                  className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
-                >
-                  Sub-Agentes
-                </TabsTrigger>
-              </TabsList>
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
+                <TabsList className="grid grid-cols-3 bg-[#222]">
+                  <TabsTrigger value="basic" className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]">
+                    Informações Básicas
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="config"
+                    className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
+                  >
+                    Configuração
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="subagents"
+                    className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
+                  >
+                    Sub-Agentes
+                  </TabsTrigger>
+                </TabsList>
 
-              <ScrollArea className="flex-1 overflow-auto">
-                <TabsContent value="basic" className="p-4 space-y-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="type" className="text-right text-gray-300">
-                      Tipo de Agente
-                    </Label>
-                    <Select
-                      value={newAgent.type}
-                      onValueChange={(value: AgentType) => setNewAgent({ ...newAgent, type: value } as Partial<Agent> & { type?: string })}
-                    >
-                      <SelectTrigger className="col-span-3 bg-[#222] border-[#444] text-white">
-                        <SelectValue placeholder="Selecione o tipo" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#222] border-[#444] text-white">
-                        {agentTypes.map((type) => (
-                          <SelectItem 
-                            key={type.value} 
-                            value={type.value}
-                            className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
-                          >
-                            <div className="flex items-center gap-2">
-                              <type.icon className="h-4 w-4 text-[#00ff9d]" />
-                              {type.label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right text-gray-300">
-                      Nome
-                    </Label>
-                    <Input
-                      id="name"
-                      value={newAgent.name || ""}
-                      onChange={(e) => setNewAgent({ ...newAgent, name: e.target.value } as Partial<Agent> & { name?: string })}
-                      className="col-span-3 bg-[#222] border-[#444] text-white"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="description" className="text-right text-gray-300">
-                      Descrição
-                    </Label>
-                    <Input
-                      id="description"
-                      value={newAgent.description || ""}
-                      onChange={(e) => setNewAgent({ ...newAgent, description: e.target.value } as Partial<Agent> & { description?: string })}
-                      className="col-span-3 bg-[#222] border-[#444] text-white"
-                    />
-                  </div>
-
-                  {newAgent.type === "llm" && (
-                    <>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="model" className="text-right text-gray-300">
-                          Modelo
-                        </Label>
-                        <Select
-                          value={newAgent.model}
-                          onValueChange={(value) => setNewAgent({ ...newAgent, model: value } as Partial<Agent> & { model?: string })}
-                        >
-                          <SelectTrigger className="col-span-3 bg-[#222] border-[#444] text-white">
-                            <SelectValue placeholder="Selecione o modelo" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#222] border-[#444] text-white">
-                            {availableModels.map((model) => (
-                              <SelectItem 
-                                key={model.value} 
-                                value={model.value}
-                                className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
-                              >
-                                {model.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="api_key" className="text-right text-gray-300">
-                          API Key
-                        </Label>
-                        <Input
-                          id="api_key"
-                          value={newAgent.api_key || ""}
-                          onChange={(e) => setNewAgent({ ...newAgent, api_key: e.target.value } as Partial<Agent> & { api_key?: string })}
-                          className="col-span-3 bg-[#222] border-[#444] text-white"
-                          type="password"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-4 items-start gap-4">
-                        <Label htmlFor="instruction" className="text-right pt-2 text-gray-300">
-                          Instruções
-                        </Label>
-                        <Textarea
-                          id="instruction"
-                          value={newAgent.instruction || ""}
-                          onChange={(e) => setNewAgent({ ...newAgent, instruction: e.target.value } as Partial<Agent> & { instruction?: string })}
-                          className="col-span-3 bg-[#222] border-[#444] text-white"
-                          rows={4}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {newAgent.type === "a2a" && (
+                <ScrollArea className="flex-1 overflow-auto">
+                  <TabsContent value="basic" className="p-4 space-y-4">
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="agent_card_url" className="text-right text-gray-300">
-                        URL do Agent Card
+                      <Label htmlFor="type" className="text-right text-gray-300">
+                        Tipo de Agente
+                      </Label>
+                      <Select
+                        value={newAgent.type}
+                        onValueChange={(value: AgentType) => setNewAgent({ ...newAgent, type: value } as Partial<Agent> & { type?: string })}
+                      >
+                        <SelectTrigger className="col-span-3 bg-[#222] border-[#444] text-white">
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#222] border-[#444] text-white">
+                          {agentTypes.map((type) => (
+                            <SelectItem 
+                              key={type.value} 
+                              value={type.value}
+                              className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
+                            >
+                              <div className="flex items-center gap-2">
+                                <type.icon className="h-4 w-4 text-[#00ff9d]" />
+                                {type.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="name" className="text-right text-gray-300">
+                        Nome
                       </Label>
                       <Input
-                        id="agent_card_url"
-                        value={newAgent.agent_card_url || ""}
-                        onChange={(e) => setNewAgent({ ...newAgent, agent_card_url: e.target.value } as Partial<Agent> & { agent_card_url?: string })}
+                        id="name"
+                        value={newAgent.name || ""}
+                        onChange={(e) => setNewAgent({ ...newAgent, name: e.target.value } as Partial<Agent> & { name?: string })}
                         className="col-span-3 bg-[#222] border-[#444] text-white"
                       />
                     </div>
-                  )}
 
-                  {newAgent.type === "loop" && newAgent.config?.max_iterations && (
-                    <div className="space-y-1 text-xs text-gray-400">
-                      <div>
-                        <strong>Máx. Iterações:</strong> {newAgent.config.max_iterations}
-                      </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="description" className="text-right text-gray-300">
+                        Descrição
+                      </Label>
+                      <Input
+                        id="description"
+                        value={newAgent.description || ""}
+                        onChange={(e) => setNewAgent({ ...newAgent, description: e.target.value } as Partial<Agent> & { description?: string })}
+                        className="col-span-3 bg-[#222] border-[#444] text-white"
+                      />
                     </div>
-                  )}
 
-                  {newAgent.type === "workflow" && (
-                    <div className="space-y-1 text-xs text-gray-400">
-                      <div>
-                        <strong>Tipo:</strong> Fluxo Visual
-                      </div>
-                      {newAgent.config?.workflow && (
-                        <div>
-                          <strong>Elementos:</strong> {(newAgent.config.workflow.nodes?.length || 0)} nós, {(newAgent.config.workflow.edges?.length || 0)} conexões
+                    {newAgent.type === "llm" && (
+                      <>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="model" className="text-right text-gray-300">
+                            Modelo
+                          </Label>
+                          <Select
+                            value={newAgent.model}
+                            onValueChange={(value) => setNewAgent({ ...newAgent, model: value } as Partial<Agent> & { model?: string })}
+                          >
+                            <SelectTrigger className="col-span-3 bg-[#222] border-[#444] text-white">
+                              <SelectValue placeholder="Selecione o modelo" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#222] border-[#444] text-white">
+                              {availableModels.map((model) => (
+                                <SelectItem 
+                                  key={model.value} 
+                                  value={model.value}
+                                  className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
+                                >
+                                  {model.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </TabsContent>
 
-                <TabsContent value="config" className="p-4 space-y-4">
-                  {newAgent.type === "llm" && (
-                    <>
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-medium text-white">Servidores MCP</h3>
-                        <div className="border border-[#444] rounded-md p-4 bg-[#222]">
-                          <p className="text-sm text-gray-400 mb-4">
-                            Configure os servidores MCP que este agente pode utilizar.
-                          </p>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="api_key" className="text-right text-gray-300">
+                            API Key
+                          </Label>
+                          <Input
+                            id="api_key"
+                            value={newAgent.api_key || ""}
+                            onChange={(e) => setNewAgent({ ...newAgent, api_key: e.target.value } as Partial<Agent> & { api_key?: string })}
+                            className="col-span-3 bg-[#222] border-[#444] text-white"
+                            type="password"
+                          />
+                        </div>
 
-                          {newAgent.config?.mcp_servers && newAgent.config.mcp_servers.length > 0 ? (
-                            <div className="space-y-2">
-                              {newAgent.config.mcp_servers.map((mcpConfig) => {
-                                // Encontrar o servidor MCP correspondente para obter name e description
-                                const mcpServer = availableMCPs.find(mcp => mcp.id === mcpConfig.id);
-                                return (
+                        <div className="grid grid-cols-4 items-start gap-4">
+                          <Label htmlFor="instruction" className="text-right pt-2 text-gray-300">
+                            Instruções
+                          </Label>
+                          <Textarea
+                            id="instruction"
+                            value={newAgent.instruction || ""}
+                            onChange={(e) => setNewAgent({ ...newAgent, instruction: e.target.value } as Partial<Agent> & { instruction?: string })}
+                            className="col-span-3 bg-[#222] border-[#444] text-white"
+                            rows={4}
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {newAgent.type === "a2a" && (
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="agent_card_url" className="text-right text-gray-300">
+                          URL do Agent Card
+                        </Label>
+                        <Input
+                          id="agent_card_url"
+                          value={newAgent.agent_card_url || ""}
+                          onChange={(e) => setNewAgent({ ...newAgent, agent_card_url: e.target.value } as Partial<Agent> & { agent_card_url?: string })}
+                          className="col-span-3 bg-[#222] border-[#444] text-white"
+                        />
+                      </div>
+                    )}
+
+                    {newAgent.type === "loop" && newAgent.config?.max_iterations && (
+                      <div className="space-y-1 text-xs text-gray-400">
+                        <div>
+                          <strong>Máx. Iterações:</strong> {newAgent.config.max_iterations}
+                        </div>
+                      </div>
+                    )}
+
+                    {newAgent.type === "workflow" && (
+                      <div className="space-y-1 text-xs text-gray-400">
+                        <div>
+                          <strong>Tipo:</strong> Fluxo Visual
+                        </div>
+                        {newAgent.config?.workflow && (
+                          <div>
+                            <strong>Elementos:</strong> {(newAgent.config.workflow.nodes?.length || 0)} nós, {(newAgent.config.workflow.edges?.length || 0)} conexões
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="config" className="p-4 space-y-4">
+                    {newAgent.type === "llm" && (
+                      <>
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-medium text-white">Servidores MCP</h3>
+                          <div className="border border-[#444] rounded-md p-4 bg-[#222]">
+                            <p className="text-sm text-gray-400 mb-4">
+                              Configure os servidores MCP que este agente pode utilizar.
+                            </p>
+
+                            {newAgent.config?.mcp_servers && newAgent.config.mcp_servers.length > 0 ? (
+                              <div className="space-y-2">
+                                {newAgent.config.mcp_servers.map((mcpConfig) => {
+                                  // Encontrar o servidor MCP correspondente para obter name e description
+                                  const mcpServer = availableMCPs.find(mcp => mcp.id === mcpConfig.id);
+                                  return (
+                                    <div
+                                      key={mcpConfig.id}
+                                      className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md"
+                                    >
+                                      <div>
+                                        <p className="font-medium text-white">{mcpServer?.name || mcpConfig.id}</p>
+                                        <p className="text-sm text-gray-400">{mcpServer?.description?.substring(0, 100)}...</p>
+                                        {mcpConfig.tools && mcpConfig.tools.length > 0 && (
+                                          <div className="flex flex-wrap gap-1 mt-1">
+                                            {mcpConfig.tools.map((toolId) => (
+                                              <Badge
+                                                key={toolId}
+                                                variant="outline"
+                                                className="text-xs bg-[#333] text-[#00ff9d] border-[#00ff9d]/30"
+                                              >
+                                                {toolId}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleOpenMCPDialog(mcpConfig)}
+                                          className="flex items-center text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
+                                        >
+                                          <Settings className="h-4 w-4 mr-1" /> Configurar
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleRemoveMCP(mcpConfig.id)}
+                                          className="text-red-500 hover:text-red-400 hover:bg-[#333]"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+
+                                {/* Botão para adicionar mais servidores MCP, sempre visível */}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenMCPDialog()}
+                                  className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                                >
+                                  <Plus className="h-4 w-4 mr-1" /> Adicionar Servidor MCP
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
+                                <div>
+                                  <p className="font-medium text-white">Sem servidores MCP configurados</p>
+                                  <p className="text-sm text-gray-400">Adicione servidores MCP para este agente</p>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenMCPDialog()}
+                                  className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                                >
+                                  <Plus className="h-4 w-4 mr-1" /> Adicionar
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Nova seção para MCPs customizados */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-medium text-white">Servidores MCP Customizados</h3>
+                          <div className="border border-[#444] rounded-md p-4 bg-[#222]">
+                            <p className="text-sm text-gray-400 mb-4">
+                              Configure servidores MCP personalizados com URL e cabeçalhos HTTP.
+                            </p>
+
+                            {newAgent.config?.custom_mcp_servers && newAgent.config.custom_mcp_servers.length > 0 ? (
+                              <div className="space-y-2">
+                                {newAgent.config.custom_mcp_servers.map((customMCP) => (
                                   <div
-                                    key={mcpConfig.id}
+                                    key={customMCP.url}
                                     className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md"
                                   >
                                     <div>
-                                      <p className="font-medium text-white">{mcpServer?.name || mcpConfig.id}</p>
-                                      <p className="text-sm text-gray-400">{mcpServer?.description?.substring(0, 100)}...</p>
-                                      {mcpConfig.tools && mcpConfig.tools.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                          {mcpConfig.tools.map((toolId) => (
-                                            <Badge
-                                              key={toolId}
-                                              variant="outline"
-                                              className="text-xs bg-[#333] text-[#00ff9d] border-[#00ff9d]/30"
-                                            >
-                                              {toolId}
-                                            </Badge>
-                                          ))}
-                                        </div>
-                                      )}
+                                      <p className="font-medium text-white">{customMCP.url}</p>
+                                      <p className="text-sm text-gray-400">
+                                        {Object.keys(customMCP.headers || {}).length > 0
+                                          ? `${Object.keys(customMCP.headers || {}).length} cabeçalhos configurados`
+                                          : "Sem cabeçalhos configurados"}
+                                      </p>
                                     </div>
                                     <div className="flex gap-2">
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => handleOpenMCPDialog(mcpConfig)}
+                                        onClick={() => handleOpenCustomMCPDialog(customMCP)}
                                         className="flex items-center text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
                                       >
                                         <Settings className="h-4 w-4 mr-1" /> Configurar
@@ -861,545 +975,475 @@ export default function AgentsPage() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => handleRemoveMCP(mcpConfig.id)}
+                                        onClick={() => handleRemoveCustomMCP(customMCP.url)}
                                         className="text-red-500 hover:text-red-400 hover:bg-[#333]"
                                       >
                                         <X className="h-4 w-4" />
                                       </Button>
                                     </div>
                                   </div>
-                                );
-                              })}
+                                ))}
 
-                              {/* Botão para adicionar mais servidores MCP, sempre visível */}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleOpenMCPDialog()}
-                                className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
-                              >
-                                <Plus className="h-4 w-4 mr-1" /> Adicionar Servidor MCP
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
-                              <div>
-                                <p className="font-medium text-white">Sem servidores MCP configurados</p>
-                                <p className="text-sm text-gray-400">Adicione servidores MCP para este agente</p>
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleOpenMCPDialog()}
-                                className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
-                              >
-                                <Plus className="h-4 w-4 mr-1" /> Adicionar
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Nova seção para MCPs customizados */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-medium text-white">Servidores MCP Customizados</h3>
-                        <div className="border border-[#444] rounded-md p-4 bg-[#222]">
-                          <p className="text-sm text-gray-400 mb-4">
-                            Configure servidores MCP personalizados com URL e cabeçalhos HTTP.
-                          </p>
-
-                          {newAgent.config?.custom_mcp_servers && newAgent.config.custom_mcp_servers.length > 0 ? (
-                            <div className="space-y-2">
-                              {newAgent.config.custom_mcp_servers.map((customMCP) => (
-                                <div
-                                  key={customMCP.url}
-                                  className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md"
+                                {/* Botão para adicionar mais MCPs customizados */}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenCustomMCPDialog()}
+                                  className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
                                 >
-                                  <div>
-                                    <p className="font-medium text-white">{customMCP.url}</p>
-                                    <p className="text-sm text-gray-400">
-                                      {Object.keys(customMCP.headers || {}).length > 0
-                                        ? `${Object.keys(customMCP.headers || {}).length} cabeçalhos configurados`
-                                        : "Sem cabeçalhos configurados"}
-                                    </p>
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleOpenCustomMCPDialog(customMCP)}
-                                      className="flex items-center text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
-                                    >
-                                      <Settings className="h-4 w-4 mr-1" /> Configurar
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleRemoveCustomMCP(customMCP.url)}
-                                      className="text-red-500 hover:text-red-400 hover:bg-[#333]"
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              ))}
-
-                              {/* Botão para adicionar mais MCPs customizados */}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleOpenCustomMCPDialog()}
-                                className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
-                              >
-                                <Plus className="h-4 w-4 mr-1" /> Adicionar MCP Customizado
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
-                              <div>
-                                <p className="font-medium text-white">Sem MCPs customizados configurados</p>
-                                <p className="text-sm text-gray-400">Adicione MCPs customizados para este agente</p>
+                                  <Plus className="h-4 w-4 mr-1" /> Adicionar MCP Customizado
+                                </Button>
                               </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleOpenCustomMCPDialog()}
-                                className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
-                              >
-                                <Plus className="h-4 w-4 mr-1" /> Adicionar
-                              </Button>
-                            </div>
-                          )}
+                            ) : (
+                              <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
+                                <div>
+                                  <p className="font-medium text-white">Sem MCPs customizados configurados</p>
+                                  <p className="text-sm text-gray-400">Adicione MCPs customizados para este agente</p>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenCustomMCPDialog()}
+                                  className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                                >
+                                  <Plus className="h-4 w-4 mr-1" /> Adicionar
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      
-                      {/* API Key Display Section */}
-                      {editingAgent && (editingAgent.config?.api_key || "not defined") && (
-                        <div className="mt-6 space-y-2">
-                          <h3 className="text-lg font-medium text-white">Informações de Segurança</h3>
-                          <div className="border border-[#444] rounded-md p-4 bg-[#222]">
-                            <div className="space-y-4">
-                              <div>
-                                <Label className="text-gray-300 block mb-2">API Key</Label>
-                                <div className="flex items-center">
-                                  <div className="relative flex-1">
-                                    <div className="bg-[#1a1a1a] border border-[#444] rounded px-3 py-2 text-[#00ff9d] font-mono text-sm relative overflow-hidden">
-                                      {isApiKeyVisible 
-                                        ? (editingAgent.config?.api_key || "not defined")
-                                        : '•'.repeat(Math.min(16, (editingAgent.config?.api_key || "not defined" || "").length))}
+                        
+                        {/* API Key Display Section */}
+                        {editingAgent && (editingAgent.config?.api_key || "not defined") && (
+                          <div className="mt-6 space-y-2">
+                            <h3 className="text-lg font-medium text-white">Informações de Segurança</h3>
+                            <div className="border border-[#444] rounded-md p-4 bg-[#222]">
+                              <div className="space-y-4">
+                                <div>
+                                  <Label className="text-gray-300 block mb-2">API Key</Label>
+                                  <div className="flex items-center">
+                                    <div className="relative flex-1">
+                                      <div className="bg-[#1a1a1a] border border-[#444] rounded px-3 py-2 text-[#00ff9d] font-mono text-sm relative overflow-hidden">
+                                        {isApiKeyVisible 
+                                          ? (editingAgent.config?.api_key || "not defined")
+                                          : '•'.repeat(Math.min(16, (editingAgent.config?.api_key || "not defined" || "").length))}
+                                      </div>
+                                    </div>
+                                    <div className="flex ml-2 space-x-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 bg-[#333] text-white hover:bg-[#444] hover:text-[#00ff9d]"
+                                        onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
+                                        title={isApiKeyVisible ? "Ocultar API Key" : "Mostrar API Key"}
+                                      >
+                                        {isApiKeyVisible ? (
+                                          <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                          <Eye className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 bg-[#333] text-white hover:bg-[#444] hover:text-[#00ff9d]"
+                                        onClick={() => copyToClipboard(editingAgent.config?.api_key || "not defined" || "")}
+                                        title="Copiar API Key"
+                                      >
+                                        <Copy className="h-4 w-4" />
+                                      </Button>
                                     </div>
                                   </div>
-                                  <div className="flex ml-2 space-x-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 bg-[#333] text-white hover:bg-[#444] hover:text-[#00ff9d]"
-                                      onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
-                                      title={isApiKeyVisible ? "Ocultar API Key" : "Mostrar API Key"}
-                                    >
-                                      {isApiKeyVisible ? (
-                                        <EyeOff className="h-4 w-4" />
-                                      ) : (
-                                        <Eye className="h-4 w-4" />
-                                      )}
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 bg-[#333] text-white hover:bg-[#444] hover:text-[#00ff9d]"
-                                      onClick={() => copyToClipboard(editingAgent.config?.api_key || "not defined" || "")}
-                                      title="Copiar API Key"
-                                    >
-                                      <Copy className="h-4 w-4" />
-                                    </Button>
-                                  </div>
+                                  <p className="text-xs text-gray-400 mt-2">
+                                    Esta é a chave de API do seu agente. Mantenha-a segura e não compartilhe com terceiros.
+                                  </p>
                                 </div>
-                                <p className="text-xs text-gray-400 mt-2">
-                                  Esta é a chave de API do seu agente. Mantenha-a segura e não compartilhe com terceiros.
-                                </p>
                               </div>
                             </div>
                           </div>
+                        )}
+                      </>
+                    )}
+
+                    {(newAgent.type === "sequential" || newAgent.type === "parallel" || newAgent.type === "loop" || newAgent.type === "workflow") && (
+                      <div className="flex items-center justify-center h-40">
+                        <div className="text-center">
+                          <p className="text-gray-400">Configure os sub-agentes na aba "Sub-Agentes"</p>
                         </div>
-                      )}
-                    </>
-                  )}
-
-                  {(newAgent.type === "sequential" || newAgent.type === "parallel" || newAgent.type === "loop" || newAgent.type === "workflow") && (
-                    <div className="flex items-center justify-center h-40">
-                      <div className="text-center">
-                        <p className="text-gray-400">Configure os sub-agentes na aba "Sub-Agentes"</p>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {newAgent.type === "a2a" && (
-                    <div className="flex items-center justify-center h-40">
-                      <div className="text-center">
-                        <p className="text-gray-400">Agentes A2A são configurados através do Agent Card URL</p>
-                        <p className="text-sm text-gray-500 mt-2">
-                          Sub-agentes podem ser configurados na aba "Sub-Agentes"
+                    {newAgent.type === "a2a" && (
+                      <div className="flex items-center justify-center h-40">
+                        <div className="text-center">
+                          <p className="text-gray-400">Agentes A2A são configurados através do Agent Card URL</p>
+                          <p className="text-sm text-gray-500 mt-2">
+                            Sub-agentes podem ser configurados na aba "Sub-Agentes"
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="subagents" className="p-4 space-y-4">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-medium text-white">Sub-Agentes</h3>
+                        <div className="text-sm text-gray-400">
+                          {newAgent.config?.sub_agents?.length || 0} sub-agentes selecionados
+                        </div>
+                      </div>
+
+                      <div className="border border-[#444] rounded-md p-4 bg-[#222]">
+                        <p className="text-sm text-gray-400 mb-4">
+                          Selecione os agentes que serão utilizados como sub-agentes.
                         </p>
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
 
-                <TabsContent value="subagents" className="p-4 space-y-4">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-medium text-white">Sub-Agentes</h3>
-                      <div className="text-sm text-gray-400">
-                        {newAgent.config?.sub_agents?.length || 0} sub-agentes selecionados
-                      </div>
-                    </div>
-
-                    <div className="border border-[#444] rounded-md p-4 bg-[#222]">
-                      <p className="text-sm text-gray-400 mb-4">
-                        Selecione os agentes que serão utilizados como sub-agentes.
-                      </p>
-
-                      {/* Lista de sub-agentes selecionados */}
-                      {newAgent.config?.sub_agents && newAgent.config.sub_agents.length > 0 ? (
-                        <div className="space-y-2 mb-4">
-                          <h4 className="text-sm font-medium text-white">Sub-agentes selecionados:</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {newAgent.config.sub_agents.map((agentId) => (
-                              <Badge
-                                key={agentId}
-                                variant="secondary"
-                                className="flex items-center gap-1 bg-[#333] text-[#00ff9d]"
-                              >
-                                {getAgentNameById(agentId)}
-                                <button
-                                  onClick={() => handleRemoveSubAgent(agentId)}
-                                  className="ml-1 h-4 w-4 rounded-full hover:bg-[#444] inline-flex items-center justify-center"
+                        {/* Lista de sub-agentes selecionados */}
+                        {newAgent.config?.sub_agents && newAgent.config.sub_agents.length > 0 ? (
+                          <div className="space-y-2 mb-4">
+                            <h4 className="text-sm font-medium text-white">Sub-agentes selecionados:</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {newAgent.config.sub_agents.map((agentId) => (
+                                <Badge
+                                  key={agentId}
+                                  variant="secondary"
+                                  className="flex items-center gap-1 bg-[#333] text-[#00ff9d]"
                                 >
-                                  ×
-                                </button>
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-4 text-gray-400 mb-4">Nenhum sub-agente selecionado</div>
-                      )}
-
-                      {/* Lista de agentes disponíveis */}
-                      <h4 className="text-sm font-medium text-white mb-2">Agentes disponíveis:</h4>
-                      <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {agents
-                          .filter((agent) => agent.id !== editingAgent?.id) // Não mostrar o próprio agente sendo editado
-                          .map((agent) => (
-                            <div
-                              key={agent.id}
-                              className="flex items-center justify-between p-2 hover:bg-[#2a2a2a] rounded-md"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-white">{agent.name}</span>
-                                <Badge variant="outline" className="ml-2 border-[#444] text-[#00ff9d]">
-                                  {getAgentTypeName(agent.type)}
+                                  {getAgentNameById(agentId)}
+                                  <button
+                                    onClick={() => handleRemoveSubAgent(agentId)}
+                                    className="ml-1 h-4 w-4 rounded-full hover:bg-[#444] inline-flex items-center justify-center"
+                                  >
+                                    ×
+                                  </button>
                                 </Badge>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleAddSubAgent(agent.id)}
-                                disabled={newAgent.config?.sub_agents?.includes(agent.id)}
-                                className={
-                                  newAgent.config?.sub_agents?.includes(agent.id)
-                                    ? "text-gray-500 bg-[#222] hover:bg-[#333]"
-                                    : "text-[#00ff9d] hover:bg-[#333] bg-[#222]"
-                                }
-                              >
-                                {newAgent.config?.sub_agents?.includes(agent.id) ? "Adicionado" : "Adicionar"}
-                              </Button>
+                              ))}
                             </div>
-                          ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 text-gray-400 mb-4">Nenhum sub-agente selecionado</div>
+                        )}
+
+                        {/* Lista de agentes disponíveis */}
+                        <h4 className="text-sm font-medium text-white mb-2">Agentes disponíveis:</h4>
+                        <div className="space-y-2 max-h-60 overflow-y-auto">
+                          {agents
+                            .filter((agent) => agent.id !== editingAgent?.id) // Não mostrar o próprio agente sendo editado
+                            .map((agent) => (
+                              <div
+                                key={agent.id}
+                                className="flex items-center justify-between p-2 hover:bg-[#2a2a2a] rounded-md"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-white">{agent.name}</span>
+                                  <Badge variant="outline" className="ml-2 border-[#444] text-[#00ff9d]">
+                                    {getAgentTypeName(agent.type)}
+                                  </Badge>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleAddSubAgent(agent.id)}
+                                  disabled={newAgent.config?.sub_agents?.includes(agent.id)}
+                                  className={
+                                    newAgent.config?.sub_agents?.includes(agent.id)
+                                      ? "text-gray-500 bg-[#222] hover:bg-[#333]"
+                                      : "text-[#00ff9d] hover:bg-[#333] bg-[#222]"
+                                  }
+                                >
+                                  {newAgent.config?.sub_agents?.includes(agent.id) ? "Adicionado" : "Adicionar"}
+                                </Button>
+                              </div>
+                            ))}
+                        </div>
                       </div>
+                    </div>
+                  </TabsContent>
+                </ScrollArea>
+              </Tabs>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                  className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
+                >
+                  Cancelar
+                </Button>
+                <Button onClick={handleAddAgent} className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]">
+                  {editingAgent ? "Salvar Alterações" : "Adicionar Agente"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="bg-[#1a1a1a] border-[#333] text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Tem certeza que deseja excluir o agente "{agentToDelete?.name}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteAgent} className="bg-red-600 text-white hover:bg-red-700">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Diálogo para configuração de MCP */}
+      <Dialog open={isMCPDialogOpen} onOpenChange={setIsMCPDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
+          <DialogHeader>
+            <DialogTitle className="text-white">Configurar Servidor MCP</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Selecione um servidor MCP e configure suas ferramentas.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto p-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="mcp-select" className="text-gray-300">
+                  Servidor MCP
+                </Label>
+                <Select
+                  value={selectedMCP?.id}
+                  onValueChange={(value) => {
+                    const mcp = availableMCPs.find((m) => m.id === value)
+                    if (mcp) {
+                      setSelectedMCP(mcp)
+                      // Inicializar variáveis de ambiente
+                      const initialEnvs: Record<string, string> = {}
+                      Object.keys(mcp.environments).forEach((key) => {
+                        initialEnvs[key] = ""
+                      })
+                      setMcpEnvs(initialEnvs)
+                      setSelectedMCPTools([])
+                    }
+                  }}
+                >
+                  <SelectTrigger className="bg-[#222] border-[#444] text-white">
+                    <SelectValue placeholder="Selecione um servidor MCP" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#222] border-[#444] text-white">
+                    {availableMCPs.map((mcp) => (
+                      <SelectItem 
+                        key={mcp.id} 
+                        value={mcp.id}
+                        className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Server className="h-4 w-4 text-[#00ff9d]" />
+                          {mcp.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedMCP && (
+                <>
+                  <div className="border border-[#444] rounded-md p-3 bg-[#222]">
+                    <p className="font-medium text-white">{selectedMCP.name}</p>
+                    <p className="text-sm text-gray-400">{selectedMCP.description?.substring(0, 100)}...</p>
+                    <div className="mt-2 text-xs text-gray-400">
+                      <p>
+                        <strong>Tipo:</strong> {selectedMCP.type}
+                      </p>
+                      <p>
+                        <strong>Configuração:</strong> {selectedMCP.config_type === "sse" ? "SSE" : "Studio"}
+                      </p>
                     </div>
                   </div>
-                </TabsContent>
-              </ScrollArea>
-            </Tabs>
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
-              >
-                Cancelar
-              </Button>
-              <Button onClick={handleAddAgent} className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]">
-                {editingAgent ? "Salvar Alterações" : "Adicionar Agente"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <AlertDialogContent className="bg-[#1a1a1a] border-[#333] text-white">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-              <AlertDialogDescription className="text-gray-400">
-                Tem certeza que deseja excluir o agente "{agentToDelete?.name}"? Esta ação não pode ser desfeita.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white">
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDeleteAgent} className="bg-red-600 text-white hover:bg-red-700">
-                Excluir
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* Diálogo para configuração de MCP */}
-        <Dialog open={isMCPDialogOpen} onOpenChange={setIsMCPDialogOpen}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
-            <DialogHeader>
-              <DialogTitle className="text-white">Configurar Servidor MCP</DialogTitle>
-              <DialogDescription className="text-gray-400">
-                Selecione um servidor MCP e configure suas ferramentas.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="flex-1 overflow-auto p-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="mcp-select" className="text-gray-300">
-                    Servidor MCP
-                  </Label>
-                  <Select
-                    value={selectedMCP?.id}
-                    onValueChange={(value) => {
-                      const mcp = availableMCPs.find((m) => m.id === value)
-                      if (mcp) {
-                        setSelectedMCP(mcp)
-                        // Inicializar variáveis de ambiente
-                        const initialEnvs: Record<string, string> = {}
-                        Object.keys(mcp.environments).forEach((key) => {
-                          initialEnvs[key] = ""
-                        })
-                        setMcpEnvs(initialEnvs)
-                        setSelectedMCPTools([])
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="bg-[#222] border-[#444] text-white">
-                      <SelectValue placeholder="Selecione um servidor MCP" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#222] border-[#444] text-white">
-                      {availableMCPs.map((mcp) => (
-                        <SelectItem 
-                          key={mcp.id} 
-                          value={mcp.id}
-                          className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Server className="h-4 w-4 text-[#00ff9d]" />
-                            {mcp.name}
-                          </div>
-                        </SelectItem>
+                  {/* Variáveis de ambiente */}
+                  {selectedMCP.environments && Object.keys(selectedMCP.environments).length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium text-white">Variáveis de Ambiente</h3>
+                      {Object.entries(selectedMCP.environments || {}).map(([key, value]) => (
+                        <div key={key} className="grid grid-cols-3 items-center gap-4">
+                          <Label htmlFor={`env-${key}`} className="text-right text-gray-300">
+                            {key}
+                          </Label>
+                          <Input
+                            id={`env-${key}`}
+                            value={mcpEnvs[key] || ""}
+                            onChange={(e) => setMcpEnvs({ ...mcpEnvs, [key]: e.target.value })}
+                            className="col-span-2 bg-[#222] border-[#444] text-white"
+                            placeholder={value as string}
+                          />
+                        </div>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {selectedMCP && (
-                  <>
-                    <div className="border border-[#444] rounded-md p-3 bg-[#222]">
-                      <p className="font-medium text-white">{selectedMCP.name}</p>
-                      <p className="text-sm text-gray-400">{selectedMCP.description?.substring(0, 100)}...</p>
-                      <div className="mt-2 text-xs text-gray-400">
-                        <p>
-                          <strong>Tipo:</strong> {selectedMCP.type}
-                        </p>
-                        <p>
-                          <strong>Configuração:</strong> {selectedMCP.config_type === "sse" ? "SSE" : "Studio"}
-                        </p>
-                      </div>
                     </div>
+                  )}
 
-                    {/* Variáveis de ambiente */}
-                    {selectedMCP.environments && Object.keys(selectedMCP.environments).length > 0 && (
-                      <div className="space-y-3">
-                        <h3 className="text-sm font-medium text-white">Variáveis de Ambiente</h3>
-                        {Object.entries(selectedMCP.environments || {}).map(([key, value]) => (
-                          <div key={key} className="grid grid-cols-3 items-center gap-4">
-                            <Label htmlFor={`env-${key}`} className="text-right text-gray-300">
-                              {key}
-                            </Label>
-                            <Input
-                              id={`env-${key}`}
-                              value={mcpEnvs[key] || ""}
-                              onChange={(e) => setMcpEnvs({ ...mcpEnvs, [key]: e.target.value })}
-                              className="col-span-2 bg-[#222] border-[#444] text-white"
-                              placeholder={value as string}
+                  {/* Ferramentas disponíveis */}
+                  {selectedMCP.tools && selectedMCP.tools.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium text-white">Ferramentas Disponíveis</h3>
+                      <div className="border border-[#444] rounded-md p-3 bg-[#222]">
+                        {selectedMCP.tools.map((tool) => (
+                          <div key={tool.id} className="flex items-center space-x-2 py-1">
+                            <Checkbox
+                              id={`tool-${tool.id}`}
+                              checked={selectedMCPTools.includes(tool.id)}
+                              onCheckedChange={() => toggleMCPTool(tool.id)}
                             />
+                            <Label htmlFor={`tool-${tool.id}`} className="text-sm text-gray-300">
+                              {tool.name}
+                            </Label>
                           </div>
                         ))}
                       </div>
-                    )}
-
-                    {/* Ferramentas disponíveis */}
-                    {selectedMCP.tools && selectedMCP.tools.length > 0 && (
-                      <div className="space-y-3">
-                        <h3 className="text-sm font-medium text-white">Ferramentas Disponíveis</h3>
-                        <div className="border border-[#444] rounded-md p-3 bg-[#222]">
-                          {selectedMCP.tools.map((tool) => (
-                            <div key={tool.id} className="flex items-center space-x-2 py-1">
-                              <Checkbox
-                                id={`tool-${tool.id}`}
-                                checked={selectedMCPTools.includes(tool.id)}
-                                onCheckedChange={() => toggleMCPTool(tool.id)}
-                              />
-                              <Label htmlFor={`tool-${tool.id}`} className="text-sm text-gray-300">
-                                {tool.name}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-            
-            <DialogFooter className="p-4 pt-2 border-t border-[#333]">
-              <Button
-                variant="outline"
-                onClick={() => setIsMCPDialogOpen(false)}
-                className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleAddMCP} 
-                className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
-                disabled={!selectedMCP}
-              >
-                Adicionar MCP
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </div>
+          
+          <DialogFooter className="p-4 pt-2 border-t border-[#333]">
+            <Button
+              variant="outline"
+              onClick={() => setIsMCPDialogOpen(false)}
+              className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleAddMCP} 
+              className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
+              disabled={!selectedMCP}
+            >
+              Adicionar MCP
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        {/* Diálogo para configuração de MCP customizado */}
-        <Dialog open={isCustomMCPDialogOpen} onOpenChange={setIsCustomMCPDialogOpen}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
-            <DialogHeader>
-              <DialogTitle className="text-white">Configurar MCP Customizado</DialogTitle>
-              <DialogDescription className="text-gray-400">
-                Configure a URL e os cabeçalhos HTTP para o servidor MCP personalizado.
-              </DialogDescription>
-            </DialogHeader>
+      {/* Diálogo para configuração de MCP customizado */}
+      <Dialog open={isCustomMCPDialogOpen} onOpenChange={setIsCustomMCPDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
+          <DialogHeader>
+            <DialogTitle className="text-white">Configurar MCP Customizado</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Configure a URL e os cabeçalhos HTTP para o servidor MCP personalizado.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="flex-1 overflow-auto p-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="custom-mcp-url" className="text-gray-300">
-                    URL do MCP
-                  </Label>
-                  <Input
-                    id="custom-mcp-url"
-                    value={selectedCustomMCP?.url || ""}
-                    onChange={(e) => setSelectedCustomMCP({ ...selectedCustomMCP || {}, url: e.target.value })}
-                    className="bg-[#222] border-[#444] text-white"
-                    placeholder="https://meu-servidor-mcp.com/api"
-                  />
-                </div>
+          <div className="flex-1 overflow-auto p-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="custom-mcp-url" className="text-gray-300">
+                  URL do MCP
+                </Label>
+                <Input
+                  id="custom-mcp-url"
+                  value={selectedCustomMCP?.url || ""}
+                  onChange={(e) => setSelectedCustomMCP({ ...selectedCustomMCP || {}, url: e.target.value })}
+                  className="bg-[#222] border-[#444] text-white"
+                  placeholder="https://meu-servidor-mcp.com/api"
+                />
+              </div>
 
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-white">Cabeçalhos HTTP</h3>
-                  <div className="border border-[#444] rounded-md p-3 bg-[#222]">
-                    {customMCPHeadersList.map((header, index) => (
-                      <div key={header.id} className="grid grid-cols-5 items-center gap-2 mb-2">
-                        <Input
-                          value={header.key}
-                          onChange={(e) => {
-                            const updatedList = [...customMCPHeadersList];
-                            updatedList[index] = { 
-                              ...updatedList[index], 
-                              key: e.target.value 
-                            };
-                            setCustomMCPHeadersList(updatedList);
-                          }}
-                          className="col-span-2 bg-[#333] border-[#444] text-white"
-                          placeholder="Nome do cabeçalho"
-                        />
-                        <Input
-                          value={header.value}
-                          onChange={(e) => {
-                            const updatedList = [...customMCPHeadersList];
-                            updatedList[index] = { 
-                              ...updatedList[index], 
-                              value: e.target.value 
-                            };
-                            setCustomMCPHeadersList(updatedList);
-                          }}
-                          className="col-span-2 bg-[#333] border-[#444] text-white"
-                          placeholder="Valor do cabeçalho"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setCustomMCPHeadersList(customMCPHeadersList.filter((_, i) => i !== index));
-                          }}
-                          className="col-span-1 h-8 text-red-500 hover:text-red-400 hover:bg-[#444]"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-white">Cabeçalhos HTTP</h3>
+                <div className="border border-[#444] rounded-md p-3 bg-[#222]">
+                  {customMCPHeadersList.map((header, index) => (
+                    <div key={header.id} className="grid grid-cols-5 items-center gap-2 mb-2">
+                      <Input
+                        value={header.key}
+                        onChange={(e) => {
+                          const updatedList = [...customMCPHeadersList];
+                          updatedList[index] = { 
+                            ...updatedList[index], 
+                            key: e.target.value 
+                          };
+                          setCustomMCPHeadersList(updatedList);
+                        }}
+                        className="col-span-2 bg-[#333] border-[#444] text-white"
+                        placeholder="Nome do cabeçalho"
+                      />
+                      <Input
+                        value={header.value}
+                        onChange={(e) => {
+                          const updatedList = [...customMCPHeadersList];
+                          updatedList[index] = { 
+                            ...updatedList[index], 
+                            value: e.target.value 
+                          };
+                          setCustomMCPHeadersList(updatedList);
+                        }}
+                        className="col-span-2 bg-[#333] border-[#444] text-white"
+                        placeholder="Valor do cabeçalho"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setCustomMCPHeadersList(customMCPHeadersList.filter((_, i) => i !== index));
+                        }}
+                        className="col-span-1 h-8 text-red-500 hover:text-red-400 hover:bg-[#444]"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setCustomMCPHeadersList([
-                          ...customMCPHeadersList,
-                          { id: `header-${Date.now()}`, key: "", value: "" }
-                        ]);
-                      }}
-                      className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Adicionar Cabeçalho
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setCustomMCPHeadersList([
+                        ...customMCPHeadersList,
+                        { id: `header-${Date.now()}`, key: "", value: "" }
+                      ]);
+                    }}
+                    className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                  >
+                    <Plus className="h-4 w-4 mr-1" /> Adicionar Cabeçalho
+                  </Button>
                 </div>
               </div>
             </div>
-            
-            <DialogFooter className="p-4 pt-2 border-t border-[#333]">
-              <Button
-                variant="outline"
-                onClick={() => setIsCustomMCPDialogOpen(false)}
-                className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleAddCustomMCP} 
-                className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
-                disabled={!selectedCustomMCP?.url}
-              >
-                {selectedCustomMCP?.url ? "Salvar MCP Customizado" : "Adicionar MCP Customizado"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </div>
+          
+          <DialogFooter className="p-4 pt-2 border-t border-[#333]">
+            <Button
+              variant="outline"
+              onClick={() => setIsCustomMCPDialogOpen(false)}
+              className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleAddCustomMCP} 
+              className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
+              disabled={!selectedCustomMCP?.url}
+            >
+              {selectedCustomMCP?.url ? "Salvar MCP Customizado" : "Adicionar MCP Customizado"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Grid de agentes ou mensagem quando não há agentes */}
-      {agents.length > 0 ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00ff9d]"></div>
+        </div>
+      ) : filteredAgents.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {agents.map((agent) => (
+          {filteredAgents.map((agent) => (
             <Card
               key={agent.id}
               className="overflow-hidden bg-[#1a1a1a] border-[#333] hover:border-[#00ff9d]/50 hover:shadow-[0_0_15px_rgba(0,255,157,0.15)] transition-all rounded-xl"
@@ -1591,6 +1635,22 @@ export default function AgentsPage() {
               </CardFooter>
             </Card>
           ))}
+        </div>
+      ) : searchTerm ? (
+        <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+          <div className="mb-6 p-8 rounded-full bg-[#1a1a1a] border border-[#333]">
+            <Search className="h-16 w-16 text-[#00ff9d]" />
+          </div>
+          <h2 className="text-2xl font-semibold text-white mb-3">Nenhum agente encontrado</h2>
+          <p className="text-gray-300 mb-6 max-w-md">
+            Não encontramos nenhum agente que corresponda à sua busca: "{searchTerm}"
+          </p>
+          <Button
+            onClick={() => setSearchTerm("")}
+            className="bg-[#222] text-white hover:bg-[#333]"
+          >
+            Limpar busca
+          </Button>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-[60vh] text-center">
