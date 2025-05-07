@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { User, Key, LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { changePassword } from "@/services/authService"
 
 export default function ProfilePage() {
   const { toast } = useToast()
@@ -90,8 +91,10 @@ export default function ProfilePage() {
     }
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await changePassword({
+        current_password: passwordData.currentPassword,
+        new_password: passwordData.newPassword
+      })
 
       // Reset password fields
       setPasswordData({
@@ -107,7 +110,7 @@ export default function ProfilePage() {
     } catch (error) {
       toast({
         title: "Error updating password",
-        description: "Unable to update your password. Please try again.",
+        description: error instanceof Error ? error.message : "Unable to update your password. Please try again.",
         variant: "destructive",
       })
     } finally {

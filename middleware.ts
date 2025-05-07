@@ -12,12 +12,21 @@ export function middleware(request: NextRequest) {
 
   const token = request.cookies.get('access_token')?.value
   let isAdmin = false
+  let isImpersonating = false
+  
   const userCookie = request.cookies.get('user')?.value
   if (userCookie) {
     try {
       const user = JSON.parse(decodeURIComponent(userCookie))
       isAdmin = !!user.is_admin
     } catch {}
+  }
+  
+  isImpersonating = request.cookies.get('isImpersonating')?.value === 'true'
+  
+  if (!isImpersonating) {
+    const headers = request.headers
+    isImpersonating = headers.get('x-is-impersonating') === 'true'
   }
 
   if (isPublic && token) {
@@ -32,7 +41,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  if (isClientPath && isAdmin) {
+  if (isClientPath && isAdmin && !isImpersonating) {
     return NextResponse.redirect(new URL('/mcp-servers', request.url))
   }
 

@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
-import { Plus, MoreHorizontal, Edit, Trash2, Search, Users } from "lucide-react"
+import { Plus, MoreHorizontal, Edit, Trash2, Search, Users, UserPlus } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,11 +43,14 @@ import {
   getClient,
   updateClient,
   deleteClient,
+  impersonateClient,
   Client,
 } from "@/services/clientService"
+import { useRouter } from "next/navigation"
 
 export default function ClientsPage() {
   const { toast } = useToast()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -165,6 +168,54 @@ export default function ClientsPage() {
       toast({
         title: "Error",
         description: "Unable to delete client. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleImpersonateClient = async (client: Client) => {
+    setIsLoading(true)
+    try {
+      const response = await impersonateClient(client.id)
+      
+      const currentUser = localStorage.getItem("user")
+      if (currentUser) {
+        localStorage.setItem("adminUser", currentUser)
+      }
+      
+      const currentToken = document.cookie.match(/access_token=([^;]+)/)?.[1]
+      if (currentToken) {
+        localStorage.setItem("adminToken", currentToken)
+      }
+      
+      localStorage.setItem("isImpersonating", "true")
+      localStorage.setItem("impersonatedClient", client.name)
+      
+      document.cookie = `isImpersonating=true; path=/; max-age=${60 * 60 * 24 * 7}`
+      document.cookie = `impersonatedClient=${encodeURIComponent(client.name)}; path=/; max-age=${60 * 60 * 24 * 7}`
+      document.cookie = `access_token=${response.access_token}; path=/; max-age=${60 * 60 * 24 * 7}`
+      
+      const userData = {
+        ...JSON.parse(localStorage.getItem("user") || "{}"),
+        is_admin: false,
+        client_id: client.id
+      }
+      localStorage.setItem("user", JSON.stringify(userData))
+      document.cookie = `user=${encodeURIComponent(JSON.stringify(userData))}; path=/; max-age=${60 * 60 * 24 * 7}`
+      
+      toast({
+        title: "Impersonation mode activated",
+        description: `You are viewing as ${client.name}`,
+      })
+      
+      router.push("/agents")
+    } catch (error) {
+      console.error("Error impersonating client:", error)
+      toast({
+        title: "Error",
+        description: "Unable to impersonate client",
         variant: "destructive",
       })
     } finally {
@@ -334,6 +385,13 @@ export default function ClientsPage() {
                           >
                             <Edit className="mr-2 h-4 w-4 text-[#00ff9d]" />
                             Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer hover:bg-[#333]"
+                            onClick={() => handleImpersonateClient(client)}
+                          >
+                            <UserPlus className="mr-2 h-4 w-4 text-[#00ff9d]" />
+                            Enter as client
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="cursor-pointer hover:bg-[#333] text-red-500"

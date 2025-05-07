@@ -25,8 +25,32 @@ export interface ListClientsResponse {
   total: number
 }
 
-export const createClient = (data: CreateClientRequest) => api.post<Client>("/api/v1/clients/", data)
+export const createClient = async (client: any) => {
+  try {
+    const response = await api.post("/api/v1/clients", client)
+    return response.data
+  } catch (error) {
+    throw error
+  }
+}
+
 export const listClients = (skip = 0, limit = 10) => api.get<Client[]>(`/api/v1/clients/?skip=${skip}&limit=${limit}`)
 export const getClient = (clientId: string) => api.get<Client>(`/api/v1/clients/${clientId}`)
 export const updateClient = (clientId: string, data: UpdateClientRequest) => api.put<Client>(`/api/v1/clients/${clientId}`, data)
-export const deleteClient = (clientId: string) => api.delete(`/api/v1/clients/${clientId}`) 
+export const deleteClient = async (id: string) => {
+  try {
+    const response = await api.delete(`/api/v1/clients/${id}`)
+    return response.data
+  } catch (error) {
+    throw error
+  }
+}
+
+export const impersonateClient = async (id: string) => {
+  try {
+    const response = await api.post(`/api/v1/clients/${id}/impersonate`)
+    return response.data
+  } catch (error) {
+    throw error
+  }
+} 

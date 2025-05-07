@@ -3,8 +3,9 @@ import "./globals.css"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/toaster"
+import { Toaster } from "@/components/ui/toaster"
 import ClientLayout from "./client-layout"
+import ImpersonationBar from "@/components/ImpersonationBar"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -22,6 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
+        <ImpersonationBar />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <ClientLayout>{children}</ClientLayout>
           <Toaster />
