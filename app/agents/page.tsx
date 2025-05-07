@@ -505,7 +505,11 @@ export default function AgentsPage() {
     { value: "openai/gpt-4.1-mini", label: "GPT-4.1 Mini", provider: "openai" },
 
     // GPT-4.5 Preview
-    { value: "openai/gpt-4.5-preview", label: "GPT-4.5 Preview", provider: "openai" },
+    {
+      value: "openai/gpt-4.5-preview",
+      label: "GPT-4.5 Preview",
+      provider: "openai",
+    },
 
     // GPT-4 Turbo & GPT-4o
     { value: "openai/gpt-4", label: "GPT-4 Turbo", provider: "openai" },
@@ -516,7 +520,11 @@ export default function AgentsPage() {
     { value: "openai/gpt-4-32k", label: "GPT-4 32K", provider: "openai" },
 
     // GPT-3.5 Turbo series
-    { value: "openai/gpt-3.5-turbo", label: "GPT-3.5 Turbo", provider: "openai" },
+    {
+      value: "openai/gpt-3.5-turbo",
+      label: "GPT-3.5 Turbo",
+      provider: "openai",
+    },
     {
       value: "openai/gpt-3.5-turbo-16k",
       label: "GPT-3.5 Turbo 16K",
@@ -553,7 +561,11 @@ export default function AgentsPage() {
     },
 
     // Gemini Legacy models
-    { value: "gemini/gemini-1.5-pro", label: "Gemini 1.5 Pro", provider: "gemini" },
+    {
+      value: "gemini/gemini-1.5-pro",
+      label: "Gemini 1.5 Pro",
+      provider: "gemini",
+    },
     {
       value: "gemini/gemini-1.5-flash",
       label: "Gemini 1.5 Flash",
@@ -2959,6 +2971,292 @@ export default function AgentsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog to configure MCP */}
+      <Dialog open={isMCPDialogOpen} onOpenChange={setIsMCPDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              Configure MCP Server
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Select a MCP server and configure its tools.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto p-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="mcp-select" className="text-gray-300">
+                  MCP Server
+                </Label>
+                <Select
+                  value={selectedMCP?.id}
+                  onValueChange={(value) => {
+                    const mcp = availableMCPs.find((m) => m.id === value);
+                    if (mcp) {
+                      setSelectedMCP(mcp);
+                      // Initialize environment variables
+                      const initialEnvs: Record<string, string> = {};
+                      Object.keys(mcp.environments).forEach((key) => {
+                        initialEnvs[key] = "";
+                      });
+                      setMcpEnvs(initialEnvs);
+                      setSelectedMCPTools([]);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="bg-[#222] border-[#444] text-white">
+                    <SelectValue placeholder="Select a MCP server" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#222] border-[#444] text-white">
+                    {availableMCPs.map((mcp) => (
+                      <SelectItem
+                        key={mcp.id}
+                        value={mcp.id}
+                        className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Server className="h-4 w-4 text-[#00ff9d]" />
+                          {mcp.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedMCP && (
+                <>
+                  <div className="border border-[#444] rounded-md p-3 bg-[#222]">
+                    <p className="font-medium text-white">{selectedMCP.name}</p>
+                    <p className="text-sm text-gray-400">
+                      {selectedMCP.description?.substring(0, 100)}...
+                    </p>
+                    <div className="mt-2 text-xs text-gray-400">
+                      <p>
+                        <strong>Type:</strong> {selectedMCP.type}
+                      </p>
+                      <p>
+                        <strong>Configuration:</strong>{" "}
+                        {selectedMCP.config_type === "sse" ? "SSE" : "Studio"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Environment variables */}
+                  {selectedMCP.environments &&
+                    Object.keys(selectedMCP.environments).length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-medium text-white">
+                          Environment Variables
+                        </h3>
+                        {Object.entries(selectedMCP.environments || {}).map(
+                          ([key, value]) => (
+                            <div
+                              key={key}
+                              className="grid grid-cols-3 items-center gap-4"
+                            >
+                              <Label
+                                htmlFor={`env-${key}`}
+                                className="text-right text-gray-300"
+                              >
+                                {key}
+                              </Label>
+                              <Input
+                                id={`env-${key}`}
+                                value={mcpEnvs[key] || ""}
+                                onChange={(e) =>
+                                  setMcpEnvs({
+                                    ...mcpEnvs,
+                                    [key]: e.target.value,
+                                  })
+                                }
+                                className="col-span-2 bg-[#222] border-[#444] text-white"
+                                placeholder={value as string}
+                              />
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+
+                  {/* Available tools */}
+                  {selectedMCP.tools && selectedMCP.tools.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium text-white">
+                        Available Tools
+                      </h3>
+                      <div className="border border-[#444] rounded-md p-3 bg-[#222]">
+                        {selectedMCP.tools.map((tool) => (
+                          <div
+                            key={tool.id}
+                            className="flex items-center space-x-2 py-1"
+                          >
+                            <Checkbox
+                              id={`tool-${tool.id}`}
+                              checked={selectedMCPTools.includes(tool.id)}
+                              onCheckedChange={() => toggleMCPTool(tool.id)}
+                            />
+                            <Label
+                              htmlFor={`tool-${tool.id}`}
+                              className="text-sm text-gray-300"
+                            >
+                              {tool.name}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="p-4 pt-2 border-t border-[#333]">
+            <Button
+              variant="outline"
+              onClick={() => setIsMCPDialogOpen(false)}
+              className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddMCP}
+              className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
+              disabled={!selectedMCP}
+            >
+              Add MCP
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog to configure custom MCP */}
+      <Dialog
+        open={isCustomMCPDialogOpen}
+        onOpenChange={setIsCustomMCPDialogOpen}
+      >
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              Configure Custom MCP
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Configure the URL and HTTP headers for the custom MCP.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto p-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="custom-mcp-url" className="text-gray-300">
+                  MCP URL
+                </Label>
+                <Input
+                  id="custom-mcp-url"
+                  value={selectedCustomMCP?.url || ""}
+                  onChange={(e) =>
+                    setSelectedCustomMCP({
+                      ...(selectedCustomMCP || {}),
+                      url: e.target.value,
+                    })
+                  }
+                  className="bg-[#222] border-[#444] text-white"
+                  placeholder="https://meu-servidor-mcp.com/api"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-white">
+                  HTTP Headers
+                </h3>
+                <div className="border border-[#444] rounded-md p-3 bg-[#222]">
+                  {customMCPHeadersList.map((header, index) => (
+                    <div
+                      key={header.id}
+                      className="grid grid-cols-5 items-center gap-2 mb-2"
+                    >
+                      <Input
+                        value={header.key}
+                        onChange={(e) => {
+                          const updatedList = [...customMCPHeadersList];
+                          updatedList[index] = {
+                            ...updatedList[index],
+                            key: e.target.value,
+                          };
+                          setCustomMCPHeadersList(updatedList);
+                        }}
+                        className="col-span-2 bg-[#333] border-[#444] text-white"
+                        placeholder="Header name"
+                      />
+                      <Input
+                        value={header.value}
+                        onChange={(e) => {
+                          const updatedList = [...customMCPHeadersList];
+                          updatedList[index] = {
+                            ...updatedList[index],
+                            value: e.target.value,
+                          };
+                          setCustomMCPHeadersList(updatedList);
+                        }}
+                        className="col-span-2 bg-[#333] border-[#444] text-white"
+                        placeholder="Header value"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setCustomMCPHeadersList(
+                            customMCPHeadersList.filter((_, i) => i !== index)
+                          );
+                        }}
+                        className="col-span-1 h-8 text-red-500 hover:text-red-400 hover:bg-[#444]"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setCustomMCPHeadersList([
+                        ...customMCPHeadersList,
+                        { id: `header-${Date.now()}`, key: "", value: "" },
+                      ]);
+                    }}
+                    className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                  >
+                    <Plus className="h-4 w-4 mr-1" /> Add Header
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="p-4 pt-2 border-t border-[#333]">
+            <Button
+              variant="outline"
+              onClick={() => setIsCustomMCPDialogOpen(false)}
+              className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddCustomMCP}
+              className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
+              disabled={!selectedCustomMCP?.url}
+            >
+              {selectedCustomMCP?.url
+                ? "Save Custom MCP"
+                : "Add Custom MCP"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
