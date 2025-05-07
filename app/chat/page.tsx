@@ -48,6 +48,7 @@ import {
 } from "@/services/sessionService";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Adicionar a interface para o tipo de retorno da função getMessageText
 interface FunctionMessageContent {
@@ -265,6 +266,12 @@ export default function Chat() {
       
       // Limpar input
       setMessageInput("");
+      
+      // Resetar altura do textarea
+      const textarea = document.querySelector('textarea');
+      if (textarea) {
+        textarea.style.height = 'auto';
+      }
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
       toast({
@@ -592,7 +599,7 @@ Args: ${
   return (
     <div className="flex h-screen max-h-screen bg-[#121212]">
       {/* Sidebar - Lista de sessões de chat */}
-      <div className="w-80 border-r border-[#333] flex flex-col bg-[#1a1a1a]">
+      <div className="w-64 border-r border-[#333] flex flex-col bg-[#1a1a1a]">
         <div className="p-4 border-b border-[#333]">
           <div className="flex items-center justify-between mb-4">
             <Button
@@ -728,7 +735,7 @@ Args: ${
       </div>
 
       {/* Área principal do chat */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {selectedSession || currentAgentId ? (
           <>
             {/* Cabeçalho */}
@@ -810,7 +817,7 @@ Args: ${
                         <div
                           className={`flex gap-3 ${
                             isUser ? "flex-row-reverse" : ""
-                          } max-w-[85%]`}
+                          } max-w-[90%]`}
                         >
                           <Avatar className={isUser ? "bg-[#333]" : agentColor}>
                             <AvatarFallback>
@@ -824,7 +831,7 @@ Args: ${
                                 : isUser
                                 ? "bg-[#00ff9d] text-black"
                                 : "bg-[#222] text-white"
-                            } max-w-full`}
+                            } w-full overflow-hidden`}
                             style={{ wordBreak: "break-word" }}
                           >
                             {isFunctionMessage ? (
@@ -1177,45 +1184,64 @@ Args: ${
                 value={agentSearchTerm}
                 onChange={(e) => setAgentSearchTerm(e.target.value)}
               />
+              {agentSearchTerm && (
+                <button
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                  onClick={() => setAgentSearchTerm("")}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
 
             <div className="text-sm text-gray-300 mb-2">Escolha um agente:</div>
 
-            <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto">
+            <ScrollArea className="h-[300px] pr-2">
               {isLoading ? (
-                <div className="col-span-2 flex justify-center py-4">
+                <div className="flex justify-center py-4">
                   <Loader2 className="h-6 w-6 text-[#00ff9d] animate-spin" />
                 </div>
               ) : filteredAgents.length > 0 ? (
-                filteredAgents.map((agent) => (
-                  <Button
-                    key={agent.id}
-                    onClick={() => selectAgent(agent.id)}
-                    className="bg-[#222] hover:bg-[#333] text-white justify-start"
-                    disabled={isLoading}
-                  >
-                    <div className="flex flex-col items-start text-left">
-                      <div className="font-medium">
-                        {agent.name || agent.id}
+                <div className="space-y-2">
+                  {filteredAgents.map((agent) => (
+                    <div
+                      key={agent.id}
+                      className="p-3 rounded-md cursor-pointer transition-colors bg-[#222] hover:bg-[#333]"
+                      onClick={() => selectAgent(agent.id)}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <MessageSquare size={16} className="text-[#00ff9d]" />
+                        <span className="font-medium text-white">{agent.name}</span>
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <Badge className="text-xs bg-[#333] text-[#00ff9d] border-[#00ff9d]/30">
+                          {agent.type}
+                        </Badge>
+                        {agent.model && (
+                          <span className="text-xs text-gray-400">{agent.model}</span>
+                        )}
                       </div>
                       {agent.description && (
-                        <div className="text-xs text-gray-400 truncate w-full">
+                        <p className="text-xs text-gray-300 mt-2 line-clamp-2">
                           {agent.description}
-                        </div>
+                        </p>
                       )}
                     </div>
-                  </Button>
-                ))
+                  ))}
+                </div>
               ) : agentSearchTerm ? (
-                <div className="col-span-2 text-center py-4 text-gray-400">
+                <div className="text-center py-4 text-gray-400">
                   Nenhum agente encontrado com "{agentSearchTerm}"
                 </div>
               ) : (
-                <div className="col-span-2 text-center py-4 text-gray-400">
-                  Nenhum agente disponível
+                <div className="text-center py-4 text-gray-400">
+                  <p>Nenhum agente disponível</p>
+                  <p className="text-sm mt-2">
+                    Crie agentes na tela de Gerenciamento de Agentes
+                  </p>
                 </div>
               )}
-            </div>
+            </ScrollArea>
           </div>
 
           <DialogFooter>
