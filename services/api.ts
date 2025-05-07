@@ -7,10 +7,10 @@ const api = axios.create({
   },
 });
 
-// Interceptor para adicionar o token do cookie no header Authorization
+// Interceptor to add the token from the cookie to the Authorization header
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    // Browser: lê o token do cookie
+    // Browser: reads the token from the cookie
     const match = document.cookie.match(/(?:^|; )access_token=([^;]*)/)
     const token = match ? decodeURIComponent(match[1]) : null
     if (token) {

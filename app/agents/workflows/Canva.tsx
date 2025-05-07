@@ -209,11 +209,11 @@ const Canva = forwardRef(({ agent }: { agent: Agent | null }, ref) => {
 
     switch (type) {
       case "start-node":
-        return "Quando...";
+        return "Start";
       case "agent-node":
-        return `Agente #${order}`;
+        return `Agent #${order}`;
       case "condition-node":
-        return `Condição #${order}`;
+        return `Condition #${order}`;
       default:
         return "Node";
     }
@@ -363,7 +363,7 @@ const Canva = forwardRef(({ agent }: { agent: Agent | null }, ref) => {
   return (
     <div className="container mx-auto p-6 bg-[#121212] min-h-screen rounded-lg">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-white">Fluxos</h1>
+        <h1 className="text-3xl font-bold text-white">Workflows</h1>
       </div>
 
       <div

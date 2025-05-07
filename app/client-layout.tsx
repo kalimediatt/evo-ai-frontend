@@ -6,7 +6,6 @@ import Sidebar from "@/components/sidebar"
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  // Atualizar a verificação de página de login para incluir a página inicial redirecionada
   const isLoginPage = pathname === "/login"
 
   if (isLoginPage) {

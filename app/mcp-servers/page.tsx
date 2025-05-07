@@ -59,7 +59,6 @@ export default function MCPServersPage() {
   const [selectedServer, setSelectedServer] = useState<MCPServer | null>(null)
   const [activeTab, setActiveTab] = useState("basic")
 
-  // Server form state
   const [serverData, setServerData] = useState<{
     name: string
     description: string
@@ -84,12 +83,10 @@ export default function MCPServersPage() {
     tools: [],
   })
 
-  // Paginação
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(10)
   const [total, setTotal] = useState(0)
 
-  // Carregar MCP servers da API
   const [mcpServers, setMcpServers] = useState<MCPServer[]>([])
 
   useEffect(() => {
@@ -101,8 +98,8 @@ export default function MCPServersPage() {
         setTotal(res.data.length)
       } catch (error) {
         toast({
-          title: "Erro ao carregar servidores MCP",
-          description: "Não foi possível carregar os servidores.",
+          title: "Error loading MCP servers",
+          description: "Unable to load servers.",
           variant: "destructive",
         })
       } finally {
@@ -112,7 +109,7 @@ export default function MCPServersPage() {
     fetchServers()
   }, [page, limit])
 
-  // Buscar servidor por nome/descrição (filtro local)
+  // Search server by name/description (local filter)
   const filteredServers = Array.isArray(mcpServers)
     ? mcpServers.filter(
         (server) =>
@@ -172,7 +169,7 @@ export default function MCPServersPage() {
   }
 
   const handleAddTool = () => {
-    const name = "nova_ferramenta";
+    const name = "new_tool";
     const newTool: ToolConfig = {
       id: name,
       name: name,
@@ -232,7 +229,6 @@ export default function MCPServersPage() {
           headersObj[header.key] = header.value
         }
       })
-      // Preparar config_json baseado no tipo de configuração
       let config_json: any = {}
       if (serverData.config_type === "sse") {
         config_json = {
@@ -265,26 +261,26 @@ export default function MCPServersPage() {
       if (selectedServer) {
         await updateMCPServer(selectedServer.id, payload)
         toast({
-          title: "Servidor atualizado",
-          description: `${serverData.name} foi atualizado com sucesso.`,
+          title: "Server updated",
+          description: `${serverData.name} was updated successfully.`,
         })
       } else {
         await createMCPServer(payload)
         toast({
-          title: "Servidor adicionado",
-          description: `${serverData.name} foi adicionado com sucesso.`,
+          title: "Server added",
+          description: `${serverData.name} was added successfully.`,
         })
       }
       setIsDialogOpen(false)
       resetForm()
-      // Recarregar lista
+      // Reload list
       const res = await listMCPServers((page - 1) * limit, limit)
       setMcpServers(res.data)
       setTotal(res.data.length)
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível salvar o servidor MCP. Tente novamente.",
+        title: "Error",
+        description: "Unable to save the MCP server. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -334,8 +330,8 @@ export default function MCPServersPage() {
       setIsDialogOpen(true)
     } catch (error) {
       toast({
-        title: "Erro ao buscar servidor MCP",
-        description: "Não foi possível buscar o servidor.",
+        title: "Error searching MCP server",
+        description: "Unable to search the server.",
         variant: "destructive",
       })
     } finally {
@@ -354,19 +350,19 @@ export default function MCPServersPage() {
     try {
       await deleteMCPServer(selectedServer.id)
       toast({
-        title: "Servidor excluído",
-        description: `${selectedServer.name} foi excluído com sucesso.`,
+        title: "Server deleted",
+        description: `${selectedServer.name} was deleted successfully.`,
       })
       setIsDeleteDialogOpen(false)
       setSelectedServer(null)
-      // Recarregar lista
+      // Reload list
       const res = await listMCPServers((page - 1) * limit, limit)
       setMcpServers(res.data)
       setTotal(res.data.length)
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível excluir o servidor. Tente novamente.",
+        title: "Error",
+        description: "Unable to delete the server. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -394,25 +390,25 @@ export default function MCPServersPage() {
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-white">Gerenciamento de Servidores MCP</h1>
+        <h1 className="text-3xl font-bold text-white">MCP Servers Management</h1>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={resetForm} className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]">
               <Plus className="mr-2 h-4 w-4" />
-              Novo Servidor MCP
+              New MCP Server
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
             <form onSubmit={handleAddServer}>
               <DialogHeader>
                 <DialogTitle className="text-white">
-                  {selectedServer ? "Editar Servidor MCP" : "Novo Servidor MCP"}
+                  {selectedServer ? "Edit MCP Server" : "New MCP Server"}
                 </DialogTitle>
                 <DialogDescription className="text-gray-400">
                   {selectedServer
-                    ? "Edite as informações do servidor MCP existente."
-                    : "Preencha as informações para criar um novo servidor MCP."}
+                    ? "Edit the existing MCP server information."
+                    : "Fill in the information to create a new MCP server."}
                 </DialogDescription>
               </DialogHeader>
 
@@ -422,19 +418,19 @@ export default function MCPServersPage() {
                     value="basic"
                     className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
                   >
-                    Informações Básicas
+                    Basic Information
                   </TabsTrigger>
                   <TabsTrigger
                     value="environments"
                     className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
                   >
-                    Variáveis de Ambiente
+                    Environment Variables
                   </TabsTrigger>
                   <TabsTrigger
                     value="tools"
                     className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
                   >
-                    Ferramentas
+                    Tools
                   </TabsTrigger>
                 </TabsList>
 
@@ -442,49 +438,49 @@ export default function MCPServersPage() {
                   <TabsContent value="basic" className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="name" className="text-gray-300">
-                        Nome
+                        Name
                       </Label>
                       <Input
                         id="name"
                         value={serverData.name}
                         onChange={(e) => setServerData({ ...serverData, name: e.target.value })}
                         className="bg-[#222] border-[#444] text-white"
-                        placeholder="Nome do servidor MCP"
+                        placeholder="MCP Server Name"
                         required
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="description" className="text-gray-300">
-                        Descrição
+                        Description
                       </Label>
                       <Textarea
                         id="description"
                         value={serverData.description}
                         onChange={(e) => setServerData({ ...serverData, description: e.target.value })}
                         className="bg-[#222] border-[#444] text-white"
-                        placeholder="Descrição do servidor MCP"
+                        placeholder="MCP Server Description"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="type" className="text-gray-300">
-                        Tipo
+                        Type
                       </Label>
                       <Select
                         value={serverData.type}
                         onValueChange={(value) => setServerData({ ...serverData, type: value })}
                       >
                         <SelectTrigger id="type" className="w-full bg-[#222] border-[#444] text-white">
-                          <SelectValue placeholder="Selecione o tipo" />
+                          <SelectValue placeholder="Select the type" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#222] border-[#444] text-white">
-                          <SelectItem value="official">Oficial</SelectItem>
-                          <SelectItem value="community">Comunidade</SelectItem>
+                          <SelectItem value="official">Official</SelectItem>
+                          <SelectItem value="community">Community</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="config_type" className="text-gray-300">
-                        Tipo de Configuração
+                        Configuration Type
                       </Label>
                       <Select
                         value={serverData.config_type}
@@ -493,7 +489,7 @@ export default function MCPServersPage() {
                         }
                       >
                         <SelectTrigger id="config_type" className="w-full bg-[#222] border-[#444] text-white">
-                          <SelectValue placeholder="Selecione o tipo de configuração" />
+                          <SelectValue placeholder="Select the configuration type" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#222] border-[#444] text-white">
                           <SelectItem value="sse">SSE (Server-Sent Events)</SelectItem>
@@ -502,7 +498,7 @@ export default function MCPServersPage() {
                       </Select>
                     </div>
 
-                    {/* Campos específicos para SSE */}
+                    {/* Specific fields for SSE */}
                     {serverData.config_type === "sse" && (
                       <>
                         <div className="space-y-2">
@@ -514,12 +510,12 @@ export default function MCPServersPage() {
                             value={serverData.url}
                             onChange={(e) => setServerData({ ...serverData, url: e.target.value })}
                             className="bg-[#222] border-[#444] text-white"
-                            placeholder="http://localhost:5540/sse"
+                            placeholder="https://your_server.com/sse"
                             required={serverData.config_type === "sse"}
                           />
                         </div>
 
-                        {/* Headers dinâmicos */}
+                        {/* Dynamic headers */}
                         <div className="space-y-2">
                           <div className="flex justify-between items-center">
                             <Label className="text-gray-300">Headers</Label>
@@ -530,7 +526,7 @@ export default function MCPServersPage() {
                               size="sm"
                             >
                               <Plus className="mr-2 h-4 w-4" />
-                              Adicionar Header
+                              Add Header
                             </Button>
                           </div>
 
@@ -539,26 +535,26 @@ export default function MCPServersPage() {
                               <div key={index} className="flex gap-2 items-start">
                                 <div className="flex-1">
                                   <Label htmlFor={`header-key-${index}`} className="sr-only">
-                                    Nome do Header
+                                    Header Name
                                   </Label>
                                   <Input
                                     id={`header-key-${index}`}
                                     value={header.key}
                                     onChange={(e) => handleHeaderChange(index, "key", e.target.value)}
                                     className="bg-[#222] border-[#444] text-white"
-                                    placeholder="Nome do header"
+                                    placeholder="Header Name"
                                   />
                                 </div>
                                 <div className="flex-1">
                                   <Label htmlFor={`header-value-${index}`} className="sr-only">
-                                    Valor do Header
+                                    Header Value
                                   </Label>
                                   <Input
                                     id={`header-value-${index}`}
                                     value={header.value}
                                     onChange={(e) => handleHeaderChange(index, "value", e.target.value)}
                                     className="bg-[#222] border-[#444] text-white"
-                                    placeholder="Valor do header"
+                                    placeholder="Header Value"
                                   />
                                 </div>
                                 <Button
@@ -577,12 +573,12 @@ export default function MCPServersPage() {
                       </>
                     )}
 
-                    {/* Campos específicos para Studio */}
+                    {/* Specific fields for Studio */}
                     {serverData.config_type === "studio" && (
                       <>
                         <div className="space-y-2">
                           <Label htmlFor="command" className="text-gray-300">
-                            Comando
+                            Command
                           </Label>
                           <Input
                             id="command"
@@ -595,7 +591,7 @@ export default function MCPServersPage() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="args" className="text-gray-300">
-                            Argumentos (um por linha)
+                            Arguments (one per line)
                           </Label>
                           <Textarea
                             id="args"
@@ -613,7 +609,7 @@ export default function MCPServersPage() {
 
                   <TabsContent value="environments" className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-medium text-white">Variáveis de Ambiente</h3>
+                      <h3 className="text-lg font-medium text-white">Environment Variables</h3>
                       <Button
                         type="button"
                         onClick={handleAddEnvironment}
@@ -621,13 +617,13 @@ export default function MCPServersPage() {
                         size="sm"
                       >
                         <Plus className="mr-2 h-4 w-4" />
-                        Adicionar Variável
+                        Add Environment Variable
                       </Button>
                     </div>
 
                     {serverData.environments.length === 0 ? (
                       <div className="text-center py-8 text-gray-400">
-                        Nenhuma variável de ambiente configurada. Clique em "Adicionar Variável" para começar.
+                        No environment variables configured. Click "Add Variable" to start.
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -635,14 +631,14 @@ export default function MCPServersPage() {
                           <div key={index} className="flex gap-2 items-start">
                             <div className="flex-1">
                               <Label htmlFor={`env-key-${index}`} className="sr-only">
-                                Nome da Variável
+                                Environment Variable Name
                               </Label>
                               <Input
                                 id={`env-key-${index}`}
                                 value={env.key}
                                 onChange={(e) => handleEnvironmentChange(index, e.target.value)}
                                 className="bg-[#222] border-[#444] text-white"
-                                placeholder="NOME_DA_VARIAVEL"
+                                placeholder="ENV_VARIABLE_NAME"
                               />
                             </div>
                             <Button
@@ -662,7 +658,7 @@ export default function MCPServersPage() {
 
                   <TabsContent value="tools" className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-medium text-white">Ferramentas</h3>
+                      <h3 className="text-lg font-medium text-white">Tools</h3>
                       <Button
                         type="button"
                         onClick={handleAddTool}
@@ -670,13 +666,13 @@ export default function MCPServersPage() {
                         size="sm"
                       >
                         <Plus className="mr-2 h-4 w-4" />
-                        Adicionar Ferramenta
+                        Add Tool
                       </Button>
                     </div>
 
                     {serverData.tools.length === 0 ? (
                       <div className="text-center py-8 text-gray-400">
-                        Nenhuma ferramenta configurada. Clique em "Adicionar Ferramenta" para começar.
+                        No tools configured. Click "Add Tool" to start.
                       </div>
                     ) : (
                       <div className="space-y-6">
@@ -684,7 +680,7 @@ export default function MCPServersPage() {
                           <Card key={index} className="bg-[#222] border-[#444]">
                             <CardHeader className="pb-2 flex flex-row justify-between items-start">
                               <div>
-                                <CardTitle className="text-white text-base">Ferramenta {index + 1}</CardTitle>
+                                <CardTitle className="text-white text-base">Tool {index + 1}</CardTitle>
                               </div>
                               <Button
                                 type="button"
@@ -699,31 +695,31 @@ export default function MCPServersPage() {
                             <CardContent className="space-y-3">
                               <div className="space-y-2">
                                 <Label htmlFor={`tool-name-${index}`} className="text-gray-300">
-                                  Nome
+                                  Name
                                 </Label>
                                 <Input
                                   id={`tool-name-${index}`}
                                   value={tool.name}
                                   onChange={(e) => handleToolChange(index, "name", e.target.value)}
                                   className="bg-[#222] border-[#444] text-white"
-                                  placeholder="nome_da_ferramenta"
+                                  placeholder="tool_name"
                                 />
                               </div>
                               <div className="space-y-2">
                                 <Label htmlFor={`tool-description-${index}`} className="text-gray-300">
-                                  Descrição
+                                  Description
                                 </Label>
                                 <Textarea
                                   id={`tool-description-${index}`}
                                   value={tool.description}
                                   onChange={(e) => handleToolChange(index, "description", e.target.value)}
                                   className="bg-[#222] border-[#444] text-white"
-                                  placeholder="Descrição da ferramenta"
+                                  placeholder="Tool Description"
                                 />
                               </div>
                               <div className="space-y-2">
                                 <Label htmlFor={`tool-tags-${index}`} className="text-gray-300">
-                                  Tags (separadas por vírgula)
+                                  Tags (separated by comma)
                                 </Label>
                                 <Input
                                   id={`tool-tags-${index}`}
@@ -735,14 +731,14 @@ export default function MCPServersPage() {
                               </div>
                               <div className="space-y-2">
                                 <Label htmlFor={`tool-examples-${index}`} className="text-gray-300">
-                                  Exemplos (separados por vírgula)
+                                  Examples (separated by comma)
                                 </Label>
                                 <Textarea
                                   id={`tool-examples-${index}`}
                                   value={(tool.examples ?? []).join(", ")}
                                   onChange={(e) => handleToolChange(index, "examples", e.target.value.split(", "))}
                                   className="bg-[#222] border-[#444] text-white"
-                                  placeholder="Exemplo 1, Exemplo 2"
+                                  placeholder="Example 1, Example 2"
                                 />
                               </div>
                             </CardContent>
@@ -761,10 +757,10 @@ export default function MCPServersPage() {
                   onClick={() => setIsDialogOpen(false)}
                   className="border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
                 >
-                  Cancelar
+                  Cancel
                 </Button>
                 <Button type="submit" className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]" disabled={isLoading}>
-                  {isLoading ? "Salvando..." : selectedServer ? "Salvar Alterações" : "Adicionar Servidor"}
+                  {isLoading ? "Saving..." : selectedServer ? "Save Changes" : "Add Server"}
                 </Button>
               </DialogFooter>
             </form>
@@ -774,21 +770,21 @@ export default function MCPServersPage() {
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent className="bg-[#1a1a1a] border-[#333] text-white">
             <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogTitle>Confirm delete</AlertDialogTitle>
               <AlertDialogDescription className="text-gray-400">
-                Tem certeza que deseja excluir o servidor "{selectedServer?.name}"? Esta ação não pode ser desfeita.
+                Are you sure you want to delete the server "{selectedServer?.name}"? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel className="border-[#444] text-gray-300 hover:bg-[#333] hover:text-white">
-                Cancelar
+                Cancel
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={confirmDeleteServer}
                 className="bg-red-600 text-white hover:bg-red-700"
                 disabled={isLoading}
               >
-                {isLoading ? "Excluindo..." : "Excluir"}
+                {isLoading ? "Deleting..." : "Delete"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -797,13 +793,13 @@ export default function MCPServersPage() {
 
       <Card className="bg-[#1a1a1a] border-[#333] mb-6">
         <CardHeader className="pb-3">
-          <CardTitle className="text-white text-lg">Buscar Servidores MCP</CardTitle>
+          <CardTitle className="text-white text-lg">Search MCP Servers</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <Input
-              placeholder="Buscar por nome ou descrição..."
+              placeholder="Search by name or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-[#222] border-[#444] text-white pl-10"
@@ -817,12 +813,12 @@ export default function MCPServersPage() {
           <Table>
             <TableHeader>
               <TableRow className="border-[#333] hover:bg-[#222]">
-                <TableHead className="text-gray-300">Nome</TableHead>
-                <TableHead className="text-gray-300">Descrição</TableHead>
-                <TableHead className="text-gray-300">Tipo</TableHead>
-                <TableHead className="text-gray-300">Configuração</TableHead>
-                <TableHead className="text-gray-300">Ferramentas</TableHead>
-                <TableHead className="text-gray-300 text-right">Ações</TableHead>
+                <TableHead className="text-gray-300">Name</TableHead>
+                <TableHead className="text-gray-300">Description</TableHead>
+                <TableHead className="text-gray-300">Type</TableHead>
+                <TableHead className="text-gray-300">Configuration</TableHead>
+                <TableHead className="text-gray-300">Tools</TableHead>
+                <TableHead className="text-gray-300 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -840,7 +836,7 @@ export default function MCPServersPage() {
                             : "bg-[#ff9d00]/10 text-[#ff9d00] border-[#ff9d00]/30"
                         }
                       >
-                        {server.type === "official" ? "Oficial" : "Personalizado"}
+                        {server.type === "official" ? "Official" : "Community"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-gray-300">
@@ -879,21 +875,21 @@ export default function MCPServersPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="bg-[#222] border-[#444] text-white">
-                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator className="bg-[#444]" />
                           <DropdownMenuItem
                             className="cursor-pointer hover:bg-[#333]"
                             onClick={() => handleEditServer(server)}
                           >
                             <Edit className="mr-2 h-4 w-4 text-[#00ff9d]" />
-                            Editar
+                            Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="cursor-pointer hover:bg-[#333] text-red-500"
                             onClick={() => handleDeleteServer(server)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Excluir
+                            Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -903,7 +899,7 @@ export default function MCPServersPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center text-gray-500">
-                    Nenhum servidor MCP encontrado.
+                    No MCP servers found.
                   </TableCell>
                 </TableRow>
               )}

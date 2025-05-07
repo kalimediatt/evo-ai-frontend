@@ -18,7 +18,6 @@ export default function ProfilePage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
-  // Estado para dados reais do usuário
   const [userData, setUserData] = useState(() => {
     if (typeof window !== "undefined") {
       const user = localStorage.getItem("user")
@@ -34,7 +33,6 @@ export default function ProfilePage() {
     }
   })
 
-  // Atualizar profileData quando userData mudar
   const [profileData, setProfileData] = useState({
     name: userData.name,
     email: userData.email,
@@ -43,7 +41,6 @@ export default function ProfilePage() {
     setProfileData({ name: userData.name, email: userData.email })
   }, [userData])
 
-  // Password form state
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -55,10 +52,8 @@ export default function ProfilePage() {
     setIsLoading(true)
 
     try {
-      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      // Update local state
       setUserData({
         ...userData,
         name: profileData.name,
@@ -66,13 +61,13 @@ export default function ProfilePage() {
       })
 
       toast({
-        title: "Perfil atualizado",
-        description: "Suas informações foram atualizadas com sucesso.",
+        title: "Profile updated",
+        description: "Your information has been updated successfully.",
       })
     } catch (error) {
       toast({
-        title: "Erro ao atualizar perfil",
-        description: "Não foi possível atualizar suas informações. Tente novamente.",
+        title: "Error updating profile",
+        description: "Unable to update your information. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -86,8 +81,8 @@ export default function ProfilePage() {
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast({
-        title: "Erro ao atualizar senha",
-        description: "As senhas não coincidem.",
+        title: "Error updating password",
+        description: "The passwords do not match.",
         variant: "destructive",
       })
       setIsLoading(false)
@@ -106,13 +101,13 @@ export default function ProfilePage() {
       })
 
       toast({
-        title: "Senha atualizada",
-        description: "Sua senha foi atualizada com sucesso.",
+        title: "Password updated",
+        description: "Your password has been updated successfully.",
       })
     } catch (error) {
       toast({
-        title: "Erro ao atualizar senha",
-        description: "Não foi possível atualizar sua senha. Tente novamente.",
+        title: "Error updating password",
+        description: "Unable to update your password. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -120,14 +115,14 @@ export default function ProfilePage() {
     }
   }
 
-  // Função de logout
+  // Logout function
   const handleLogout = () => {
-    // Remover token do cookie
+    // Remove token from cookie
     document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
-    // Remover do localStorage
+    // Remove from localStorage
     localStorage.removeItem("access_token")
     localStorage.removeItem("user")
-    // Redirecionar para login
+    // Redirect to login
     router.push("/login")
   }
 
@@ -159,22 +154,22 @@ export default function ProfilePage() {
                   <span className="text-gray-400 truncate max-w-[180px]">{userData.id}</span>
                 </div>
                 <div className="flex justify-between text-gray-300">
-                  <span>Tipo de Conta:</span>
-                  <span className="text-gray-400">{userData.is_admin ? "Administrador" : "Cliente"}</span>
+                  <span>Account Type:</span>
+                  <span className="text-gray-400">{userData.is_admin ? "Administrator" : "Client"}</span>
                 </div>
                 <div className="flex justify-between text-gray-300">
-                  <span>Email Verificado:</span>
-                  <span className="text-gray-400">{userData.email_verified ? "Sim" : "Não"}</span>
+                  <span>Email Verified:</span>
+                  <span className="text-gray-400">{userData.email_verified ? "Yes" : "No"}</span>
                 </div>
                 <div className="flex justify-between text-gray-300">
-                  <span>Criado em:</span>
-                  <span className="text-gray-400">{new Date(userData.created_at).toLocaleDateString("pt-BR")}</span>
+                  <span>Created at:</span>
+                  <span className="text-gray-400">{new Date(userData.created_at).toLocaleDateString("en-US")}</span>
                 </div>
               </div>
             </CardContent>
             <CardFooter>
               <Button variant="destructive" className="w-full" onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" /> Sair
+                <LogOut className="mr-2 h-4 w-4" /> Logout
               </Button>
             </CardFooter>
           </Card>
@@ -188,26 +183,26 @@ export default function ProfilePage() {
                   value="profile"
                   className="flex-1 data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
                 >
-                  <User className="mr-2 h-4 w-4" /> Perfil
+                  <User className="mr-2 h-4 w-4" /> Profile
                 </TabsTrigger>
                 <TabsTrigger
                   value="security"
                   className="flex-1 data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
                 >
-                  <Key className="mr-2 h-4 w-4" /> Segurança
+                  <Key className="mr-2 h-4 w-4" /> Security
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="profile">
                 <form onSubmit={handleProfileUpdate}>
                   <CardHeader>
-                    <CardTitle className="text-white">Informações do Perfil</CardTitle>
-                    <CardDescription className="text-gray-400">Atualize suas informações pessoais.</CardDescription>
+                    <CardTitle className="text-white">Profile Information</CardTitle>
+                    <CardDescription className="text-gray-400">Update your personal information.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="name" className="text-gray-300">
-                        Nome
+                        Name
                       </Label>
                       <Input
                         id="name"
@@ -235,7 +230,7 @@ export default function ProfilePage() {
                       className="w-full bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
                       disabled={isLoading}
                     >
-                      {isLoading ? "Salvando..." : "Salvar Alterações"}
+                      {isLoading ? "Saving..." : "Save Changes"}
                     </Button>
                   </CardFooter>
                 </form>
@@ -244,15 +239,15 @@ export default function ProfilePage() {
               <TabsContent value="security">
                 <form onSubmit={handlePasswordUpdate}>
                   <CardHeader>
-                    <CardTitle className="text-white">Alterar Senha</CardTitle>
+                    <CardTitle className="text-white">Change Password</CardTitle>
                     <CardDescription className="text-gray-400">
-                      Atualize sua senha para manter sua conta segura.
+                      Update your password to keep your account secure.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="current-password" className="text-gray-300">
-                        Senha Atual
+                        Current Password
                       </Label>
                       <Input
                         id="current-password"
@@ -264,7 +259,7 @@ export default function ProfilePage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="new-password" className="text-gray-300">
-                        Nova Senha
+                        New Password
                       </Label>
                       <Input
                         id="new-password"
@@ -276,7 +271,7 @@ export default function ProfilePage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="confirm-password" className="text-gray-300">
-                        Confirmar Nova Senha
+                        Confirm New Password
                       </Label>
                       <Input
                         id="confirm-password"
@@ -293,7 +288,7 @@ export default function ProfilePage() {
                       className="w-full bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
                       disabled={isLoading}
                     >
-                      {isLoading ? "Atualizando..." : "Atualizar Senha"}
+                      {isLoading ? "Updating..." : "Update Password"}
                     </Button>
                   </CardFooter>
                 </form>

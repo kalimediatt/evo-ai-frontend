@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const PUBLIC_PATHS = ['/login']
-const ADMIN_PATHS = ['/clientes', '/servidores-mcp']
-const CLIENT_PATHS = ['/agentes', '/chat']
+const ADMIN_PATHS = ['/clients', '/mcp-servers']
+const CLIENT_PATHS = ['/agents', '/chat']
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -33,7 +33,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (isClientPath && isAdmin) {
-    return NextResponse.redirect(new URL('/servidores-mcp', request.url))
+    return NextResponse.redirect(new URL('/mcp-servers', request.url))
   }
 
   return NextResponse.next()

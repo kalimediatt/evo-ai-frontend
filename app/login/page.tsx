@@ -20,13 +20,11 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState("login")
 
-  // Login form state
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
   })
 
-  // Forgot password state
   const [forgotEmail, setForgotEmail] = useState("")
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -38,28 +36,24 @@ export default function LoginPage() {
         email: loginData.email,
         password: loginData.password,
       })
-      // Salvar token no localStorage
       if (response.data.access_token) {
         localStorage.setItem("access_token", response.data.access_token)
-        // Salvar token em cookie (expira em 7 dias)
         document.cookie = `access_token=${response.data.access_token}; path=/; max-age=${60 * 60 * 24 * 7}`
-        // Buscar dados do usuário
         const meResponse = await getMe()
         if (meResponse.data) {
           localStorage.setItem("user", JSON.stringify(meResponse.data))
-          // Salvar user em cookie (expira em 7 dias)
           document.cookie = `user=${encodeURIComponent(JSON.stringify(meResponse.data))}; path=/; max-age=${60 * 60 * 24 * 7}`
         }
       }
       toast({
-        title: "Login bem-sucedido",
-        description: "Bem-vindo de volta!",
+        title: "Login successful",
+        description: "Welcome back!",
       })
       router.push("/")
     } catch (error: any) {
       toast({
-        title: "Erro ao fazer login",
-        description: error?.response?.data?.detail || "Verifique suas credenciais e tente novamente.",
+        title: "Error logging in",
+        description: error?.response?.data?.detail || "Check your credentials and try again.",
         variant: "destructive",
       })
     } finally {
@@ -74,14 +68,14 @@ export default function LoginPage() {
     try {
       await forgotPassword({ email: forgotEmail })
       toast({
-        title: "Email enviado",
-        description: "Verifique sua caixa de entrada para redefinir sua senha.",
+        title: "Email sent",
+        description: "Check your inbox to reset your password.",
       })
       setActiveTab("login")
     } catch (error: any) {
       toast({
-        title: "Erro ao enviar email",
-        description: error?.response?.data?.detail || "Não foi possível enviar o email de redefinição. Tente novamente.",
+        title: "Error sending email",
+        description: error?.response?.data?.detail || "Unable to send the reset password email. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -92,7 +86,13 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#121212] p-4">
       <div className="mb-8">
-        <Image src="/images/evolution-api-logo.png" alt="Evolution API" width={220} height={50} />
+        <Image 
+          src="/images/evolution-api-logo.png" 
+          alt="Evolution API" 
+          width={220} 
+          height={50}
+          priority 
+        />
       </div>
 
       <Card className="w-full max-w-md bg-[#1a1a1a] border-[#333]">
@@ -102,7 +102,7 @@ export default function LoginPage() {
               Login
             </TabsTrigger>
             <TabsTrigger value="forgot" className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]">
-              Recuperar
+              Forgot Password
             </TabsTrigger>
           </TabsList>
 
@@ -111,7 +111,7 @@ export default function LoginPage() {
               <CardHeader>
                 <CardTitle className="text-white">Login</CardTitle>
                 <CardDescription className="text-gray-400">
-                  Entre com suas credenciais para acessar o sistema.
+                  Enter your credentials to access the system.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -122,7 +122,7 @@ export default function LoginPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="seu@email.com"
+                    placeholder="your@email.com"
                     required
                     value={loginData.email}
                     onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
@@ -132,7 +132,7 @@ export default function LoginPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password" className="text-gray-300">
-                      Senha
+                      Password
                     </Label>
                   </div>
                   <Input
@@ -151,7 +151,7 @@ export default function LoginPage() {
                   className="w-full bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Entrando..." : "Entrar"}
+                  {isLoading ? "Entering..." : "Enter"}
                 </Button>
               </CardFooter>
             </form>
@@ -160,9 +160,9 @@ export default function LoginPage() {
           <TabsContent value="forgot">
             <form onSubmit={handleForgotPassword}>
               <CardHeader>
-                <CardTitle className="text-white">Recuperar Senha</CardTitle>
+                <CardTitle className="text-white">Forgot Password</CardTitle>
                 <CardDescription className="text-gray-400">
-                  Digite seu email para receber um link de redefinição de senha.
+                  Enter your email to receive a password reset link.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -173,7 +173,7 @@ export default function LoginPage() {
                   <Input
                     id="forgot-email"
                     type="email"
-                    placeholder="seu@email.com"
+                    placeholder="your@email.com"
                     required
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
@@ -187,7 +187,7 @@ export default function LoginPage() {
                   className="w-full bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Enviando..." : "Enviar Link"}
+                  {isLoading ? "Sending..." : "Send Link"}
                 </Button>
               </CardFooter>
             </form>
@@ -197,13 +197,13 @@ export default function LoginPage() {
 
       <div className="mt-4 text-center text-sm text-gray-500">
         <p>
-          Ao usar este serviço, você concorda com nossos{" "}
+          By using this service, you agree to our{" "}
           <Link href="#" className="text-[#00ff9d] hover:underline">
-            Termos de Serviço
+            Terms of Service
           </Link>{" "}
           e{" "}
           <Link href="#" className="text-[#00ff9d] hover:underline">
-            Política de Privacidade
+            Privacy Policy
           </Link>
           .
         </p>

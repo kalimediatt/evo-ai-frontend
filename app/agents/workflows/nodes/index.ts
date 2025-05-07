@@ -42,7 +42,7 @@ export const initialNodes: AppNode[] = [
     type: "start-node",
     position: { x: -100, y: 100 },
     data: {
-      label: "Início",
+      label: "Start",
     },
   },
 ];

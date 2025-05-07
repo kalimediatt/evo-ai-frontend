@@ -14,7 +14,7 @@ import { NodeDataProvider } from "@/contexts/NodeDataContext";
 import { SourceClickProvider } from "@/contexts/SourceClickContext";
 import { useToast } from '@/components/ui/use-toast';
 
-function FluxosContent() {
+function WorkflowsContent() {
   const searchParams = useSearchParams();
   const agentId = searchParams.get('agentId');
   const [agent, setAgent] = useState<Agent | null>(null);
@@ -22,7 +22,6 @@ function FluxosContent() {
   const canvaRef = useRef<any>(null);
   const { toast } = useToast();
   
-  // Buscar client_id do usuário logado
   const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || '{}') : {};
   const clientId = user?.client_id || "";
 
@@ -32,13 +31,12 @@ function FluxosContent() {
       getAgent(agentId, clientId)
         .then(res => {
           setAgent(res.data);
-          // Salvar o agente atual no localStorage para poder filtrá-lo na lista de agentes
           if (typeof window !== "undefined") {
             localStorage.setItem("current_workflow_agent", JSON.stringify(res.data));
           }
         })
         .catch(err => {
-          console.error("Erro ao carregar agente:", err);
+          console.error("Error loading agent:", err);
         })
         .finally(() => {
           setLoading(false);
@@ -46,7 +44,6 @@ function FluxosContent() {
     }
   }, [agentId, clientId]);
 
-  // Limpar o agente do localStorage quando o componente for desmontado
   useEffect(() => {
     return () => {
       if (typeof window !== "undefined") {
@@ -98,16 +95,16 @@ function FluxosContent() {
       });
       
       toast({
-        title: "Workflow salvo",
-        description: "As alterações foram salvas com sucesso",
+        title: "Workflow saved",
+        description: "The changes were saved successfully",
       });
       
       canvaRef.current.setHasChanges(false);
     } catch (error) {
-      console.error("Erro ao salvar workflow:", error);
+      console.error("Error saving workflow:", error);
       toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível salvar as alterações",
+        title: "Error saving workflow",
+        description: "Unable to save the changes",
         variant: "destructive"
       });
     }
@@ -116,7 +113,7 @@ function FluxosContent() {
   if (loading) {
     return (
       <div className="container mx-auto p-6 bg-[#121212] min-h-screen rounded-lg flex items-center justify-center">
-        <div className="text-white text-xl">Carregando...</div>
+        <div className="text-white text-xl">Loading...</div>
       </div>
     );
   }
@@ -124,10 +121,10 @@ function FluxosContent() {
   return (
     <div className="relative">
       <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-        <Link href="/agentes">
+        <Link href="/agents">
           <Button variant="outline" className="bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar para Agentes
+            Back to Agents
           </Button>
         </Link>
         
@@ -137,7 +134,7 @@ function FluxosContent() {
           onClick={handleSaveWorkflow}
         >
           <Save className="mr-2 h-4 w-4" />
-          Salvar
+          Save
         </Button>
         
         <Button 
@@ -146,7 +143,7 @@ function FluxosContent() {
           onClick={handleExportFlow}
         >
           <Download className="mr-2 h-4 w-4" />
-          Exportar
+          Export
         </Button>
       </div>
       {agent && <div className="absolute top-4 right-4 z-10 bg-gray-800 px-4 py-2 rounded-md">
@@ -166,14 +163,14 @@ function FluxosContent() {
   );
 }
 
-export default function FluxosPage() {
+export default function WorkflowsPage() {
   return (
     <Suspense fallback={
       <div className="container mx-auto p-6 bg-[#121212] min-h-screen rounded-lg flex items-center justify-center">
-        <div className="text-white text-xl">Carregando...</div>
+        <div className="text-white text-xl">Loading...</div>
       </div>
     }>
-      <FluxosContent />
+      <WorkflowsContent />
     </Suspense>
   );
 }

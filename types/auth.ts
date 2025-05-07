@@ -1,5 +1,3 @@
-// Tipos para Auth API
-
 export interface RegisterRequest {
   email: string;
   password: string;
@@ -7,11 +5,9 @@ export interface RegisterRequest {
 }
 
 export interface RegisterResponse {
-  // Defina os campos conforme a resposta real da API
   id: string;
   email: string;
   name: string;
-  // ... outros campos
 }
 
 export interface LoginRequest {

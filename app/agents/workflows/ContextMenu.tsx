@@ -63,7 +63,7 @@ export default function ContextMenu({
       {...props}
     >
       <p className="mb-2 text-sm font-semibold text-gray-200">
-        Ações
+        Actions
       </p>
       <button
         onClick={duplicateNode}
@@ -73,7 +73,7 @@ export default function ContextMenu({
           size={16}
           className="mr-2 flex-shrink-0 text-blue-300"
         />
-        <span className="text-gray-300">Duplicar</span>
+        <span className="text-gray-300">Duplicate</span>
       </button>
       <button
         onClick={deleteNode}
@@ -83,7 +83,7 @@ export default function ContextMenu({
           size={16}
           className="mr-2 flex-shrink-0 text-red-300"
         />
-        <span className="text-gray-300">Excluir</span>
+        <span className="text-gray-300">Delete</span>
       </button>
     </div>
   );

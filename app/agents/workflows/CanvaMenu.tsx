@@ -67,17 +67,17 @@ function CanvaMenu({
 
   const addNode = (type: string) => {
     if (!externalOpen) {
-      console.log("externalOpen está vazio, não é possível adicionar node");
+      console.log("externalOpen is empty, unable to add node");
       return;
     }
 
     // Verificar se externalOpen tem a propriedade position
     if (!externalOpen.position) {
-      console.log("externalOpen não tem a propriedade position:", externalOpen);
+      console.log("externalOpen does not have the position property:", externalOpen);
       return;
     }
 
-    console.log("Adicionando node do tipo:", type, "com dados:", externalOpen);
+    console.log("Adding node of type:", type, "with data:", externalOpen);
     handleAddNode(type, externalOpen);
 
     setIsOpen(false);
@@ -89,7 +89,7 @@ function CanvaMenu({
     if (externalOpen) {
       addNode(type);
     } else {
-      console.log("Item clicado, mas sem dados de posição disponíveis");
+      console.log("Item clicked, but no position data available");
       setIsOpen(false);
     }
   };
@@ -109,7 +109,7 @@ function CanvaMenu({
           <Card className="absolute right-20 top-5 z-50 mr-5 w-96 p-2 pt-8 shadow-lg bg-gray-800 text-white">
             <CardContent>
               <div className="mb-4">
-                <h4 className="mb-4 text-sm font-medium">Conteúdo</h4>
+                <h4 className="mb-4 text-sm font-medium">Content</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div
                     className="flex cursor-pointer items-center justify-between rounded-lg border-2 border-dashed p-4 border-gray-700 hover:bg-gray-700"
@@ -120,12 +120,12 @@ function CanvaMenu({
                     onClick={() => handleItemClick("agent-node")}
                   >
                     <User size={20} className="text-blue-500" />
-                    <span>Agente</span>
+                    <span>Agent</span>
                   </div>
                 </div>
               </div>
               <div className="mb-4">
-                <h4 className="mb-4 text-sm font-medium">Lógica</h4>
+                <h4 className="mb-4 text-sm font-medium">Logic</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div
                     className="flex cursor-pointer items-center justify-between rounded-lg border-2 border-dashed p-4 border-gray-700 hover:bg-gray-700"
@@ -136,7 +136,7 @@ function CanvaMenu({
                     onClick={() => handleItemClick("condition-node")}
                   >
                     <FilterIcon size={20} className="text-blue-500" />
-                    <span>Condição</span>
+                    <span>Condition</span>
                   </div>
                 </div>
               </div>

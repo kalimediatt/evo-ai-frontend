@@ -64,7 +64,7 @@ export const NodeDataProvider: React.FC<NodeDataProviderProps> = ({
   const [currentUploadType, setCurrentUploadType] = useState<string>("image");
 
   useEffect(() => {
-    // Você pode adicionar lógica aqui se necessário
+    // You can add logic here if needed
   }, [nodeData]);
 
   return (

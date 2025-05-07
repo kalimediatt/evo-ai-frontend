@@ -16,20 +16,20 @@ export function StartNode(props: NodeProps) {
   const edges = useEdges();
 
   const isSourceHandleConnected = edges.some(
-    (edge) => edge.source === props.id,
+    (edge) => edge.source === props.id
   );
 
   return (
     <BaseNode hasTarget={true} selected={selected || false}>
       <div className="mb-4 flex items-center gap-2">
         <Zap size={20} className="text-gray-400" />
-        <span className="font-semibold text-gray-300">
-          Início
-        </span>
+        <span className="font-semibold text-gray-300">Start</span>
       </div>
 
+      <div className="text-sm text-gray-400">Input: User content</div>
+
       <div className="mt-4 cursor-pointer text-right text-sm text-gray-400">
-        Então
+        Then
       </div>
 
       <Handle

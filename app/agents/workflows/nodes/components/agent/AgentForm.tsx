@@ -38,11 +38,9 @@ function AgentForm({
     return node || null;
   }, [edges, nodes, selectedNode.id]);
   
-  // Buscar client_id do usuário logado
   const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || '{}') : {};
   const clientId = user?.client_id || "";
   
-  // Obter o ID do agente atual do workflow
   const currentAgent = typeof window !== "undefined" ? 
     JSON.parse(localStorage.getItem("current_workflow_agent") || '{}') : {};
   const currentAgentId = currentAgent?.id;
@@ -53,22 +51,19 @@ function AgentForm({
     }
   }, [selectedNode]);
 
-  // Buscar a lista de agentes
   useEffect(() => {
     if (!clientId) return;
     setLoading(true);
     listAgents(clientId)
       .then((res) => {
-        // Filtrar a lista para remover o agente atual do workflow
         const filteredAgents = res.data.filter((agent: Agent) => agent.id !== currentAgentId);
         setAllAgents(filteredAgents);
         setAgents(filteredAgents);
       })
-      .catch((error) => console.error("Erro ao carregar agentes:", error))
+      .catch((error) => console.error("Error loading agents:", error))
       .finally(() => setLoading(false));
   }, [clientId, currentAgentId]);
 
-  // Filtrar agentes quando o termo de busca mudar
   useEffect(() => {
     if (searchTerm.trim() === "") {
       setAgents(allAgents);
@@ -100,7 +95,6 @@ function AgentForm({
     handleUpdateNode(updatedNode);
   };
 
-  // Função para obter o ícone do tipo de agente
   const getAgentTypeName = (type: string) => {
     const agentTypes: Record<string, string> = {
       llm: "LLM Agent",
@@ -115,12 +109,12 @@ function AgentForm({
   const renderForm = () => {
     return (
       <div className="pb-4 pl-8 pr-8 pt-2 text-white">
-        <h3 className="text-lg font-medium mb-4">Selecione um Agente</h3>
+        <h3 className="text-lg font-medium mb-4">Select an Agent</h3>
         
         <div className="relative mb-4">
           <Input
             type="text"
-            placeholder="Buscar agente..."
+            placeholder="Search for an agent..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="bg-gray-700 border-gray-600 text-gray-200 focus:border-green-500 py-2 pl-10"
@@ -182,12 +176,12 @@ function AgentForm({
         ) : (
           <div className="text-center py-8 text-gray-400">
             {searchTerm ? (
-              <p>Nenhum agente encontrado para "{searchTerm}"</p>
+              <p>No agents found for "{searchTerm}"</p>
             ) : (
               <>
-            <p>Nenhum agente disponível</p>
+            <p>No agents available</p>
             <p className="text-sm mt-2">
-              Crie agentes na tela de Gerenciamento de Agentes
+              Create agents in the Agent Management screen
             </p>
               </>
             )}
@@ -210,7 +204,7 @@ function AgentForm({
                 });
               }}
             >
-              Remover Agente
+              Remove Agent
             </Button>
           </div>
         )}

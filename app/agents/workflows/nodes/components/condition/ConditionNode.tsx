@@ -33,20 +33,20 @@ export type OperatorType =
   | "not_matches";
 
 const operatorText: Record<OperatorType, string> = {
-  equals: "é igual a",
-  not_equals: "é diferente de",
-  contains: "contém",
-  not_contains: "não contém",
-  starts_with: "começa com",
-  ends_with: "termina com",
-  greater_than: "é maior que",
-  greater_than_or_equal: "é maior ou igual a",
-  less_than: "é menor que",
-  less_than_or_equal: "é menor ou igual a",
-  matches: "corresponde ao padrão",
-  not_matches: "não corresponde ao padrão",
-  is_defined: "está definido",
-  is_not_defined: "não está definido",
+  equals: "is equal to",
+  not_equals: "is not equal to",
+  contains: "contains",
+  not_contains: "does not contain",
+  starts_with: "starts with",
+  ends_with: "ends with",
+  greater_than: "is greater than",
+  greater_than_or_equal: "is greater than or equal to",
+  less_than: "is less than",
+  less_than_or_equal: "is less than or equal to",
+  matches: "matches the pattern",
+  not_matches: "does not match the pattern",
+  is_defined: "is defined",
+  is_not_defined: "is not defined",
 };
 
 export function ConditionNode(props: NodeProps) {
@@ -54,8 +54,8 @@ export function ConditionNode(props: NodeProps) {
   const edges = useEdges();
 
   const typeText = {
-    and: "todas as seguintes condições",
-    or: "qualquer uma das seguintes condições",
+    and: "all of the following conditions",
+    or: "any of the following conditions",
   };
 
   const isHandleConnected = (handleId: string) => {
@@ -132,7 +132,7 @@ export function ConditionNode(props: NodeProps) {
               {data.label as string}
             </p>
             <p className="text-sm text-gray-400">
-              Corresponde a {typeText[(data.type as "and" | "or") || "and"]}
+              Matches {typeText[(data.type as "and" | "or") || "and"]}
             </p>
           </div>
         </div>
@@ -144,12 +144,12 @@ export function ConditionNode(props: NodeProps) {
         ))
       ) : (
         <div className="mb-4 cursor-pointer rounded-lg border-2 border-dashed p-4 text-center text-gray-400 border-gray-700 hover:bg-gray-700">
-          Adicionar Condição
+          Add Condition
         </div>
       )}
 
       <div className="mt-4 cursor-pointer text-right text-sm text-gray-400">
-        Próximo passo
+        Next step
       </div>
       <Handle
         style={{

@@ -77,17 +77,13 @@ export default function AgentsPage() {
   const { toast } = useToast()
   const router = useRouter()
 
-  // Buscar client_id do usuário logado
   const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || '{}') : {}
   const clientId = user?.client_id || ""
 
-  // Estado para controlar a visibilidade do sidebar de pastas
   const [isSidebarVisible, setIsSidebarVisible] = useState(false)
 
-  // Lista de MCPs disponíveis
   const [availableMCPs, setAvailableMCPs] = useState<MCPServer[]>([])
 
-  // Estado para as API Keys
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
   const [isApiKeysDialogOpen, setIsApiKeysDialogOpen] = useState(false)
   const [isLoadingApiKeys, setIsLoadingApiKeys] = useState(false)
@@ -97,13 +93,11 @@ export default function AgentsPage() {
   const [isDeleteApiKeyDialogOpen, setIsDeleteApiKeyDialogOpen] = useState(false)
   const [apiKeyToDelete, setApiKeyToDelete] = useState<ApiKey | null>(null)
 
-  // Estado para agentes
   const [agents, setAgents] = useState<Agent[]>([])
   const [filteredAgents, setFilteredAgents] = useState<Agent[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  // Estados para o sistema de pastas
   const [folders, setFolders] = useState<FolderType[]>([])
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [isFolderDialogOpen, setIsFolderDialogOpen] = useState(false)
@@ -114,17 +108,14 @@ export default function AgentsPage() {
   })
   const [isFolderDeleteDialogOpen, setIsFolderDeleteDialogOpen] = useState(false)
   const [folderToDelete, setFolderToDelete] = useState<FolderType | null>(null)
-  const [isMovingAgent, setIsMovingAgent] = useState(false)
   const [agentToMove, setAgentToMove] = useState<Agent | null>(null)
   const [isMovingDialogOpen, setIsMovingDialogOpen] = useState(false)
 
-  // Carregar agentes da API
   useEffect(() => {
     if (!clientId) return
     loadAgents()
   }, [clientId, selectedFolderId])
 
-  // Função para carregar agentes com base na pasta selecionada
   const loadAgents = async () => {
     setIsLoading(true)
     try {
@@ -132,23 +123,21 @@ export default function AgentsPage() {
       setAgents(res.data)
       setFilteredAgents(res.data)
     } catch (error) {
-      toast({ title: "Erro ao carregar agentes", variant: "destructive" })
+      toast({ title: "Error loading agents", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Carregar pastas
   useEffect(() => {
     if (!clientId) return
     setIsLoading(true)
     listFolders(clientId)
       .then(res => setFolders(res.data))
-      .catch(() => toast({ title: "Erro ao carregar pastas", variant: "destructive" }))
+      .catch(() => toast({ title: "Error loading folders", variant: "destructive" }))
       .finally(() => setIsLoading(false))
   }, [clientId])
 
-  // Filtrar agentes quando o termo de busca mudar
   useEffect(() => {
     if (searchTerm.trim() === "") {
       setFilteredAgents(agents)
@@ -164,40 +153,36 @@ export default function AgentsPage() {
     }
   }, [searchTerm, agents])
 
-  // Carregar MCPs da API
   useEffect(() => {
     setIsLoading(true)
     listMCPServers()
       .then(res => setAvailableMCPs(res.data))
-      .catch(() => toast({ title: "Erro ao carregar servidores MCP", variant: "destructive" }))
+      .catch(() => toast({ title: "Error loading MCP servers", variant: "destructive" }))
       .finally(() => setIsLoading(false))
   }, [])
 
-  // Carregar API Keys
   useEffect(() => {
     if (!clientId) return
     loadApiKeys()
   }, [clientId])
 
-  // Função para carregar chaves de API
   const loadApiKeys = async () => {
     setIsLoadingApiKeys(true)
     try {
       const res = await listApiKeys(clientId)
       setApiKeys(res.data)
     } catch (error) {
-      toast({ title: "Erro ao carregar chaves de API", variant: "destructive" })
+      toast({ title: "Error loading API keys", variant: "destructive" })
     } finally {
       setIsLoadingApiKeys(false)
     }
   }
 
-  // Função para adicionar ou atualizar uma chave de API
   const handleSaveApiKey = async () => {
     if (!currentApiKey.name || !currentApiKey.provider || !currentApiKey.key_value) {
       toast({ 
-        title: "Campos obrigatórios", 
-        description: "Nome, provedor e valor da chave são obrigatórios", 
+        title: "Required fields", 
+        description: "Name, provider and key value are required", 
         variant: "destructive" 
       })
       return
@@ -206,7 +191,7 @@ export default function AgentsPage() {
     try {
       setIsLoadingApiKeys(true)
       if (currentApiKey.id) {
-        // Atualizar chave existente
+        // Update existing key
         await updateApiKey(
           currentApiKey.id, 
           { 
@@ -217,82 +202,78 @@ export default function AgentsPage() {
           }, 
           clientId
         )
-        toast({ title: "Chave atualizada", description: "A chave de API foi atualizada com sucesso" })
+        toast({ title: "Key updated", description: "The API key was updated successfully" })
       } else {
-        // Criar nova chave
+        // Create new key
         await createApiKey({
           name: currentApiKey.name,
           provider: currentApiKey.provider,
           key_value: currentApiKey.key_value,
           client_id: clientId
         })
-        toast({ title: "Chave adicionada", description: "A chave de API foi adicionada com sucesso" })
+        toast({ title: "Key added", description: "The API key was added successfully" })
       }
       
-      // Limpar formulário e recarregar lista
+      // Clear form and reload list
       setCurrentApiKey({})
       setIsAddingApiKey(false)
       setIsEditingApiKey(false)
       loadApiKeys()
     } catch (error) {
-      toast({ title: "Erro", description: "Não foi possível salvar a chave de API", variant: "destructive" })
+      toast({ title: "Error", description: "Unable to save the API key", variant: "destructive" })
     } finally {
       setIsLoadingApiKeys(false)
     }
   }
 
-  // Função para excluir uma chave de API
   const handleDeleteApiKey = async () => {
     if (!apiKeyToDelete) return
     try {
       setIsLoadingApiKeys(true)
       await deleteApiKey(apiKeyToDelete.id, clientId)
-      toast({ title: "Chave excluída", description: "A chave de API foi excluída com sucesso" })
+      toast({ title: "Key deleted", description: "The API key was deleted successfully" })
       
-      // Limpar e recarregar lista
+      // Clear and reload list
       setApiKeyToDelete(null)
       setIsDeleteApiKeyDialogOpen(false)
       loadApiKeys()
     } catch (error) {
-      toast({ title: "Erro", description: "Não foi possível excluir a chave de API", variant: "destructive" })
+      toast({ title: "Error", description: "Unable to delete the API key", variant: "destructive" })
     } finally {
       setIsLoadingApiKeys(false)
     }
   }
 
-  // Função para editar uma chave de API
   const handleEditApiKey = (apiKey: ApiKey) => {
-    setCurrentApiKey({ ...apiKey, key_value: '' }) // Não incluímos o valor real da chave
+    setCurrentApiKey({ ...apiKey, key_value: '' })
     setIsEditingApiKey(true)
     setIsAddingApiKey(true)
   }
-
-  // Funções para gerenciamento de pastas
   
   const handleAddFolder = async () => {
     if (!newFolder.name) {
-      toast({ title: "Campo obrigatório", description: "Nome da pasta é obrigatório", variant: "destructive" })
+      toast({ title: "Required field", description: "Folder name is required", variant: "destructive" })
       return
     }
     try {
       setIsLoading(true)
       if (editingFolder) {
         await updateFolder(editingFolder.id, newFolder, clientId)
-        toast({ title: "Pasta atualizada", description: `${newFolder.name} foi atualizada com sucesso` })
+        toast({ title: "Folder updated", description: `${newFolder.name} was updated successfully` })
       } else {
         await createFolder({
           ...newFolder,
           client_id: clientId,
         })
-        toast({ title: "Pasta criada", description: `${newFolder.name} foi criada com sucesso` })
+        toast({ title: "Folder created", description: `${newFolder.name} was created successfully` })
       }
-      // Recarregar pastas
+      // Reload folders
       const res = await listFolders(clientId)
       setFolders(res.data)
       setIsFolderDialogOpen(false)
       resetFolderForm()
     } catch (error) {
-      toast({ title: "Erro", description: "Não foi possível salvar a pasta", variant: "destructive" })
+      toast({ title: "Error", description: "Unable to save the folder", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
@@ -312,18 +293,18 @@ export default function AgentsPage() {
     try {
       setIsLoading(true)
       await deleteFolder(folderToDelete.id, clientId)
-      toast({ title: "Pasta excluída", description: "A pasta foi excluída com sucesso" })
-      // Recarregar pastas
+      toast({ title: "Folder deleted", description: "The folder was deleted successfully" })
+      // Reload folders
       const res = await listFolders(clientId)
       setFolders(res.data)
-      // Se a pasta excluída era a selecionada, voltar para "Todos os agentes"
+      // If the deleted folder was selected, go back to "All agents"
       if (selectedFolderId === folderToDelete.id) {
         setSelectedFolderId(null)
       }
       setFolderToDelete(null)
       setIsFolderDeleteDialogOpen(false)
     } catch (error) {
-      toast({ title: "Erro", description: "Não foi possível excluir a pasta", variant: "destructive" })
+      toast({ title: "Error", description: "Unable to delete the folder", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
@@ -343,28 +324,26 @@ export default function AgentsPage() {
       setIsLoading(true)
       await assignAgentToFolder(agentToMove.id, targetFolderId, clientId)
       toast({ 
-        title: "Agente movido", 
+        title: "Agent moved", 
         description: targetFolderId 
-          ? `Agente movido para a pasta com sucesso` 
-          : "Agente removido da pasta com sucesso" 
+          ? `Agent moved to the folder successfully` 
+          : "Agent removed from the folder successfully" 
       })
       setIsMovingDialogOpen(false)
       loadAgents()
     } catch (error) {
-      toast({ title: "Erro", description: "Não foi possível mover o agente", variant: "destructive" })
+      toast({ title: "Error", description: "Unable to move the agent", variant: "destructive" })
     } finally {
       setIsLoading(false)
       setAgentToMove(null)
     }
   }
   
-  // Funções para iniciar o processo de mover um agente
   const startMoveAgent = (agent: Agent) => {
     setAgentToMove(agent)
     setIsMovingDialogOpen(true)
   }
 
-  // Estado inicial
   const [newAgent, setNewAgent] = useState<Partial<Agent>>({
     client_id: clientId || "",
     name: "",
@@ -381,25 +360,20 @@ export default function AgentsPage() {
         http_tools: [],
       },
       sub_agents: [],
-    } // Usando AgentConfig unificado
+    }
   })
 
-  // Estado para controlar o diálogo
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
-  // Estado para edição
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null)
 
-  // Estado para a aba ativa no formulário
   const [activeTab, setActiveTab] = useState("basic")
 
-  // Estado para o diálogo de MCP
   const [isMCPDialogOpen, setIsMCPDialogOpen] = useState(false)
   const [selectedMCP, setSelectedMCP] = useState<MCPServer | null>(null)
   const [mcpEnvs, setMcpEnvs] = useState<Record<string, string>>({})
   const [selectedMCPTools, setSelectedMCPTools] = useState<string[]>([])
 
-  // Estado para o diálogo de ferramentas
   const [isToolDialogOpen, setIsToolDialogOpen] = useState(false)
   const [selectedTool, setSelectedTool] = useState<AgentToolConfig | null>(null)
   const [toolEnvs, setToolEnvs] = useState<Record<string, string>>({})
@@ -409,13 +383,11 @@ export default function AgentsPage() {
 
   const [isApiKeyVisible, setIsApiKeyVisible] = useState<boolean>(false);
 
-  // Estado para o diálogo de MCP customizado
   const [isCustomMCPDialogOpen, setIsCustomMCPDialogOpen] = useState(false);
   const [selectedCustomMCP, setSelectedCustomMCP] = useState<CustomMCPServer | null>(null);
   const [customMCPHeaders, setCustomMCPHeaders] = useState<Record<string, string>>({});
   const [customMCPHeadersList, setCustomMCPHeadersList] = useState<{id: string; key: string; value: string}[]>([]);
 
-  // Tipos de agentes
   const agentTypes = [
     { value: "llm", label: "LLM Agent", icon: Code },
     { value: "a2a", label: "A2A Agent", icon: ExternalLink },
@@ -425,9 +397,8 @@ export default function AgentsPage() {
     { value: "workflow", label: "Workflow Agent", icon: Workflow },
   ]
 
-  // Modelos disponíveis
   const availableModels = [
-    // Série GPT-4.1
+    // GPT-4.1 series
     { value: "gpt-4.1", label: "GPT-4.1" },
     { value: "gpt-4.1-nano", label: "GPT-4.1 Nano" },
     { value: "gpt-4.1-mini", label: "GPT-4.1 Mini" },
@@ -443,17 +414,17 @@ export default function AgentsPage() {
     // GPT-4 Legacy
     { value: "gpt-4-32k", label: "GPT-4 32K" },
     
-    // Série GPT-3.5 Turbo
+    // GPT-3.5 Turbo series
     { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo" },
     { value: "gpt-3.5-turbo-16k", label: "GPT-3.5 Turbo 16K" },
     
-    // Modelos Claude
+    // Claude models
     { value: "claude-3-opus", label: "Claude 3 Opus" },
     { value: "claude-3-sonnet", label: "Claude 3 Sonnet" },
     { value: "claude-3-haiku", label: "Claude 3 Haiku" },
   ]
 
-  // Efeito para atualizar o formulário com base no tipo de agente
+  // Effect to update the form based on the agent type
   useEffect(() => {
     if (newAgent.type === "llm") {
       setNewAgent((prev) => ({
@@ -470,7 +441,7 @@ export default function AgentsPage() {
             http_tools: [],
           },
           sub_agents: [],
-        } // Usando AgentConfig unificado
+        }
       }))
     } else if (newAgent.type === "a2a") {
       setNewAgent((prev) => ({
@@ -479,7 +450,7 @@ export default function AgentsPage() {
         instruction: undefined,
         agent_card_url: prev.agent_card_url || "",
         api_key_id: undefined,
-        config: undefined // A2A não precisa de config
+        config: undefined
       }))
     } else if (newAgent.type === "loop") {
       setNewAgent((prev) => ({
@@ -491,7 +462,7 @@ export default function AgentsPage() {
         config: {
           sub_agents: [],
           custom_mcp_servers: [],
-        } // Usando AgentConfig unificado
+        }
       }))
     } else if (newAgent.type === "workflow") {
       setNewAgent((prev) => ({
@@ -506,10 +477,9 @@ export default function AgentsPage() {
             nodes: [],
             edges: [],
           },
-        } // Configuração para workflow
+        }
       }))
     } else {
-      // sequential ou parallel
       setNewAgent((prev) => ({
         ...prev,
         model: undefined,
@@ -519,77 +489,76 @@ export default function AgentsPage() {
         config: {
           sub_agents: [],
           custom_mcp_servers: [],
-        } // Usando AgentConfig unificado
+        }
       }))
     }
   }, [newAgent.type])
 
-  // Adicionar ou editar agente
   const handleAddAgent = async () => {
     if (!newAgent.name) {
-      toast({ title: "Campo obrigatório", description: "Nome do agente é obrigatório", variant: "destructive" })
+      toast({ title: "Required field", description: "Agent name is required", variant: "destructive" })
       return
     }
 
-    // Verificar se é um agente LLM e se a API Key é necessária
+    // Check if it's an LLM agent and if an API Key is required
     if (newAgent.type === "llm" && !newAgent.api_key_id) {
       toast({ 
-        title: "API Key necessária", 
-        description: "Selecione uma chave de API para o agente", 
+        title: "API Key required", 
+        description: "Select an API Key for the agent", 
         variant: "destructive" 
       })
       return
     }
 
     try {
-      // Remover o campo api_key se estiver presente
+      // Remove the api_key field if it's present
       const agentData = { ...newAgent }
 
       setIsLoading(true)
       if (editingAgent) {
         await updateAgent(editingAgent.id, { ...agentData, client_id: clientId })
-        toast({ title: "Agente atualizado", description: `${newAgent.name} foi atualizado com sucesso` })
+        toast({ title: "Agent updated", description: `${newAgent.name} was updated successfully` })
       } else {
         const createdAgent = await createAgent({ ...(agentData as AgentCreate), client_id: clientId })
         
-        // Se tiver uma pasta selecionada, adicionar o agente a ela
+        // If there's a selected folder, add the agent to it
         if (selectedFolderId && createdAgent.data.id) {
           await assignAgentToFolder(createdAgent.data.id, selectedFolderId, clientId)
         }
         
-        toast({ title: "Agente adicionado", description: `${newAgent.name} foi adicionado com sucesso` })
+        toast({ title: "Agent added", description: `${newAgent.name} was added successfully` })
       }
-      // Recarregar lista
+      // Reload list
       loadAgents()
       setIsDialogOpen(false)
       resetForm()
     } catch (error) {
-      console.error("Erro ao salvar agente:", error)
-      toast({ title: "Erro", description: "Não foi possível salvar o agente", variant: "destructive" })
+      console.error("Error saving agent:", error)
+      toast({ title: "Error", description: "Unable to save the agent", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Excluir agente
+  // Delete agent
   const confirmDeleteAgent = async () => {
     if (!agentToDelete) return
     try {
       setIsLoading(true)
       await deleteAgent(agentToDelete.id)
-      toast({ title: "Agente excluído", description: "O agente foi excluído com sucesso" })
-      // Recarregar lista
+      toast({ title: "Agent deleted", description: "The agent was deleted successfully" })
+      // Reload list
       loadAgents()
       setAgentToDelete(null)
       setIsDeleteDialogOpen(false)
     } catch {
-      toast({ title: "Erro", description: "Não foi possível excluir o agente", variant: "destructive" })
+      toast({ title: "Error", description: "Unable to delete the agent", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Editar agente
+  // Edit agent
   const handleEditAgent = (agent: Agent) => {
     setEditingAgent(agent)
     setNewAgent({ ...agent })
@@ -597,7 +566,7 @@ export default function AgentsPage() {
     setIsDialogOpen(true)
   }
 
-  // Resetar o formulário
+  // Reset the form
   const resetForm = () => {
     setNewAgent({
       client_id: clientId || "",
@@ -615,13 +584,13 @@ export default function AgentsPage() {
           http_tools: [],
         },
         sub_agents: [],
-      } // Usando AgentConfig unificado
+      }
     })
     setEditingAgent(null)
     setActiveTab("basic")
   }
 
-  // Função para adicionar um sub-agente
+  // Function to add a sub-agent
   const handleAddSubAgent = (agentId: string) => {
     if (!newAgent.config?.sub_agents?.includes(agentId)) {
       setNewAgent({
@@ -634,7 +603,7 @@ export default function AgentsPage() {
     }
   }
 
-  // Função para remover um sub-agente
+  // Function to remove a sub-agent
   const handleRemoveSubAgent = (agentId: string) => {
     setNewAgent({
       ...newAgent,
@@ -645,12 +614,12 @@ export default function AgentsPage() {
     })
   }
 
-  // Função para abrir o diálogo de MCP
+  // Function to open the MCP dialog
   const handleOpenMCPDialog = (mcp?: any) => {
     if (mcp) {
-      // Se for um MCP de configuração existente (contém apenas ID, envs e tools)
+      // If it's an existing MCP configuration (contains only ID, envs and tools)
       if (!mcp.name) {
-        // Buscar o MCP completo da lista de disponíveis
+        // Search for the full MCP in the available list
         const fullMCP = availableMCPs.find(m => m.id === mcp.id);
         if (fullMCP) {
           setSelectedMCP(fullMCP);
@@ -658,20 +627,20 @@ export default function AgentsPage() {
           setSelectedMCPTools(mcp.tools || []);
         } else {
           toast({
-            title: "Erro",
-            description: "MCP não encontrado na lista de disponíveis",
+            title: "Error",
+            description: "MCP not found in the available list",
             variant: "destructive",
           });
           return;
         }
       } else {
-        // É um MCP completo da lista
+        // It's a full MCP from the list
         setSelectedMCP(mcp);
         setMcpEnvs(mcp.envs || {});
         setSelectedMCPTools(mcp.selected_tools || []);
       }
     } else {
-      // Valor padrão para um novo MCP
+      // Default value for a new MCP
       setSelectedMCP(null);
       setMcpEnvs({});
       setSelectedMCPTools([]);
@@ -679,22 +648,22 @@ export default function AgentsPage() {
     setIsMCPDialogOpen(true);
   };
 
-  // Função para adicionar ou atualizar um MCP
+  // Function to add or update a MCP
   const handleAddMCP = () => {
     if (!selectedMCP) {
       toast({
-        title: "Erro",
-        description: "Nenhum MCP selecionado",
+        title: "Error",
+        description: "No MCP selected",
         variant: "destructive",
       })
       return
     }
 
-    // Verificar se o config existe antes de adicionar MCPs
+    // Check if the config exists before adding MCPs
     if (newAgent.config) {
       const mcp = { ...selectedMCP }
       
-      // Criar uma configuração MCPServerConfig
+      // Create a MCPServerConfig
       const mcpConfig: MCPServerConfig = {
         id: mcp.id,
         envs: mcpEnvs,
@@ -704,7 +673,7 @@ export default function AgentsPage() {
       const existingMCPIndex = newAgent.config.mcp_servers?.findIndex((mcpItem) => mcpItem.id === selectedMCP.id)
 
       if (existingMCPIndex !== undefined && existingMCPIndex >= 0) {
-        // Atualizar MCP existente
+        // Update existing MCP
         const updatedMCPs = [...(newAgent.config.mcp_servers || [])]
         updatedMCPs[existingMCPIndex] = mcpConfig
 
@@ -716,7 +685,7 @@ export default function AgentsPage() {
           }
         })
       } else {
-        // Adicionar novo MCP
+        // Add new MCP
         setNewAgent({
           ...newAgent,
           config: {
@@ -728,19 +697,19 @@ export default function AgentsPage() {
 
       setIsMCPDialogOpen(false)
       toast({
-        title: "MCP configurado",
-        description: `${mcp.name} foi configurado com sucesso`,
+        title: "MCP configured",
+        description: `${mcp.name} was configured successfully`,
       })
     } else {
       toast({
-        title: "Erro",
-        description: "O tipo de agente atual não suporta servidores MCP",
+        title: "Error",
+        description: "The current agent type does not support MCP servers",
         variant: "destructive",
       })
     }
   }
 
-  // Função para remover um MCP
+  // Function to remove a MCP
   const handleRemoveMCP = (mcpId: string) => {
     setNewAgent({
       ...newAgent,
@@ -750,12 +719,12 @@ export default function AgentsPage() {
       },
     })
     toast({
-      title: "MCP removido",
-      description: "O MCP foi removido com sucesso",
+      title: "MCP removed",
+      description: "The MCP was removed successfully",
     })
   }
 
-  // Função para abrir o diálogo de ferramenta
+  // Function to open the tool dialog
   const handleOpenToolDialog = (tool?: AgentToolConfig) => {
     if (tool) {
       setSelectedTool(tool)
@@ -767,7 +736,7 @@ export default function AgentsPage() {
     setIsToolDialogOpen(true)
   }
 
-  // Função para obter o ícone do tipo de agente
+  // Function to get the agent type icon
   const getAgentTypeIcon = (type: AgentType) => {
     const agentType = agentTypes.find((t) => t.value === type)
     if (agentType) {
@@ -777,18 +746,18 @@ export default function AgentsPage() {
     return null
   }
 
-  // Função para obter o nome do tipo de agente
+  // Function to get the agent type name
   const getAgentTypeName = (type: AgentType) => {
     return agentTypes.find((t) => t.value === type)?.label || type
   }
 
-  // Função para obter o nome de um agente pelo ID
+  // Function to get the agent name by ID
   const getAgentNameById = (id: string) => {
     const agent = agents.find((a) => a.id === id)
     return agent ? agent.name : id
   }
 
-  // Função para alternar a seleção de uma ferramenta MCP
+  // Function to toggle the selection of a MCP tool
   const toggleMCPTool = (tool: any) => {
     if (selectedMCPTools.includes(tool)) {
       setSelectedMCPTools(selectedMCPTools.filter((t) => t !== tool))
@@ -797,28 +766,28 @@ export default function AgentsPage() {
     }
   }
 
-  // Função para copiar texto para a área de transferência
+  // Function to copy text to the clipboard
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
       toast({ 
-        title: "Copiado!",
-        description: "Valor copiado para a área de transferência"
+        title: "Copied!",
+        description: "Value copied to the clipboard"
       });
     }).catch(err => {
-      console.error('Erro ao copiar: ', err);
+      console.error('Error copying: ', err);
       toast({ 
-        title: "Erro ao copiar",
-        description: "Não foi possível copiar o valor",
+        title: "Error copying",
+        description: "Unable to copy the value",
         variant: "destructive"
       });
     });
   };
 
-  // Função para abrir o diálogo de MCP customizado
+  // Function to open the custom MCP dialog
   const handleOpenCustomMCPDialog = (customMCP?: CustomMCPServer) => {
     if (customMCP) {
       setSelectedCustomMCP(customMCP);
-      // Converter o objeto de headers para um array de {id, key, value}
+      // Convert the headers object to an array of {id, key, value}
       const headersList = Object.entries(customMCP.headers || {}).map(([key, value], index) => ({
         id: `header-${index}`,
         key,
@@ -832,20 +801,20 @@ export default function AgentsPage() {
     setIsCustomMCPDialogOpen(true);
   };
 
-  // Função para adicionar/atualizar um MCP customizado
+  // Function to add/update a custom MCP
   const handleAddCustomMCP = () => {
     if (!selectedCustomMCP?.url) {
       toast({
-        title: "Erro",
-        description: "A URL do MCP customizado é obrigatória",
+        title: "Error",
+        description: "The custom MCP URL is required",
         variant: "destructive",
       });
       return;
     }
 
-    // Verificar se o config existe antes de adicionar MCPs
+    // Check if the config exists before adding MCPs
     if (newAgent.config) {
-      // Converter a lista de headers de volta para um objeto Record
+      // Convert the headers list back to an object Record
       const headersObject: Record<string, string> = {};
       customMCPHeadersList.forEach(header => {
         if (header.key.trim()) {
@@ -863,7 +832,7 @@ export default function AgentsPage() {
       );
 
       if (existingCustomMCPIndex !== undefined && existingCustomMCPIndex >= 0) {
-        // Atualizar MCP customizado existente
+        // Update existing custom MCP
         const updatedCustomMCPs = [...(newAgent.config.custom_mcp_servers || [])];
         updatedCustomMCPs[existingCustomMCPIndex] = customMCPConfig;
 
@@ -875,7 +844,7 @@ export default function AgentsPage() {
           },
         });
       } else {
-        // Adicionar novo MCP customizado
+        // Add new custom MCP
         setNewAgent({
           ...newAgent,
           config: {
@@ -887,19 +856,19 @@ export default function AgentsPage() {
 
       setIsCustomMCPDialogOpen(false);
       toast({
-        title: "MCP customizado configurado",
-        description: `MCP ${selectedCustomMCP.url} foi configurado com sucesso`,
+        title: "Custom MCP configured",
+        description: `MCP ${selectedCustomMCP.url} was configured successfully`,
       });
     } else {
       toast({
-        title: "Erro",
-        description: "O tipo de agente atual não suporta servidores MCP customizados",
+        title: "Error",
+        description: "The current agent type does not support custom MCP servers",
         variant: "destructive",
       });
     }
   };
 
-  // Função para remover um MCP customizado
+  // Function to remove a custom MCP
   const handleRemoveCustomMCP = (url: string) => {
     setNewAgent({
       ...newAgent,
@@ -909,19 +878,19 @@ export default function AgentsPage() {
       },
     });
     toast({
-      title: "MCP customizado removido",
-      description: "O MCP customizado foi removido com sucesso",
+      title: "Custom MCP removed",
+      description: "The custom MCP was removed successfully",
     });
   };
 
-  // Função para obter o nome de uma pasta pelo ID
+  // Function to get the folder name by ID
   const getFolderNameById = (id: string | null) => {
     if (!id) return null
     const folder = folders.find((f) => f.id === id)
     return folder ? folder.name : null
   }
 
-  // Função para obter o nome da chave de API pelo ID
+  // Function to get the API key name by ID
   const getApiKeyNameById = (id: string | undefined) => {
     if (!id) return null
     const apiKey = apiKeys.find((key) => key.id === id)
@@ -930,13 +899,13 @@ export default function AgentsPage() {
 
   return (
     <div className="container mx-auto p-6 bg-[#121212] min-h-screen flex relative">
-      {/* Botão para mostrar/esconder o sidebar */}
+      {/* Button to show/hide the sidebar */}
       <button
         onClick={() => setIsSidebarVisible(!isSidebarVisible)}
         className={`absolute left-0 top-6 z-20 bg-[#222] p-2 rounded-r-md text-[#00ff9d] hover:bg-[#333] hover:text-[#00ff9d] shadow-md transition-all ${
           isSidebarVisible ? 'left-64' : 'left-0'
         }`}
-        aria-label={isSidebarVisible ? "Esconder pastas" : "Mostrar pastas"}
+        aria-label={isSidebarVisible ? "Hide folders" : "Show folders"}
       >
         {isSidebarVisible ? (
           <X className="h-5 w-5" />
@@ -950,7 +919,7 @@ export default function AgentsPage() {
         )}
       </button>
 
-      {/* Overlay escuro quando o sidebar estiver visível */}
+      {/* Dark overlay when the sidebar is visible */}
       {isSidebarVisible && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-10 transition-opacity duration-300"
@@ -958,7 +927,7 @@ export default function AgentsPage() {
         />
       )}
 
-      {/* Sidebar para pastas com animação */}
+      {/* Sidebar for folders with animation */}
       <div 
         className={`absolute top-0 left-0 h-full w-64 bg-[#1a1a1a] p-4 shadow-xl z-20 transition-all duration-300 ease-in-out ${
           isSidebarVisible ? 'translate-x-0' : '-translate-x-full'
@@ -967,7 +936,7 @@ export default function AgentsPage() {
       <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-white flex items-center">
             <Folder className="h-5 w-5 mr-2 text-[#00ff9d]" />
-            Pastas
+            Folders
           </h2>
           <div className="flex space-x-1">
             <Button
@@ -1000,7 +969,7 @@ export default function AgentsPage() {
             onClick={() => setSelectedFolderId(null)}
           >
             <Home className="h-4 w-4 mr-2" />
-            <span>Todos os agentes</span>
+            <span>All agents</span>
           </button>
           
           {folders.map((folder) => (
@@ -1037,7 +1006,7 @@ export default function AgentsPage() {
                       }}
                     >
                       <Edit className="h-4 w-4 mr-2" />
-                      Editar
+                      Edit
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="cursor-pointer text-red-500 hover:bg-[#333] hover:text-red-400 focus:bg-[#333]"
@@ -1048,7 +1017,7 @@ export default function AgentsPage() {
                       }}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir
+                      Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -1058,9 +1027,9 @@ export default function AgentsPage() {
         </div>
       </div>
       
-      {/* Conteúdo principal */}
+      {/* Main content */}
       <div className={`w-full transition-all duration-300 ease-in-out ${isSidebarVisible ? "pl-64" : "pl-0"}`}>
-        {/* Título da página e barra de pesquisa */}
+        {/* Page title and search bar */}
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center ml-4">
@@ -1070,7 +1039,7 @@ export default function AgentsPage() {
                   {getFolderNameById(selectedFolderId)}
                 </>
               ) : (
-                "Agentes"
+                "Agents"
               )}
             </h1>
             {selectedFolderId && (
@@ -1084,7 +1053,7 @@ export default function AgentsPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
-                placeholder="Buscar agentes..."
+                placeholder="Search agents..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 w-[300px] bg-[#222] border-[#444] text-white focus:border-[#00ff9d] focus:ring-[#00ff9d]/10"
@@ -1104,7 +1073,7 @@ export default function AgentsPage() {
               className="bg-[#222] text-white hover:bg-[#333] border border-[#444]"
             >
               <Key className="mr-2 h-4 w-4 text-[#00ff9d]" />
-              Chaves API
+              API Keys
             </Button>
 
             <Dialog
@@ -1122,35 +1091,35 @@ export default function AgentsPage() {
                   className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Novo Agente
+                  New Agent
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
                 <DialogHeader>
-                  <DialogTitle className="text-white">{editingAgent ? "Editar Agente" : "Novo Agente"}</DialogTitle>
+                  <DialogTitle className="text-white">{editingAgent ? "Edit Agent" : "New Agent"}</DialogTitle>
                   <DialogDescription className="text-gray-400">
                     {editingAgent
-                      ? "Edite as informações do agente existente"
-                      : "Preencha as informações para criar um novo agente"}
+                      ? "Edit the existing agent information"
+                      : "Fill in the information to create a new agent"}
                   </DialogDescription>
                 </DialogHeader>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
                   <TabsList className="grid grid-cols-3 bg-[#222]">
                     <TabsTrigger value="basic" className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]">
-                      Informações Básicas
+                      Basic Information
                     </TabsTrigger>
                     <TabsTrigger
                       value="config"
                       className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
                     >
-                      Configuração
+                      Configuration
                     </TabsTrigger>
                     <TabsTrigger
                       value="subagents"
                       className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]"
                     >
-                      Sub-Agentes
+                      Sub-Agents
                     </TabsTrigger>
                   </TabsList>
 
@@ -1158,14 +1127,14 @@ export default function AgentsPage() {
                     <TabsContent value="basic" className="p-4 space-y-4">
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="type" className="text-right text-gray-300">
-                          Tipo de Agente
+                          Agent Type
                         </Label>
                         <Select
                           value={newAgent.type}
                           onValueChange={(value: AgentType) => setNewAgent({ ...newAgent, type: value } as Partial<Agent> & { type?: string })}
                         >
                           <SelectTrigger className="col-span-3 bg-[#222] border-[#444] text-white">
-                            <SelectValue placeholder="Selecione o tipo" />
+                            <SelectValue placeholder="Select the type" />
                           </SelectTrigger>
                           <SelectContent className="bg-[#222] border-[#444] text-white">
                             {agentTypes.map((type) => (
@@ -1186,7 +1155,7 @@ export default function AgentsPage() {
 
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="name" className="text-right text-gray-300">
-                          Nome
+                          Name
                         </Label>
                         <Input
                           id="name"
@@ -1198,7 +1167,7 @@ export default function AgentsPage() {
 
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="description" className="text-right text-gray-300">
-                          Descrição
+                          Description
                         </Label>
                         <Input
                           id="description"
@@ -1212,14 +1181,14 @@ export default function AgentsPage() {
                         <>
                           <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="model" className="text-right text-gray-300">
-                              Modelo
+                              Model
                             </Label>
                             <Select
                               value={newAgent.model}
                               onValueChange={(value) => setNewAgent({ ...newAgent, model: value } as Partial<Agent> & { model?: string })}
                             >
                               <SelectTrigger className="col-span-3 bg-[#222] border-[#444] text-white">
-                                <SelectValue placeholder="Selecione o modelo" />
+                                <SelectValue placeholder="Select the model" />
                               </SelectTrigger>
                               <SelectContent className="bg-[#222] border-[#444] text-white">
                                 {availableModels.map((model) => (
@@ -1249,7 +1218,7 @@ export default function AgentsPage() {
                                   })}
                                 >
                                   <SelectTrigger className="flex-1 bg-[#222] border-[#444] text-white">
-                                    <SelectValue placeholder="Selecione uma chave de API" />
+                                    <SelectValue placeholder="Select an API key" />
                                   </SelectTrigger>
                                   <SelectContent className="bg-[#222] border-[#444] text-white">
                                     {apiKeys.length > 0 ? (
@@ -1271,7 +1240,7 @@ export default function AgentsPage() {
                                         ))
                                     ) : (
                                       <div className="text-gray-500 px-2 py-1.5 pl-8">
-                                        Nenhuma chave disponível
+                                        No API keys available
                                       </div>
                                     )}
                                   </SelectContent>
@@ -1291,9 +1260,9 @@ export default function AgentsPage() {
                                 <div className="flex items-center text-xs text-gray-400">
                                   <Info className="h-3 w-3 mr-1 inline" />
                                   <span>
-                                    Você precisa <Button variant="link" onClick={() => setIsApiKeysDialogOpen(true)} className="h-auto p-0 text-xs text-[#00ff9d]">
-                                      cadastrar chaves de API
-                                    </Button> antes de criar um agente.
+                                    You need to <Button variant="link" onClick={() => setIsApiKeysDialogOpen(true)} className="h-auto p-0 text-xs text-[#00ff9d]">
+                                      register API keys
+                                    </Button> before creating an agent.
                                   </span>
                                 </div>
                               )}
@@ -1302,7 +1271,7 @@ export default function AgentsPage() {
 
                           <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="instruction" className="text-right text-gray-300">
-                              Instruções
+                              Instructions
                             </Label>
                             <Textarea
                               id="instruction"
@@ -1318,7 +1287,7 @@ export default function AgentsPage() {
                       {newAgent.type === "a2a" && (
                         <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="agent_card_url" className="text-right text-gray-300">
-                            URL do Agent Card
+                            Agent Card URL
                           </Label>
                           <Input
                             id="agent_card_url"
@@ -1332,7 +1301,7 @@ export default function AgentsPage() {
                       {newAgent.type === "loop" && newAgent.config?.max_iterations && (
                         <div className="space-y-1 text-xs text-gray-400">
                           <div>
-                            <strong>Máx. Iterações:</strong> {newAgent.config.max_iterations}
+                            <strong>Max. Iterations:</strong> {newAgent.config.max_iterations}
                           </div>
                         </div>
                       )}
@@ -1340,11 +1309,11 @@ export default function AgentsPage() {
                       {newAgent.type === "workflow" && (
                         <div className="space-y-1 text-xs text-gray-400">
                           <div>
-                            <strong>Tipo:</strong> Fluxo Visual
+                            <strong>Type:</strong> Visual Flow
                           </div>
                           {newAgent.config?.workflow && (
                             <div>
-                              <strong>Elementos:</strong> {(newAgent.config.workflow.nodes?.length || 0)} nós, {(newAgent.config.workflow.edges?.length || 0)} conexões
+                              <strong>Elements:</strong> {(newAgent.config.workflow.nodes?.length || 0)} nodes, {(newAgent.config.workflow.edges?.length || 0)} connections
                             </div>
                           )}
                         </div>
@@ -1355,16 +1324,16 @@ export default function AgentsPage() {
                       {newAgent.type === "llm" && (
                         <>
                           <div className="space-y-4">
-                            <h3 className="text-lg font-medium text-white">Servidores MCP</h3>
+                            <h3 className="text-lg font-medium text-white">MCP Servers</h3>
                             <div className="border border-[#444] rounded-md p-4 bg-[#222]">
                               <p className="text-sm text-gray-400 mb-4">
-                                Configure os servidores MCP que este agente pode utilizar.
+                                Configure the MCP servers that this agent can use.
                               </p>
 
                               {newAgent.config?.mcp_servers && newAgent.config.mcp_servers.length > 0 ? (
                                 <div className="space-y-2">
                                   {newAgent.config.mcp_servers.map((mcpConfig) => {
-                                    // Encontrar o servidor MCP correspondente para obter name e description
+                                    // Find the corresponding MCP server to get name and description
                                     const mcpServer = availableMCPs.find(mcp => mcp.id === mcpConfig.id);
                                     return (
                                       <div
@@ -1395,7 +1364,7 @@ export default function AgentsPage() {
                                             onClick={() => handleOpenMCPDialog(mcpConfig)}
                                             className="flex items-center text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
                                           >
-                                            <Settings className="h-4 w-4 mr-1" /> Configurar
+                                            <Settings className="h-4 w-4 mr-1" /> Configure
                                           </Button>
                                           <Button
                                             variant="ghost"
@@ -1410,21 +1379,21 @@ export default function AgentsPage() {
                                     );
                                   })}
 
-                                  {/* Botão para adicionar mais servidores MCP, sempre visível */}
+                                  {/* Button to add more MCP servers, always visible */}
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleOpenMCPDialog()}
                                     className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
                                   >
-                                    <Plus className="h-4 w-4 mr-1" /> Adicionar Servidor MCP
+                                    <Plus className="h-4 w-4 mr-1" /> Add MCP Server
                                   </Button>
                                 </div>
                               ) : (
                                 <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
                                   <div>
-                                    <p className="font-medium text-white">Sem servidores MCP configurados</p>
-                                    <p className="text-sm text-gray-400">Adicione servidores MCP para este agente</p>
+                                    <p className="font-medium text-white">No MCP servers configured</p>
+                                    <p className="text-sm text-gray-400">Add MCP servers for this agent</p>
                                   </div>
                                   <Button
                                     variant="outline"
@@ -1432,19 +1401,19 @@ export default function AgentsPage() {
                                     onClick={() => handleOpenMCPDialog()}
                                     className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
                                   >
-                                    <Plus className="h-4 w-4 mr-1" /> Adicionar
+                                    <Plus className="h-4 w-4 mr-1" /> Add
                                   </Button>
                                 </div>
                               )}
                             </div>
                           </div>
                           
-                          {/* Nova seção para MCPs customizados */}
+                          {/* New section for custom MCPs */}
                           <div className="space-y-4">
-                            <h3 className="text-lg font-medium text-white">Servidores MCP Customizados</h3>
+                            <h3 className="text-lg font-medium text-white">Custom MCP Servers</h3>
                             <div className="border border-[#444] rounded-md p-4 bg-[#222]">
                               <p className="text-sm text-gray-400 mb-4">
-                                Configure servidores MCP personalizados com URL e cabeçalhos HTTP.
+                                Configure custom MCP servers with URL and HTTP headers.
                               </p>
 
                               {newAgent.config?.custom_mcp_servers && newAgent.config.custom_mcp_servers.length > 0 ? (
@@ -1458,8 +1427,8 @@ export default function AgentsPage() {
                                         <p className="font-medium text-white">{customMCP.url}</p>
                                         <p className="text-sm text-gray-400">
                                           {Object.keys(customMCP.headers || {}).length > 0
-                                            ? `${Object.keys(customMCP.headers || {}).length} cabeçalhos configurados`
-                                            : "Sem cabeçalhos configurados"}
+                                            ? `${Object.keys(customMCP.headers || {}).length} headers configured`
+                                            : "No headers configured"}
                                         </p>
                                       </div>
                                       <div className="flex gap-2">
@@ -1469,7 +1438,7 @@ export default function AgentsPage() {
                                           onClick={() => handleOpenCustomMCPDialog(customMCP)}
                                           className="flex items-center text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
                                         >
-                                          <Settings className="h-4 w-4 mr-1" /> Configurar
+                                          <Settings className="h-4 w-4 mr-1" /> Configure
                                         </Button>
                                         <Button
                                           variant="ghost"
@@ -1483,21 +1452,21 @@ export default function AgentsPage() {
                                     </div>
                                   ))}
 
-                                  {/* Botão para adicionar mais MCPs customizados */}
+                                  {/* Button to add more custom MCPs */}
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleOpenCustomMCPDialog()}
                                     className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
                                   >
-                                    <Plus className="h-4 w-4 mr-1" /> Adicionar MCP Customizado
+                                    <Plus className="h-4 w-4 mr-1" /> Add Custom MCP
                                   </Button>
                                 </div>
                               ) : (
                                 <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
                                   <div>
-                                    <p className="font-medium text-white">Sem MCPs customizados configurados</p>
-                                    <p className="text-sm text-gray-400">Adicione MCPs customizados para este agente</p>
+                                    <p className="font-medium text-white">No custom MCPs configured</p>
+                                    <p className="text-sm text-gray-400">Add custom MCPs for this agent</p>
                                   </div>
                                   <Button
                                     variant="outline"
@@ -1505,7 +1474,7 @@ export default function AgentsPage() {
                                     onClick={() => handleOpenCustomMCPDialog()}
                                     className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
                                   >
-                                    <Plus className="h-4 w-4 mr-1" /> Adicionar
+                                    <Plus className="h-4 w-4 mr-1" /> Add
                                   </Button>
                                 </div>
                               )}
@@ -1515,7 +1484,7 @@ export default function AgentsPage() {
                           {/* API Key Display Section */}
                           {editingAgent && (editingAgent.config?.api_key || "not defined") && (
                             <div className="mt-6 space-y-2">
-                              <h3 className="text-lg font-medium text-white">Informações de Segurança</h3>
+                              <h3 className="text-lg font-medium text-white">Security Information</h3>
                               <div className="border border-[#444] rounded-md p-4 bg-[#222]">
                                 <div className="space-y-4">
                                   <div>
@@ -1534,7 +1503,7 @@ export default function AgentsPage() {
                                           size="icon"
                                           className="h-8 w-8 bg-[#333] text-white hover:bg-[#444] hover:text-[#00ff9d]"
                                           onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}
-                                          title={isApiKeyVisible ? "Ocultar API Key" : "Mostrar API Key"}
+                                          title={isApiKeyVisible ? "Hide API Key" : "Show API Key"}
                                         >
                                           {isApiKeyVisible ? (
                                             <EyeOff className="h-4 w-4" />
@@ -1547,14 +1516,14 @@ export default function AgentsPage() {
                                           size="icon"
                                           className="h-8 w-8 bg-[#333] text-white hover:bg-[#444] hover:text-[#00ff9d]"
                                           onClick={() => copyToClipboard(editingAgent.config?.api_key || "not defined" || "")}
-                                          title="Copiar API Key"
+                                          title="Copy API Key"
                                         >
                                           <Copy className="h-4 w-4" />
                                         </Button>
                                       </div>
                                     </div>
                                     <p className="text-xs text-gray-400 mt-2">
-                                      Esta é a chave de API do seu agente. Mantenha-a segura e não compartilhe com terceiros.
+                                      This is the API key of your agent. Keep it secure and do not share it with third parties.
                                     </p>
                                   </div>
                                 </div>
@@ -1567,7 +1536,7 @@ export default function AgentsPage() {
                       {(newAgent.type === "sequential" || newAgent.type === "parallel" || newAgent.type === "loop" || newAgent.type === "workflow") && (
                         <div className="flex items-center justify-center h-40">
                           <div className="text-center">
-                            <p className="text-gray-400">Configure os sub-agentes na aba "Sub-Agentes"</p>
+                            <p className="text-gray-400">Configure the sub-agents in the "Sub-Agents" tab</p>
                           </div>
                         </div>
                       )}
@@ -1575,9 +1544,9 @@ export default function AgentsPage() {
                       {newAgent.type === "a2a" && (
                         <div className="flex items-center justify-center h-40">
                           <div className="text-center">
-                            <p className="text-gray-400">Agentes A2A são configurados através do Agent Card URL</p>
+                            <p className="text-gray-400">A2A agents are configured through the Agent Card URL</p>
                             <p className="text-sm text-gray-500 mt-2">
-                              Sub-agentes podem ser configurados na aba "Sub-Agentes"
+                              Sub-agents can be configured in the "Sub-Agents" tab
                             </p>
                           </div>
                         </div>
@@ -1587,21 +1556,21 @@ export default function AgentsPage() {
                     <TabsContent value="subagents" className="p-4 space-y-4">
                       <div className="space-y-4">
                         <div className="flex justify-between items-center">
-                          <h3 className="text-lg font-medium text-white">Sub-Agentes</h3>
+                          <h3 className="text-lg font-medium text-white">Sub-Agents</h3>
                           <div className="text-sm text-gray-400">
-                            {newAgent.config?.sub_agents?.length || 0} sub-agentes selecionados
+                            {newAgent.config?.sub_agents?.length || 0} selected sub-agents
                           </div>
                         </div>
 
                         <div className="border border-[#444] rounded-md p-4 bg-[#222]">
                           <p className="text-sm text-gray-400 mb-4">
-                            Selecione os agentes que serão utilizados como sub-agentes.
+                            Select the agents that will be used as sub-agents.
                           </p>
 
-                          {/* Lista de sub-agentes selecionados */}
+                          {/* List of selected sub-agents */}
                           {newAgent.config?.sub_agents && newAgent.config.sub_agents.length > 0 ? (
                             <div className="space-y-2 mb-4">
-                              <h4 className="text-sm font-medium text-white">Sub-agentes selecionados:</h4>
+                              <h4 className="text-sm font-medium text-white">Selected sub-agents:</h4>
                               <div className="flex flex-wrap gap-2">
                                 {newAgent.config.sub_agents.map((agentId) => (
                                   <Badge
@@ -1621,14 +1590,14 @@ export default function AgentsPage() {
                               </div>
                             </div>
                           ) : (
-                            <div className="text-center py-4 text-gray-400 mb-4">Nenhum sub-agente selecionado</div>
+                            <div className="text-center py-4 text-gray-400 mb-4">No sub-agents selected</div>
                           )}
 
-                          {/* Lista de agentes disponíveis */}
-                          <h4 className="text-sm font-medium text-white mb-2">Agentes disponíveis:</h4>
+                          {/* List of available agents */}
+                          <h4 className="text-sm font-medium text-white mb-2">Available agents:</h4>
                           <div className="space-y-2 max-h-60 overflow-y-auto">
                             {agents
-                              .filter((agent) => agent.id !== editingAgent?.id) // Não mostrar o próprio agente sendo editado
+                              .filter((agent) => agent.id !== editingAgent?.id) // Do not show the agent being edited
                               .map((agent) => (
                                 <div
                                   key={agent.id}
@@ -1651,7 +1620,7 @@ export default function AgentsPage() {
                                         : "text-[#00ff9d] hover:bg-[#333] bg-[#222]"
                                     }
                                   >
-                                    {newAgent.config?.sub_agents?.includes(agent.id) ? "Adicionado" : "Adicionar"}
+                                    {newAgent.config?.sub_agents?.includes(agent.id) ? "Added" : "Add"}
                                   </Button>
                                 </div>
                               ))}
@@ -1668,10 +1637,10 @@ export default function AgentsPage() {
                     onClick={() => setIsDialogOpen(false)}
                     className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
                   >
-                    Cancelar
+                    Cancel
                   </Button>
                   <Button onClick={handleAddAgent} className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]">
-                    {editingAgent ? "Salvar Alterações" : "Adicionar Agente"}
+                    {editingAgent ? "Save Changes" : "Add Agent"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1714,7 +1683,7 @@ export default function AgentsPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-white hover:bg-[#333]/50 hover:text-[#00ff9d]"
-                        onClick={() => router.push(`/agentes/fluxos?agentId=${agent.id}`)}
+                        onClick={() => router.push(`/agents/workflows?agentId=${agent.id}`)}
                       >
                         <Workflow className="h-4 w-4" />
                       </Button>
@@ -1736,7 +1705,7 @@ export default function AgentsPage() {
                             onClick={() => startMoveAgent(agent)}
                           >
                             <MoveRight className="h-4 w-4 mr-2" />
-                            Mover para Pasta
+                            Move to Folder
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="cursor-pointer text-red-500 hover:bg-[#333] hover:text-red-400 focus:bg-[#333]"
@@ -1746,7 +1715,7 @@ export default function AgentsPage() {
                             }}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir
+                            Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1759,7 +1728,7 @@ export default function AgentsPage() {
                 {agent.type === "llm" && (
                   <div className="space-y-1 text-xs text-gray-400">
                     <div>
-                      <strong>Modelo:</strong> {agent.model}
+                      <strong>Model:</strong> {agent.model}
                     </div>
                     {agent.api_key_id && (
                       <div>
@@ -1771,7 +1740,7 @@ export default function AgentsPage() {
                     )}
                     {agent.instruction && (
                       <div>
-                        <strong>Instruções:</strong>{" "}
+                        <strong>Instructions:</strong>{" "}
                         {agent.instruction.length > 60 ? `${agent.instruction.substring(0, 60)}...` : agent.instruction}
                       </div>
                     )}
@@ -1789,7 +1758,7 @@ export default function AgentsPage() {
                 {agent.type === "loop" && agent.config?.max_iterations && (
                   <div className="space-y-1 text-xs text-gray-400">
                     <div>
-                      <strong>Máx. Iterações:</strong> {agent.config.max_iterations}
+                      <strong>Max. Iterations:</strong> {agent.config.max_iterations}
                     </div>
                   </div>
                 )}
@@ -1797,11 +1766,11 @@ export default function AgentsPage() {
                 {agent.type === "workflow" && (
                   <div className="space-y-1 text-xs text-gray-400">
                     <div>
-                      <strong>Tipo:</strong> Fluxo Visual
+                      <strong>Type:</strong> Visual Workflow
                     </div>
                     {agent.config?.workflow && (
                       <div>
-                        <strong>Elementos:</strong> {(agent.config.workflow.nodes?.length || 0)} nós, {(agent.config.workflow.edges?.length || 0)} conexões
+                        <strong>Elements:</strong> {(agent.config.workflow.nodes?.length || 0)} nodes, {(agent.config.workflow.edges?.length || 0)} connections
                       </div>
                     )}
                   </div>
@@ -1809,7 +1778,7 @@ export default function AgentsPage() {
 
                 {agent.config?.sub_agents && agent.config.sub_agents.length > 0 && (
                   <div className="mt-2">
-                    <div className="text-xs font-medium text-gray-300 mb-1">Sub-agentes:</div>
+                    <div className="text-xs font-medium text-gray-300 mb-1">Sub-agents:</div>
                     <div className="flex flex-wrap gap-1">
                       {agent.config.sub_agents.map((subAgentId) => (
                         <Badge key={subAgentId} variant="outline" className="text-xs border-[#444] text-[#00ff9d]">
@@ -1822,12 +1791,12 @@ export default function AgentsPage() {
 
                 {agent.type === "llm" && agent.config?.mcp_servers && agent.config.mcp_servers.length > 0 && (
                   <div className="mt-2">
-                    <div className="text-xs font-medium text-gray-300 mb-1">Servidores MCP:</div>
+                    <div className="text-xs font-medium text-gray-300 mb-1">MCP Servers:</div>
                     <div className="flex flex-wrap gap-1">
                       {agent.config.mcp_servers.map((mcpConfig) => {
-                        // Encontrar o servidor MCP correspondente para obter o nome
+                        // Find the corresponding MCP server to get the name
                         const mcpServer = availableMCPs.find(mcp => mcp.id === mcpConfig.id);
-                        // Contar ferramentas deste MCP
+                        // Count tools from this MCP
                         const toolCount = mcpConfig.tools?.length || 0;
                         
                         return (
@@ -1850,10 +1819,10 @@ export default function AgentsPage() {
                       })}
                     </div>
                     
-                    {/* Total de ferramentas em todos os MCPs */}
+                    {/* Total of tools in all MCPs */}
                     {agent.config.mcp_servers.some(mcp => mcp.tools && mcp.tools.length > 0) && (
                       <div className="mt-1 text-xs text-gray-400">
-                        <strong>Total de Ferramentas:</strong> {agent.config.mcp_servers.reduce((total, mcp) => total + (mcp.tools?.length || 0), 0)}
+                        <strong>Total of Tools:</strong> {agent.config.mcp_servers.reduce((total, mcp) => total + (mcp.tools?.length || 0), 0)}
                       </div>
                     )}
                   </div>
@@ -1861,7 +1830,7 @@ export default function AgentsPage() {
 
                 {agent.type === "llm" && agent.config?.custom_mcp_servers && agent.config.custom_mcp_servers.length > 0 && (
                   <div className="mt-2">
-                    <div className="text-xs font-medium text-gray-300 mb-1">MCPs Customizados:</div>
+                    <div className="text-xs font-medium text-gray-300 mb-1">Custom MCPs:</div>
                     <div className="flex flex-wrap gap-1">
                       {agent.config.custom_mcp_servers.map((customMCP) => (
                         <Badge 
@@ -1890,7 +1859,7 @@ export default function AgentsPage() {
               </CardContent>
               <CardFooter className="border-t border-[#333] pt-3 flex justify-between">
                 <div className="text-xs text-gray-500">
-                  <strong>Criado em:</strong> {new Date(agent.created_at).toLocaleString()}
+                  <strong>Created at:</strong> {new Date(agent.created_at).toLocaleString()}
                 </div>
                 {agent.agent_card_url && (
                   <a 
@@ -1900,7 +1869,7 @@ export default function AgentsPage() {
                     className="text-xs flex items-center gap-1 bg-[#333] text-[#00ff9d] hover:bg-[#444] px-2 py-1 rounded-md transition-colors"
                   >
                     <ExternalLink className="h-3 w-3" />
-                    Cartão do Agente
+                    Agent Card
                   </a>
                 )}
               </CardFooter>
@@ -1912,15 +1881,15 @@ export default function AgentsPage() {
             <div className="mb-6 p-8 rounded-full bg-[#1a1a1a] border border-[#333]">
               <Search className="h-16 w-16 text-[#00ff9d]" />
             </div>
-            <h2 className="text-2xl font-semibold text-white mb-3">Nenhum agente encontrado</h2>
+            <h2 className="text-2xl font-semibold text-white mb-3">No agents found</h2>
             <p className="text-gray-300 mb-6 max-w-md">
-              Não encontramos nenhum agente que corresponda à sua busca: "{searchTerm}"
+              We couldn't find any agents that match your search: "{searchTerm}"
             </p>
             <Button
               onClick={() => setSearchTerm("")}
               className="bg-[#222] text-white hover:bg-[#333]"
             >
-              Limpar busca
+              Clear search
             </Button>
           </div>
       ) : (
@@ -1933,12 +1902,12 @@ export default function AgentsPage() {
               )}
           </div>
             <h2 className="text-2xl font-semibold text-white mb-3">
-              {selectedFolderId ? "Pasta vazia" : "Nenhum agente encontrado"}
+              {selectedFolderId ? "Empty folder" : "No agents found"}
             </h2>
           <p className="text-gray-300 mb-6 max-w-md">
               {selectedFolderId 
-                ? "Esta pasta ainda não contém nenhum agente. Adicione agentes ou crie um novo."
-                : "Você ainda não tem nenhum agente configurado. Crie seu primeiro agente para começar!"}
+                ? "This folder is empty. Add agents or create a new one."
+                : "You don't have any agents configured. Create your first agent to start!"}
           </p>
           <Button
             onClick={() => {
@@ -1948,28 +1917,28 @@ export default function AgentsPage() {
             className="bg-[#00ff9d] text-black hover:bg-[#00cc7d] px-6 py-2 hover:shadow-[0_0_15px_rgba(0,255,157,0.2)]"
           >
             <Plus className="mr-2 h-5 w-5" />
-            Criar Agente
+            Create Agent
           </Button>
         </div>
       )}
       </div>
       
-      {/* Diálogo para criar/editar pastas */}
+      {/* Dialog to create/edit folders */}
       <Dialog open={isFolderDialogOpen} onOpenChange={setIsFolderDialogOpen}>
         <DialogContent className="sm:max-w-[500px] bg-[#1a1a1a] border-[#333] text-white">
           <DialogHeader>
-            <DialogTitle>{editingFolder ? "Editar Pasta" : "Nova Pasta"}</DialogTitle>
+            <DialogTitle>{editingFolder ? "Edit Folder" : "New Folder"}</DialogTitle>
             <DialogDescription className="text-gray-400">
               {editingFolder
-                ? "Atualize as informações da pasta existente"
-                : "Preencha as informações para criar uma nova pasta"}
+                ? "Update the existing folder information"
+                : "Fill in the information to create a new folder"}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="folder-name" className="text-gray-300">
-                Nome da pasta
+                Folder Name
               </Label>
               <Input
                 id="folder-name"
@@ -1981,7 +1950,7 @@ export default function AgentsPage() {
             
             <div className="space-y-2">
               <Label htmlFor="folder-description" className="text-gray-300">
-                Descrição (opcional)
+                Description (optional)
               </Label>
               <Textarea
                 id="folder-description"
@@ -1998,42 +1967,42 @@ export default function AgentsPage() {
               onClick={() => setIsFolderDialogOpen(false)}
               className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
             >
-              Cancelar
+              Cancel
             </Button>
             <Button onClick={handleAddFolder} className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]">
-              {editingFolder ? "Salvar Alterações" : "Criar Pasta"}
+              {editingFolder ? "Save Changes" : "Create Folder"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
-      {/* Diálogo para confirmar exclusão de pasta */}
+      {/* Dialog to confirm folder deletion */}
       <AlertDialog open={isFolderDeleteDialogOpen} onOpenChange={setIsFolderDeleteDialogOpen}>
         <AlertDialogContent className="bg-[#1a1a1a] border-[#333] text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogTitle>Confirm delete</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Tem certeza que deseja excluir a pasta "{folderToDelete?.name}"? Os agentes não serão excluídos, apenas removidos da pasta.
+              Are you sure you want to delete the folder "{folderToDelete?.name}"? The agents will not be deleted, only removed from the folder.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white">
-              Cancelar
+              Cancel
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteFolder} className="bg-red-600 text-white hover:bg-red-700">
-              Excluir
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Diálogo para mover agente para outra pasta */}
+      {/* Dialog to move agent to another folder */}
       <Dialog open={isMovingDialogOpen} onOpenChange={setIsMovingDialogOpen}>
         <DialogContent className="sm:max-w-[500px] bg-[#1a1a1a] border-[#333] text-white">
           <DialogHeader>
-            <DialogTitle>Mover Agente</DialogTitle>
+            <DialogTitle>Move Agent</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Escolha uma pasta para mover o agente "{agentToMove?.name}"
+              Choose a folder to move the agent "{agentToMove?.name}"
             </DialogDescription>
           </DialogHeader>
           
@@ -2045,8 +2014,8 @@ export default function AgentsPage() {
               >
                 <Home className="h-5 w-5 mr-3 text-gray-400" />
                 <div>
-                  <div className="font-medium">Remover da pasta</div>
-                  <p className="text-sm text-gray-400">O agente será visível em "Todos os agentes"</p>
+                  <div className="font-medium">Remove from folder</div>
+                  <p className="text-sm text-gray-400">The agent will be visible in "All agents"</p>
                 </div>
               </button>
               
@@ -2074,19 +2043,19 @@ export default function AgentsPage() {
               onClick={() => setIsMovingDialogOpen(false)}
               className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
             >
-              Cancelar
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para gerenciar chaves de API */}
+      {/* Dialog to manage API keys */}
       <Dialog open={isApiKeysDialogOpen} onOpenChange={setIsApiKeysDialogOpen}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col bg-[#1a1a1a] border-[#333]">
           <DialogHeader>
-            <DialogTitle className="text-white">Gerenciar Chaves de API</DialogTitle>
+            <DialogTitle className="text-white">Manage API Keys</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Adicione e gerencie chaves de API para uso nos seus agentes
+              Add and manage API keys for use in your agents
             </DialogDescription>
           </DialogHeader>
 
@@ -2095,7 +2064,7 @@ export default function AgentsPage() {
               <div className="space-y-4 p-4 bg-[#222] rounded-md">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium text-white">
-                    {isEditingApiKey ? "Editar Chave" : "Nova Chave"}
+                    {isEditingApiKey ? "Edit Key" : "New Key"}
                   </h3>
                   <Button
                     variant="ghost"
@@ -2114,7 +2083,7 @@ export default function AgentsPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="name" className="text-right text-gray-300">
-                      Nome
+                      Name
                     </Label>
                     <Input
                       id="name"
@@ -2127,14 +2096,14 @@ export default function AgentsPage() {
 
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="provider" className="text-right text-gray-300">
-                      Provedor
+                      Provider
                     </Label>
                     <Select
                       value={currentApiKey.provider}
                       onValueChange={(value) => setCurrentApiKey({ ...currentApiKey, provider: value })}
                     >
                       <SelectTrigger className="col-span-3 bg-[#333] border-[#444] text-white">
-                        <SelectValue placeholder="Selecione o provedor" />
+                        <SelectValue placeholder="Select the provider" />
                       </SelectTrigger>
                       <SelectContent className="bg-[#222] border-[#444] text-white">
                         <SelectItem
@@ -2161,7 +2130,7 @@ export default function AgentsPage() {
 
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="key_value" className="text-right text-gray-300">
-                      Valor da Chave
+                      Key Value
                     </Label>
                     <div className="col-span-3 relative">
                       <Input
@@ -2170,7 +2139,7 @@ export default function AgentsPage() {
                         onChange={(e) => setCurrentApiKey({ ...currentApiKey, key_value: e.target.value })}
                         className="bg-[#333] border-[#444] text-white pr-10"
                         type="password"
-                        placeholder={isEditingApiKey ? "Deixe em branco para manter o valor atual" : "sk-..."} 
+                        placeholder={isEditingApiKey ? "Leave blank to keep the current value" : "sk-..."} 
                       />
                       <Button
                         variant="ghost"
@@ -2202,7 +2171,7 @@ export default function AgentsPage() {
                           className="mr-2 data-[state=checked]:bg-[#00ff9d] data-[state=checked]:border-[#00ff9d]"
                         />
                         <Label htmlFor="is_active" className="text-gray-300">
-                          Ativa
+                          Active
                         </Label>
                       </div>
                     </div>
@@ -2219,17 +2188,17 @@ export default function AgentsPage() {
                     }}
                     className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
                   >
-                    Cancelar
+                    Cancel
                   </Button>
                   <Button onClick={handleSaveApiKey} className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]">
-                    {isEditingApiKey ? "Atualizar" : "Adicionar"}
+                    {isEditingApiKey ? "Update" : "Add"}
                   </Button>
                 </div>
               </div>
             ) : (
               <>
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-white">Chaves disponíveis</h3>
+                  <h3 className="text-lg font-medium text-white">Available Keys</h3>
                   <Button
                     onClick={() => {
                       setIsAddingApiKey(true)
@@ -2239,7 +2208,7 @@ export default function AgentsPage() {
                     className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    Nova Chave
+                    New Key
                   </Button>
                 </div>
 
@@ -2264,11 +2233,11 @@ export default function AgentsPage() {
                               {apiKey.provider.toUpperCase()}
                             </Badge>
                             <p className="text-xs text-gray-400">
-                              Criada em {new Date(apiKey.created_at).toLocaleDateString()}
+                              Created on {new Date(apiKey.created_at).toLocaleDateString()}
                             </p>
                             {!apiKey.is_active && (
                               <Badge variant="outline" className="bg-[#333] text-red-400 border-red-400/30">
-                                Inativa
+                                Inactive
                               </Badge>
                             )}
                           </div>
@@ -2301,9 +2270,9 @@ export default function AgentsPage() {
                 ) : (
                   <div className="text-center py-10 border border-dashed border-[#333] rounded-md bg-[#222] text-gray-400">
                     <Key className="mx-auto h-10 w-10 text-gray-500 mb-3" />
-                    <p>Você ainda não tem nenhuma chave de API cadastrada</p>
+                    <p>You don't have any API key registered</p>
                     <p className="text-sm mt-1">
-                      Adicione suas chaves de API para poder utilizá-las nos seus agentes
+                      Add your API keys to be able to use them in your agents
                     </p>
                     <Button
                       onClick={() => {
@@ -2314,7 +2283,7 @@ export default function AgentsPage() {
                       className="mt-4 bg-[#333] text-[#00ff9d] hover:bg-[#444]"
                     >
                       <Plus className="mr-2 h-4 w-4" />
-                      Adicionar chave
+                      Add key
                     </Button>
                   </div>
                 )}
@@ -2328,59 +2297,59 @@ export default function AgentsPage() {
               onClick={() => setIsApiKeysDialogOpen(false)}
               className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
             >
-              Fechar
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para confirmar exclusão de chave de API */}
+      {/* Dialog to confirm API key deletion */}
       <AlertDialog
         open={isDeleteApiKeyDialogOpen}
         onOpenChange={setIsDeleteApiKeyDialogOpen}
       >
         <AlertDialogContent className="bg-[#1a1a1a] border-[#333] text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogTitle>Confirm delete</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Tem certeza que deseja excluir a chave "{apiKeyToDelete?.name}"? Esta ação não pode ser desfeita.
+              Are you sure you want to delete the key "{apiKeyToDelete?.name}"? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white">
-              Cancelar
+              Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteApiKey}
               className="bg-red-600 text-white hover:bg-red-700"
             >
-              Excluir
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog para confirmar exclusão de agente */}
+      {/* Dialog to confirm agent deletion */}
       <AlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
       >
         <AlertDialogContent className="bg-[#1a1a1a] border-[#333] text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogTitle>Confirm delete</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Tem certeza que deseja excluir o agente "{agentToDelete?.name}"? Esta ação não pode ser desfeita.
+              Are you sure you want to delete the agent "{agentToDelete?.name}"? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white">
-              Cancelar
+              Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeleteAgent}
               className="bg-red-600 text-white hover:bg-red-700"
             >
-              Excluir
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

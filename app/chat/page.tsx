@@ -10,7 +10,6 @@ import {
   Send,
   Plus,
   Search,
-  ArrowLeft,
   Loader2,
   X,
   Filter,
@@ -18,7 +17,6 @@ import {
   ChevronRight,
   Trash2,
 } from "lucide-react";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -41,16 +39,13 @@ import {
   listSessions,
   getSessionMessages,
   sendMessage,
-  generateExternalId,
-  ChatSession,
   ChatMessage,
   deleteSession,
+  ChatSession,
 } from "@/services/sessionService";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-// Adicionar a interface para o tipo de retorno da função getMessageText
 interface FunctionMessageContent {
   title: string;
   content: string;
@@ -78,14 +73,12 @@ export default function Chat() {
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // Buscar ID do cliente do localStorage
   const user =
     typeof window !== "undefined"
       ? JSON.parse(localStorage.getItem("user") || "{}")
       : {};
-  const clientId = user?.client_id || "teste"; // Fallback para teste
+  const clientId = user?.client_id || "test";
 
-  // Função para rolar para o final do chat
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop =
@@ -93,20 +86,17 @@ export default function Chat() {
     }
   };
 
-  // Carregar agentes e sessões ao iniciar
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        // Carregar agentes
         const agentsResponse = await listAgents(clientId);
         setAgents(agentsResponse.data);
 
-        // Carregar sessões
         const sessionsResponse = await listSessions(clientId);
         setSessions(sessionsResponse.data);
       } catch (error) {
-        console.error("Erro ao carregar dados:", error);
+        console.error("Error loading data:", error);
       } finally {
         setIsLoading(false);
       }
@@ -115,7 +105,6 @@ export default function Chat() {
     loadData();
   }, [clientId]);
 
-  // Carregar mensagens quando uma sessão é selecionada
   useEffect(() => {
     if (!selectedSession) {
       setMessages([]);
@@ -128,14 +117,12 @@ export default function Chat() {
         const response = await getSessionMessages(selectedSession);
         setMessages(response.data);
 
-        // Extrair o ID do agente do ID da sessão
         const agentId = selectedSession.split("_")[1];
         setCurrentAgentId(agentId);
 
-        // Rolar para o final após carregar mensagens
         setTimeout(scrollToBottom, 100);
       } catch (error) {
-        console.error("Erro ao carregar mensagens:", error);
+        console.error("Error loading messages:", error);
       } finally {
         setIsLoading(false);
       }
@@ -144,44 +131,36 @@ export default function Chat() {
     loadMessages();
   }, [selectedSession]);
 
-  // Efeito para rolar para o final quando as mensagens mudarem
   useEffect(() => {
     if (messages.length > 0) {
       setTimeout(scrollToBottom, 100);
     }
   }, [messages]);
 
-  // Filtrar sessões por termo de busca e agente selecionado
   const filteredSessions = sessions.filter((session) => {
     const matchesSearchTerm = session.id
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
 
-    // Se o filtro de agente for "all", retorna todas as sessões que correspondem ao termo de busca
     if (selectedAgentFilter === "all") {
       return matchesSearchTerm;
     }
 
-    // Caso contrário, filtra também pelo agente selecionado
     const sessionAgentId = session.id.split("_")[1];
     return matchesSearchTerm && sessionAgentId === selectedAgentFilter;
   });
 
-  // Ordenar por data de atualização (mais recentes primeiro)
   const sortedSessions = [...filteredSessions].sort((a, b) => {
-    // Usar campo update_time para ordenação
     const updateTimeA = new Date(a.update_time).getTime();
     const updateTimeB = new Date(b.update_time).getTime();
 
     return updateTimeB - updateTimeA;
   });
 
-  // Função para formatar a data/hora
   const formatDateTime = (dateTimeStr: string) => {
     try {
       const date = new Date(dateTimeStr);
 
-      // Formatar como "DD/MM/YYYY HH:MM"
       const day = date.getDate().toString().padStart(2, "0");
       const month = (date.getMonth() + 1).toString().padStart(2, "0");
       const year = date.getFullYear();
@@ -190,11 +169,10 @@ export default function Chat() {
 
       return `${day}/${month}/${year} ${hours}:${minutes}`;
     } catch (error) {
-      return "Data inválida";
+      return "Invalid date";
     }
   };
 
-  // Filtrar agentes por termo de busca
   const filteredAgents = agents.filter(
     (agent) =>
       agent.name.toLowerCase().includes(agentSearchTerm.toLowerCase()) ||
@@ -202,15 +180,13 @@ export default function Chat() {
         agent.description.toLowerCase().includes(agentSearchTerm.toLowerCase()))
   );
 
-  // Selecionar agente para nova conversa
   const selectAgent = (agentId: string) => {
     setCurrentAgentId(agentId);
-    setSelectedSession(null); // Limpar sessão atual
-    setMessages([]); // Limpar mensagens
-    setIsNewChatDialogOpen(false); // Fechar diálogo
+    setSelectedSession(null);
+    setMessages([]);
+    setIsNewChatDialogOpen(false);
   };
 
-  // Enviar mensagem
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -222,16 +198,13 @@ export default function Chat() {
     try {
       setIsSending(true);
 
-      // Se não houver sessão selecionada, criar uma nova sessão implicitamente
       if (!selectedSession) {
         const externalId = generateExternalId();
-        // Formato simplificado: externalId_agentId (sem timestamp)
         const newSessionId = `${externalId}_${currentAgentId}`;
         setSelectedSession(newSessionId);
         sessionId = newSessionId;
       }
 
-      // Adicionar mensagem localmente para feedback imediato
       const tempMessage: ChatMessage = {
         id: `temp-${Date.now()}`,
         content: {
@@ -243,116 +216,99 @@ export default function Chat() {
       };
 
       setMessages((prev) => [...prev, tempMessage]);
-      // Rolar para o final após adicionar mensagem
       setTimeout(scrollToBottom, 100);
 
-      // Verificar se sessionId existe antes de chamar a API
       if (!sessionId) {
-        throw new Error("ID da sessão não definido");
+        throw new Error("Session ID not defined");
       }
 
-      // Enviar para a API
       const response = await sendMessage(
         sessionId,
         currentAgentId,
         messageInput
       );
-      
+
       responseData = response.data;
 
-      // Atualizar a lista de sessões
       const sessionsResponse = await listSessions(clientId);
       setSessions(sessionsResponse.data);
-      
-      // Limpar input
+
       setMessageInput("");
-      
-      // Resetar altura do textarea
-      const textarea = document.querySelector('textarea');
+
+      const textarea = document.querySelector("textarea");
       if (textarea) {
-        textarea.style.height = 'auto';
+        textarea.style.height = "auto";
       }
     } catch (error) {
-      console.error("Erro ao enviar mensagem:", error);
+      console.error("Error sending message:", error);
       toast({
-        title: "Erro ao enviar mensagem",
+        title: "Error sending message",
         variant: "destructive",
       });
     } finally {
-      // Verificar se a API retornou um ID de sessão válido
       if (responseData && responseData.session_id) {
         sessionId = responseData.session_id;
-        // Atualizar o ID da sessão selecionada
         setSelectedSession(sessionId);
       }
-      
-      // Pequeno delay para garantir que a sessão foi processada no backend
+
       setTimeout(async () => {
         try {
-          // Certificar que temos um ID de sessão
           if (sessionId) {
             const messagesResponse = await getSessionMessages(sessionId);
             setMessages(messagesResponse.data);
           }
         } catch (error) {
-          console.error("Erro ao buscar mensagens atualizadas:", error);
-          
-          // Se não conseguir buscar com o ID atual, tentar com um formato alternativo
+          console.error("Error updating messages:", error);
+
           if (sessionId && sessionId.includes("_")) {
             try {
-              // Extrair externalId e agentId do sessionId atual
               const parts = sessionId.split("_");
-              // Para lidar com múltiplos underscores, pegamos o primeiro elemento como externalId
-              // e o último como agentId
               const externalId = parts[0];
               const agentId = parts[parts.length - 1];
-              
-              // Tentar com o formato simplificado
+
               const alternativeId = `${externalId}_${agentId}`;
-              
+
               if (alternativeId !== sessionId) {
-                console.log("Tentando formato alternativo de ID:", alternativeId);
+                console.log(
+                  "Trying alternative ID format:",
+                  alternativeId
+                );
                 const altResponse = await getSessionMessages(alternativeId);
                 setMessages(altResponse.data);
-                // Atualizar para o ID correto
                 setSelectedSession(alternativeId);
               }
             } catch (altError) {
-              console.error("Falha ao tentar formato alternativo:", altError);
+              console.error("Error trying alternative ID format:", altError);
             }
           }
         } finally {
           setIsSending(false);
         }
-      }, 1500); // Aumentei o tempo para 1.5s
+      }, 1500);
     }
   };
 
-  // Gerar ID de externo (atualizado para remover timestamp)
   const generateExternalId = () => {
     const now = new Date();
-    // Formato YYYYMMDDHHMMSSmmm (ano, mês, dia, hora, minuto, segundo, milissegundo)
-    return now.getFullYear().toString() +
-           (now.getMonth() + 1).toString().padStart(2, "0") +
-           now.getDate().toString().padStart(2, "0") +
-           now.getHours().toString().padStart(2, "0") +
-           now.getMinutes().toString().padStart(2, "0") +
-           now.getSeconds().toString().padStart(2, "0") +
-           now.getMilliseconds().toString().padStart(3, "0");
+    return (
+      now.getFullYear().toString() +
+      (now.getMonth() + 1).toString().padStart(2, "0") +
+      now.getDate().toString().padStart(2, "0") +
+      now.getHours().toString().padStart(2, "0") +
+      now.getMinutes().toString().padStart(2, "0") +
+      now.getSeconds().toString().padStart(2, "0") +
+      now.getMilliseconds().toString().padStart(3, "0")
+    );
   };
 
-  // Encontrar informações do agente atual
   const currentAgent = agents.find((agent) => agent.id === currentAgentId);
 
-  // Extrair informações da sessão atual
   const getCurrentSessionInfo = () => {
     if (!selectedSession) return null;
 
-    // O formato do sessionId é externalId_agentId
     const parts = selectedSession.split("_");
 
     try {
-      // Tentar extrair data do externalId se estiver no formato correto (YYYYMMDD_HHMMSS)
       const dateStr = parts[0];
       if (dateStr.length >= 8) {
         const year = dateStr.substring(0, 4);
@@ -366,161 +322,142 @@ export default function Chat() {
         };
       }
     } catch (e) {
-      console.error("Erro ao processar ID da sessão:", e);
+      console.error("Error processing session ID:", e);
     }
 
     return {
       externalId: parts[0],
       agentId: parts[1],
-      displayDate: "Sessão",
+      displayDate: "Session",
     };
   };
 
-  // Extrair externalId de um ID de sessão
   const getExternalId = (sessionId: string) => {
     return sessionId.split("_")[0];
   };
 
-  // Função para verificar se o texto contém markdown
   const containsMarkdown = (text: string): boolean => {
-    // Se o texto for muito curto, provavelmente não é markdown
     if (!text || text.length < 3) return false;
 
-    // Padrões mais comuns de markdown
     const markdownPatterns = [
       /[*_]{1,2}[^*_]+[*_]{1,2}/, // bold/italic
       /\[[^\]]+\]\([^)]+\)/, // links
       /^#{1,6}\s/m, // headers
       /^[-*+]\s/m, // unordered lists
       /^[0-9]+\.\s/m, // ordered lists
-      /^>\s/m, // blockquotes
+      /^>\s/m, // block quotes
       /`[^`]+`/, // inline code
       /```[\s\S]*?```/, // code blocks
       /^\|(.+\|)+$/m, // tables
       /!\[[^\]]*\]\([^)]+\)/, // images
     ];
 
-    // Verifica presença de qualquer padrão de markdown
     return markdownPatterns.some((pattern) => pattern.test(text));
   };
 
-  // Função para interpretar o conteúdo da mensagem
   const getMessageText = (
     message: ChatMessage
   ): string | FunctionMessageContent => {
     const author = message.author;
     const parts = message.content.parts;
-    
-    if (!parts || parts.length === 0) return "Conteúdo vazio";
-    
-    // Verificar se há uma chamada de função ou resposta de função em qualquer parte
-    const functionCallPart = parts.find(part => part.functionCall || part.function_call);
-    const functionResponsePart = parts.find(part => part.functionResponse || part.function_response);
-    
-    // Se houver uma chamada de função, priorizá-la
+
+    if (!parts || parts.length === 0) return "Empty content";
+
+    const functionCallPart = parts.find(
+      (part) => part.functionCall || part.function_call
+    );
+    const functionResponsePart = parts.find(
+      (part) => part.functionResponse || part.function_response
+    );
+
     if (functionCallPart) {
-      const funcCall = functionCallPart.functionCall || functionCallPart.function_call || {};
+      const funcCall =
+        functionCallPart.functionCall || functionCallPart.function_call || {};
       const args = funcCall.args || {};
-      const name = funcCall.name || "desconhecida";
-      const id = funcCall.id || "sem-id";
-      
+      const name = funcCall.name || "unknown";
+      const id = funcCall.id || "no-id";
+
       return {
         author,
-        title: `📞 Chamada de função: ${name}`,
+        title: `📞 Function call: ${name}`,
         content: `ID: ${id}
 Args: ${
-        Object.keys(args).length > 0
-          ? `\n${JSON.stringify(args, null, 2)}`
-          : "{}"
-      }`,
+          Object.keys(args).length > 0
+            ? `\n${JSON.stringify(args, null, 2)}`
+            : "{}"
+        }`,
       } as FunctionMessageContent;
     }
-    
-    // Se houver uma resposta de função, priorizá-la
+
     if (functionResponsePart) {
       const funcResponse =
-        functionResponsePart.functionResponse || functionResponsePart.function_response || {};
+        functionResponsePart.functionResponse ||
+        functionResponsePart.function_response ||
+        {};
       const response = funcResponse.response || {};
-      const name = funcResponse.name || "desconhecida";
-      const id = funcResponse.id || "sem-id";
+      const name = funcResponse.name || "unknown";
+      const id = funcResponse.id || "no-id";
       const status = response.status || "unknown";
       const statusEmoji = status === "error" ? "❌" : "✅";
-      
+
       let resultText = "";
       if (status === "error") {
-        resultText = `Erro: ${
-          response.error_message || "Erro desconhecido"
-        }`;
+        resultText = `Error: ${response.error_message || "Unknown error"}`;
       } else if (response.report) {
-        resultText = `Resultado: ${response.report}`;
+        resultText = `Result: ${response.report}`;
       } else if (response.result && response.result.content) {
-        // Processar conteúdo de resposta que pode vir no formato de result.content
         const content = response.result.content;
-        if (
-          Array.isArray(content) &&
-          content.length > 0 &&
-          content[0].text
-        ) {
+        if (Array.isArray(content) && content.length > 0 && content[0].text) {
           try {
-            // Tentar analisar o conteúdo como JSON se for uma string
             const textContent = content[0].text;
             const parsedJson = JSON.parse(textContent);
-            resultText = `Resultado: \n${JSON.stringify(
-              parsedJson,
-              null,
-              2
-            )}`;
+            resultText = `Result: \n${JSON.stringify(parsedJson, null, 2)}`;
           } catch (e) {
-            // Se não for JSON válido, exibir como texto
-            resultText = `Resultado: ${content[0].text}`;
+            resultText = `Result: ${content[0].text}`;
           }
         } else {
-          resultText = `Resultado:\n${JSON.stringify(response, null, 2)}`;
+          resultText = `Result:\n${JSON.stringify(response, null, 2)}`;
         }
       } else {
-        resultText = `Resultado:\n${JSON.stringify(response, null, 2)}`;
+        resultText = `Result:\n${JSON.stringify(response, null, 2)}`;
       }
-      
+
       return {
         author,
-        title: `${statusEmoji} Resposta da função: ${name}`,
+        title: `${statusEmoji} Function response: ${name}`,
         content: `ID: ${id}\n${resultText}`,
       } as FunctionMessageContent;
     }
-    
-    // Se só houver uma parte com texto, retorne-a diretamente
+
     if (parts.length === 1 && parts[0].text) {
       return {
         author,
         content: parts[0].text,
-        title: "Mensagem",
+        title: "Message",
       } as FunctionMessageContent;
     }
 
-    // Se chegamos aqui, não há chamadas de função, então juntamos todas as partes de texto
     const textParts = parts
-      .filter(part => part.text)
-      .map(part => part.text)
-      .filter(text => text);
-    
+      .filter((part) => part.text)
+      .map((part) => part.text)
+      .filter((text) => text);
+
     if (textParts.length > 0) {
       return {
         author,
         content: textParts.join("\n\n"),
-        title: "Mensagem",
+        title: "Message",
       } as FunctionMessageContent;
     }
 
-    // Se não encontramos nada útil, tentamos representar o conteúdo como JSON
     try {
       return JSON.stringify(parts, null, 2).replace(/\\n/g, "\n");
     } catch (error) {
-      console.error("Erro ao processar mensagem:", error);
-      return "Não foi possível interpretar o conteúdo da mensagem";
+      console.error("Error processing message:", error);
+      return "Unable to interpret message content";
     }
   };
 
-  // Função para alternar a expansão de uma mensagem de função
   const toggleFunctionExpansion = (messageId: string) => {
     setExpandedFunctions((prev) => ({
       ...prev,
@@ -528,13 +465,12 @@ Args: ${
     }));
   };
 
-  // Cores para agentes - mapeamento por nome
   const agentColors: Record<string, string> = {
-    Assistente: "bg-[#00ff9d]",
-    Programador: "bg-[#00cc7d]",
-    Redator: "bg-[#00b8ff]",
-    Pesquisador: "bg-[#ff9d00]",
-    Planejador: "bg-[#9d00ff]",
+    Assistant: "bg-[#00ff9d]",
+    Programmer: "bg-[#00cc7d]",
+    Writer: "bg-[#00b8ff]",
+    Researcher: "bg-[#ff9d00]",
+    Planner: "bg-[#9d00ff]",
     default: "bg-[#333]",
   };
 
@@ -542,55 +478,45 @@ Args: ${
     return agentColors[agentName] || agentColors.default;
   };
 
-  // Adicionar esta função dentro do componente Chat
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Enviar mensagem ao pressionar Enter sem Shift
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage(e as unknown as React.FormEvent);
     }
-    // Quando Shift+Enter é pressionado, deixamos o comportamento padrão (quebra de linha)
   };
 
-  // Função para ajustar automaticamente a altura do textarea
   const autoResizeTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = e.target;
 
-    // Primeiro reset para altura mínima para calcular corretamente
     textarea.style.height = "auto";
 
-    // Limitar a 10 linhas no máximo
-    const maxHeight = 10 * 24; // 24px é aproximadamente a altura de uma linha (ajuste conforme necessário)
+    const maxHeight = 10 * 24;
     const newHeight = Math.min(textarea.scrollHeight, maxHeight);
 
     textarea.style.height = `${newHeight}px`;
 
-    // Atualizar o state com o novo valor
     setMessageInput(textarea.value);
   };
 
-  // Função para excluir uma sessão
   const handleDeleteSession = async () => {
     if (!selectedSession) return;
-    
+
     try {
-      // Chamar a API para excluir a sessão
       await deleteSession(selectedSession);
-      
-      // Atualizar a lista de sessões localmente
-      setSessions(sessions.filter(session => session.id !== selectedSession));
+
+      setSessions(sessions.filter((session) => session.id !== selectedSession));
       setSelectedSession(null);
       setMessages([]);
       setCurrentAgentId(null);
       setIsDeleteDialogOpen(false);
-      
+
       toast({
-        title: "Sessão excluída com sucesso",
+        title: "Session deleted successfully",
       });
     } catch (error) {
-      console.error("Erro ao excluir sessão:", error);
+      console.error("Error deleting session:", error);
       toast({
-        title: "Erro ao excluir sessão",
+        title: "Error deleting session",
         variant: "destructive",
       });
     }
@@ -598,7 +524,6 @@ Args: ${
 
   return (
     <div className="flex h-screen max-h-screen bg-[#121212]">
-      {/* Sidebar - Lista de sessões de chat */}
       <div className="w-64 border-r border-[#333] flex flex-col bg-[#1a1a1a]">
         <div className="p-4 border-b border-[#333]">
           <div className="flex items-center justify-between mb-4">
@@ -607,16 +532,15 @@ Args: ${
               className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
               size="sm"
             >
-              <Plus className="h-4 w-4 mr-1" /> Nova Conversa
+              <Plus className="h-4 w-4 mr-1" /> New Conversation
             </Button>
           </div>
 
-          {/* Busca e Filtros */}
           <div className="space-y-2">
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
               <Input
-                placeholder="Buscar conversas..."
+                placeholder="Search conversations..."
                 className="pl-8 bg-[#222] border-[#444] text-white"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -631,7 +555,7 @@ Args: ${
                 onClick={() => setShowAgentFilter(!showAgentFilter)}
               >
                 <Filter className="h-4 w-4 mr-1" />
-                Filtrar
+                Filter
               </Button>
 
               {selectedAgentFilter !== "all" && (
@@ -641,7 +565,7 @@ Args: ${
                   onClick={() => setSelectedAgentFilter("all")}
                   className="text-gray-400 hover:text-white hover:bg-[#333]"
                 >
-                  Limpar filtro
+                  Clear filter
                 </Button>
               )}
             </div>
@@ -653,14 +577,14 @@ Args: ${
                   onValueChange={setSelectedAgentFilter}
                 >
                   <SelectTrigger className="bg-[#222] border-[#444] text-white">
-                    <SelectValue placeholder="Filtrar por agente" />
+                    <SelectValue placeholder="Filter by agent" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#222] border-[#444] text-white">
                     <SelectItem
                       value="all"
                       className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
                     >
-                      Todos os agentes
+                      All agents
                     </SelectItem>
                     {agents.map((agent) => (
                       <SelectItem
@@ -678,7 +602,6 @@ Args: ${
           </div>
         </div>
 
-        {/* Lista de sessões */}
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex justify-center items-center h-24">
@@ -687,7 +610,6 @@ Args: ${
           ) : sortedSessions.length > 0 ? (
             <div className="divide-y divide-[#333]">
               {sortedSessions.map((session) => {
-                // Extrair ID do agente do ID da sessão
                 const agentId = session.id.split("_")[1];
                 const agentInfo = agents.find((a) => a.id === agentId);
                 const externalId = getExternalId(session.id);
@@ -724,23 +646,20 @@ Args: ${
             </div>
           ) : searchTerm || selectedAgentFilter !== "all" ? (
             <div className="p-4 text-center text-gray-400">
-              Nenhum resultado encontrado
+              No results found
             </div>
           ) : (
             <div className="p-4 text-center text-gray-400">
-              Clique em "Nova" para iniciar
+              Click "New" to start
             </div>
           )}
         </div>
       </div>
 
-      {/* Área principal do chat */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {selectedSession || currentAgentId ? (
           <>
-            {/* Cabeçalho */}
             <div className="p-4 border-b border-[#333] bg-[#1a1a1a]">
-              {/* Extrair informações da sessão atual */}
               {(() => {
                 const sessionInfo = getCurrentSessionInfo();
 
@@ -749,8 +668,8 @@ Args: ${
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
                       <MessageSquare className="h-5 w-5 text-[#00ff9d]" />
                       {selectedSession
-                        ? `Sessão ${sessionInfo?.externalId || selectedSession}`
-                        : "Nova Conversa"}
+                        ? `Session ${sessionInfo?.externalId || selectedSession}`
+                        : "New Conversation"}
                     </h2>
 
                     <div className="flex items-center gap-2">
@@ -759,7 +678,7 @@ Args: ${
                           {currentAgent.name || currentAgentId}
                         </Badge>
                       )}
-                      
+
                       {selectedSession && (
                         <Button
                           variant="ghost"
@@ -776,7 +695,6 @@ Args: ${
               })()}
             </div>
 
-            {/* Mensagens */}
             <div
               ref={messagesContainerRef}
               className="flex-1 overflow-y-auto p-4 bg-[#121212]"
@@ -788,7 +706,7 @@ Args: ${
               ) : messages.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-center text-gray-400">
                   <p>
-                    Nenhuma mensagem nesta conversa. Comece digitando abaixo.
+                    No messages in this conversation. Start typing below.
                   </p>
                 </div>
               ) : (
@@ -879,18 +797,18 @@ Args: ${
                               </div>
                             ) : (
                               <div className="markdown-content break-words">
-                                {/* Usar o author do objeto messageContent se disponível e não for do usuário */}
-                                {typeof messageContent === "object" && 
-                                 "author" in messageContent && 
-                                 messageContent.author !== "user" && (
-                                  <div className="text-xs text-gray-400 mb-1">
-                                    {messageContent.author}
-                                  </div>
-                                )}
-                                {(typeof messageContent === "string" && containsMarkdown(messageContent)) || 
-                                 (typeof messageContent === "object" && 
-                                  "content" in messageContent && 
-                                  typeof messageContent.content === "string" && 
+                                {typeof messageContent === "object" &&
+                                  "author" in messageContent &&
+                                  messageContent.author !== "user" && (
+                                    <div className="text-xs text-gray-400 mb-1">
+                                      {messageContent.author}
+                                    </div>
+                                  )}
+                                {(typeof messageContent === "string" &&
+                                  containsMarkdown(messageContent)) ||
+                                (typeof messageContent === "object" &&
+                                  "content" in messageContent &&
+                                  typeof messageContent.content === "string" &&
                                   containsMarkdown(messageContent.content)) ? (
                                   <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
@@ -1059,9 +977,10 @@ Args: ${
                                       ),
                                     }}
                                   >
-                                    {typeof messageContent === "string" 
-                                      ? messageContent 
-                                      : typeof messageContent === "object" && "content" in messageContent
+                                    {typeof messageContent === "string"
+                                      ? messageContent
+                                      : typeof messageContent === "object" &&
+                                        "content" in messageContent
                                       ? messageContent.content
                                       : ""}
                                   </ReactMarkdown>
@@ -1069,7 +988,8 @@ Args: ${
                                   <span>
                                     {typeof messageContent === "string"
                                       ? messageContent
-                                      : typeof messageContent === "object" && "content" in messageContent
+                                      : typeof messageContent === "object" &&
+                                        "content" in messageContent
                                       ? messageContent.content
                                       : JSON.stringify(messageContent)}
                                   </span>
@@ -1082,7 +1002,6 @@ Args: ${
                     );
                   })}
 
-                  {/* Indicador de digitação */}
                   {isSending && (
                     <div className="flex justify-start">
                       <div className="flex gap-3 max-w-[80%]">
@@ -1111,14 +1030,13 @@ Args: ${
               )}
             </div>
 
-            {/* Área de entrada de mensagem */}
             <div className="p-4 border-t border-[#333] bg-[#1a1a1a]">
               <form onSubmit={handleSendMessage} className="flex w-full gap-2">
                 <Textarea
                   value={messageInput}
                   onChange={autoResizeTextarea}
                   onKeyDown={handleKeyDown}
-                  placeholder="Digite sua mensagem..."
+                  placeholder="Type your message..."
                   className="flex-1 bg-[#222] border-[#444] text-white focus-visible:ring-[#00ff9d] min-h-[40px] max-h-[240px] resize-none"
                   disabled={isSending || isLoading}
                   rows={1}
@@ -1146,40 +1064,38 @@ Args: ${
           <div className="flex flex-col items-center justify-center h-full text-center">
             <MessageSquare className="h-16 w-16 text-[#00ff9d] mb-4" />
             <h2 className="text-2xl font-semibold text-white mb-3">
-              Selecione uma conversa
+              Select a conversation
             </h2>
             <p className="text-gray-400 mb-6 max-w-md">
-              Escolha uma conversa existente ou inicie uma nova.
+              Choose an existing conversation or start a new one.
             </p>
             <Button
               onClick={() => setIsNewChatDialogOpen(true)}
               className="bg-[#00ff9d] text-black hover:bg-[#00cc7d] px-6 py-2"
             >
               <Plus className="mr-2 h-5 w-5" />
-              Nova Conversa
+              New Conversation
             </Button>
           </div>
         )}
       </div>
 
-      {/* Modal para criar nova conversa */}
       <Dialog open={isNewChatDialogOpen} onOpenChange={setIsNewChatDialogOpen}>
         <DialogContent className="bg-[#1a1a1a] border-[#333] text-white">
           <DialogHeader>
             <DialogTitle className="text-xl text-white">
-              Nova Conversa
+              New Conversation
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Selecione um agente para iniciar uma nova conversa.
+              Select an agent to start a new conversation.
             </DialogDescription>
           </DialogHeader>
 
           <div className="mt-4 space-y-4">
-            {/* Campo de busca para agentes */}
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
               <Input
-                placeholder="Buscar agentes..."
+                placeholder="Search agents..."
                 className="pl-8 bg-[#222] border-[#444] text-white"
                 value={agentSearchTerm}
                 onChange={(e) => setAgentSearchTerm(e.target.value)}
@@ -1194,7 +1110,7 @@ Args: ${
               )}
             </div>
 
-            <div className="text-sm text-gray-300 mb-2">Escolha um agente:</div>
+            <div className="text-sm text-gray-300 mb-2">Choose an agent:</div>
 
             <ScrollArea className="h-[300px] pr-2">
               {isLoading ? (
@@ -1211,14 +1127,18 @@ Args: ${
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <MessageSquare size={16} className="text-[#00ff9d]" />
-                        <span className="font-medium text-white">{agent.name}</span>
+                        <span className="font-medium text-white">
+                          {agent.name}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between mt-1">
                         <Badge className="text-xs bg-[#333] text-[#00ff9d] border-[#00ff9d]/30">
                           {agent.type}
                         </Badge>
                         {agent.model && (
-                          <span className="text-xs text-gray-400">{agent.model}</span>
+                          <span className="text-xs text-gray-400">
+                            {agent.model}
+                          </span>
                         )}
                       </div>
                       {agent.description && (
@@ -1231,13 +1151,13 @@ Args: ${
                 </div>
               ) : agentSearchTerm ? (
                 <div className="text-center py-4 text-gray-400">
-                  Nenhum agente encontrado com "{agentSearchTerm}"
+                  No agent found with "{agentSearchTerm}"
                 </div>
               ) : (
                 <div className="text-center py-4 text-gray-400">
-                  <p>Nenhum agente disponível</p>
+                  <p>No agents available</p>
                   <p className="text-sm mt-2">
-                    Crie agentes na tela de Gerenciamento de Agentes
+                    Create agents in the Agent Management screen
                   </p>
                 </div>
               )}
@@ -1250,21 +1170,21 @@ Args: ${
               variant="outline"
               className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333]"
             >
-              Cancelar
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal para confirmar exclusão de sessão */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="bg-[#1a1a1a] border-[#333] text-white">
           <DialogHeader>
             <DialogTitle className="text-xl text-white">
-              Excluir Sessão
+              Delete Session
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Tem certeza que deseja excluir esta sessão? Esta ação não pode ser desfeita.
+              Are you sure you want to delete this session? This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
 
@@ -1274,13 +1194,13 @@ Args: ${
               variant="outline"
               className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333]"
             >
-              Cancelar
+              Cancel
             </Button>
             <Button
               onClick={handleDeleteSession}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              Excluir
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

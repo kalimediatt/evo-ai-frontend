@@ -19,7 +19,6 @@ export function AgentNode(props: NodeProps) {
 
   const isBottomHandleConnected = isHandleConnected("bottom-handle");
   
-  // Garantir que o agente existe e é do tipo Agent
   const agent = data.agent as Agent | undefined;
 
   return (
@@ -43,12 +42,12 @@ export function AgentNode(props: NodeProps) {
             <p className="text-xs text-gray-500 dark:text-gray-400">{agent.type}</p>
           </div>
         ) : (
-          "Selecionar agente"
+          "Select agent"
         )}
       </div>
 
       <div className="mt-4 cursor-pointer text-right text-sm text-gray-500 dark:text-gray-400">
-        Próximo passo
+        Next step
       </div>
       <Handle
         style={{

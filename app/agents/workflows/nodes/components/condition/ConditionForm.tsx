@@ -79,20 +79,20 @@ function ConditionForm({
         | "not_matches";
 
       const operatorText: Record<OperatorType, string> = {
-        is_defined: "está definido",
-        is_not_defined: "não está definido",
-        equals: "é igual a",
-        not_equals: "não é igual a",
-        contains: "contém",
-        not_contains: "não contém",
-        starts_with: "começa com",
-        ends_with: "termina com",
-        greater_than: "maior que",
-        greater_than_or_equal: "maior ou igual a",
-        less_than: "menor que",
-        less_than_or_equal: "menor ou igual a",
-        matches: "corresponde ao regex",
-        not_matches: "não corresponde ao regex",
+        is_defined: "is defined",
+        is_not_defined: "is not defined",
+        equals: "is equal to",
+        not_equals: "is not equal to",
+        contains: "contains",
+        not_contains: "does not contain",
+        starts_with: "starts with",
+        ends_with: "ends with",
+        greater_than: "is greater than",
+        greater_than_or_equal: "is greater than or equal to",
+        less_than: "is less than",
+        less_than_or_equal: "is less than or equal to",
+        matches: "matches the regex",
+        not_matches: "does not match the regex",
       };
 
       return (
@@ -151,7 +151,7 @@ function ConditionForm({
       <div className="pb-4 pl-8 pr-8 pt-2">
         <div className="my-4 text-gray-300">
           <p>
-            Esta validação corresponde a:{" "}
+            This validation corresponds to:{" "}
             <select
               className="cursor-pointer border-none bg-transparent p-0 font-bold text-green-600 underline focus:outline-none focus:ring-0"
               value={node.data.type || "and"}
@@ -167,8 +167,8 @@ function ConditionForm({
                 handleUpdateNode(updatedNode);
               }}
             >
-              <option value="and">todas as seguintes condições</option>
-              <option value="or">qualquer uma das seguintes condições</option>
+              <option value="and">all of the following conditions</option>
+              <option value="or">any of the following conditions</option>
             </select>
           </p>
         </div>
@@ -183,7 +183,7 @@ function ConditionForm({
           onClick={() => setOpen(true)}
           className="mb-4 cursor-pointer rounded-lg border-2 border-dashed p-4 text-center text-blue-400 border-gray-700 hover:bg-gray-700"
         >
-          + Adicionar Condição
+          + Add Condition
         </div>
 
         <ConditionDialog
@@ -202,10 +202,10 @@ function ConditionForm({
       <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogTitle>Confirm Delete</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p>Tem certeza que deseja excluir esta condição?</p>
+            <p>Are you sure you want to delete this condition?</p>
           </div>
           <DialogFooter>
             <Button
@@ -215,10 +215,10 @@ function ConditionForm({
                 setConditionToDelete(null);
               }}
             >
-              Cancelar
+              Cancel
             </Button>
             <Button variant="destructive" onClick={confirmDelete}>
-              Excluir
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

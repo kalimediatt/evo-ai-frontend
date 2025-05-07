@@ -27,12 +27,12 @@ export default function Sidebar() {
     ...(!isAdmin
       ? [
           {
-            name: "Agentes",
-            href: "/agentes",
+            name: "Agents",
+            href: "/agents",
             icon: Grid3X3,
           },
           {
-            name: "Chat AI",
+            name: "Chat",
             href: "/chat",
             icon: MessageSquare,
           },
@@ -41,20 +41,20 @@ export default function Sidebar() {
     ...(isAdmin
       ? [
           {
-            name: "Servidores MCP",
-            href: "/servidores-mcp",
+            name: "MCP Servers",
+            href: "/mcp-servers",
             icon: Server,
           },
           {
-            name: "Clientes",
-            href: "/clientes",
+            name: "Clients",
+            href: "/clients",
             icon: Users,
           },
         ]
       : []),
     {
-      name: "Perfil",
-      href: "/perfil",
+      name: "Profile",
+      href: "/profile",
       icon: User,
     },
   ]
@@ -90,8 +90,8 @@ export default function Sidebar() {
       </nav>
 
       <div className="border-t border-gray-800 pt-4 mt-4">
-        <div className="text-sm text-gray-400">Evo AI</div>
-        <div className="text-xs text-gray-500 mt-1">© 2024 Evolution API</div>
+        <div className="text-sm text-gray-400">Evolution AI</div>
+        <div className="text-xs text-gray-500 mt-1">© {new Date().getFullYear()} Evolution API</div>
       </div>
     </div>
   )

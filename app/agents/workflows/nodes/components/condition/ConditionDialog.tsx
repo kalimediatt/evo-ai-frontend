@@ -10,31 +10,31 @@ import { ConditionType, ConditionTypeEnum } from "../../nodeFunctions";
 const conditionTypes = [
   {
     id: "previous-output",
-    name: "Output do nó anterior",
-    description: "Validar o resultado retornado pelo nó anterior",
+    name: "Previous output",
+    description: "Validate the result returned by the previous node",
     icon: "🔄",
   },
 ];
 
 const operators = [
-  { value: "is_defined", label: "está definido" },
-  { value: "is_not_defined", label: "não está definido" },
-  { value: "equals", label: "igual a" },
-  { value: "not_equals", label: "diferente de" },
-  { value: "contains", label: "contém" },
-  { value: "not_contains", label: "não contém" },
-  { value: "starts_with", label: "começa com" },
-  { value: "ends_with", label: "termina com" },
-  { value: "greater_than", label: "maior que" },
-  { value: "greater_than_or_equal", label: "maior ou igual a" },
-  { value: "less_than", label: "menor que" },
-  { value: "less_than_or_equal", label: "menor ou igual a" },
-  { value: "matches", label: "corresponde ao regex" },
-  { value: "not_matches", label: "não corresponde ao regex" },
+  { value: "is_defined", label: "is defined" },
+  { value: "is_not_defined", label: "is not defined" },
+  { value: "equals", label: "is equal to" },
+  { value: "not_equals", label: "is not equal to" },
+  { value: "contains", label: "contains" },
+  { value: "not_contains", label: "does not contain" },
+  { value: "starts_with", label: "starts with" },
+  { value: "ends_with", label: "ends with" },
+  { value: "greater_than", label: "is greater than" },
+  { value: "greater_than_or_equal", label: "is greater than or equal to" },
+  { value: "less_than", label: "is less than" },
+  { value: "less_than_or_equal", label: "is less than or equal to" },
+  { value: "matches", label: "matches the regex" },
+  { value: "not_matches", label: "does not match the regex" },
 ];
 
 const outputFields = [
-  { value: "content", label: "Conteúdo" },
+  { value: "content", label: "Content" },
   { value: "status", label: "Status" },
 ];
 
@@ -76,7 +76,7 @@ function ConditionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-w-4xl gap-4 bg-gray-800">
         <div className="w-1/4 border-r pr-4 border-gray-700">
-          <h3 className="mb-4 font-bold text-white">Tipos de Condição</h3>
+          <h3 className="mb-4 font-bold text-white">Condition Types</h3>
           {conditionTypes.map((type) => (
             <div
               key={type.id}
@@ -102,14 +102,14 @@ function ConditionDialog({
 
         <div className="w-3/4">
           <h3 className="mb-4 font-bold text-white">
-            Configurar Condição
+            Configure Condition
           </h3>
 
           {selectedType === "previous-output" && (
             <div className="space-y-4">
               <div>
                 <label className="mb-2 block text-sm text-gray-200">
-                  Campo do output
+                  Output field
                 </label>
                 <select
                   value={selectedField}
@@ -126,7 +126,7 @@ function ConditionDialog({
 
               <div>
                 <label className="mb-2 block text-sm text-gray-200">
-                  Operador
+                  Operator
                 </label>
                 <select
                   value={selectedOperator}
@@ -144,7 +144,7 @@ function ConditionDialog({
               {!["is_defined", "is_not_defined"].includes(selectedOperator) && (
                 <div>
                   <label className="mb-2 block text-sm text-gray-200">
-                    Valor para comparação
+                    Comparison value
                   </label>
                   <input
                     type="text"
@@ -169,7 +169,7 @@ function ConditionDialog({
                   });
                 }}
               >
-                Adicionar Condição
+                Add Condition
               </button>
             </div>
           )}
