@@ -1740,11 +1740,11 @@ export default function AgentsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="cursor-pointer text-red-500 hover:bg-[#333] hover:text-red-400 focus:bg-[#333]"
-                      onClick={() => {
-                        setAgentToDelete(agent);
-                        setIsDeleteDialogOpen(true);
-                      }}
-                    >
+                            onClick={() => {
+                              setAgentToDelete(agent);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Excluir
                           </DropdownMenuItem>
@@ -2352,6 +2352,32 @@ export default function AgentsPage() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteApiKey}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog para confirmar exclusão de agente */}
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent className="bg-[#1a1a1a] border-[#333] text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Tem certeza que deseja excluir o agente "{agentToDelete?.name}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteAgent}
               className="bg-red-600 text-white hover:bg-red-700"
             >
               Excluir
