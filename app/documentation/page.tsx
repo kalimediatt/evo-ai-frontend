@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { ClipboardCopy, Send } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useSearchParams } from "next/navigation";
 
-export default function DocumentationPage() {
+function DocumentationContent() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const agentUrlParam = searchParams.get("agent_url");
@@ -485,5 +485,15 @@ export default function DocumentationPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function DocumentationPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto p-6 bg-[#121212] min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00ff9d]"></div>
+    </div>}>
+      <DocumentationContent />
+    </Suspense>
   );
 } 
