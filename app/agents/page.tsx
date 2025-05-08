@@ -62,7 +62,8 @@ export default function AgentsPage() {
   const [isFolderDialogOpen, setIsFolderDialogOpen] = useState(false);
   const [isMovingDialogOpen, setIsMovingDialogOpen] = useState(false);
   const [isDeleteAgentDialogOpen, setIsDeleteAgentDialogOpen] = useState(false);
-  const [isDeleteFolderDialogOpen, setIsDeleteFolderDialogOpen] = useState(false);
+  const [isDeleteFolderDialogOpen, setIsDeleteFolderDialogOpen] =
+    useState(false);
   const [isApiKeysDialogOpen, setIsApiKeysDialogOpen] = useState(false);
   const [isMCPDialogOpen, setIsMCPDialogOpen] = useState(false);
   const [isCustomMCPDialogOpen, setIsCustomMCPDialogOpen] = useState(false);
@@ -450,6 +451,9 @@ export default function AgentsPage() {
             onCreateAgent={() => {
               resetForm();
               setIsDialogOpen(true);
+            }}
+            onWorkflow={(agentId) => {
+              router.push(`/agents/workflows?agentId=${agentId}`);
             }}
             apiKeys={apiKeys}
             folders={folders}

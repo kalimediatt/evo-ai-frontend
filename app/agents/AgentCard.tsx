@@ -21,6 +21,7 @@ import {
   ExternalLink,
   GitBranch,
   MoveRight,
+  Pencil,
   RefreshCw,
   Server,
   Settings,
@@ -225,10 +226,20 @@ export function AgentCard({
               align="end"
               className="bg-zinc-900 border-zinc-800 text-white"
             >
+              {agent.type === "workflow" && onWorkflow && (
+                <DropdownMenuItem
+                  className="cursor-pointer hover:bg-zinc-800 focus:bg-zinc-800"
+                  onClick={() => onWorkflow(agent.id)}
+                >
+                  <Workflow className="h-4 w-4 mr-2" />
+                  Open Workflow
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 className="cursor-pointer hover:bg-zinc-800 focus:bg-zinc-800"
                 onClick={() => onEdit(agent)}
               >
+                <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -238,15 +249,6 @@ export function AgentCard({
                 <MoveRight className="h-4 w-4 mr-2" />
                 Move to Folder
               </DropdownMenuItem>
-              {agent.type === "workflow" && onWorkflow && (
-                <DropdownMenuItem
-                  className="cursor-pointer hover:bg-zinc-800 focus:bg-zinc-800"
-                  onClick={() => onWorkflow(agent.id)}
-                >
-                  <Workflow className="h-4 w-4 mr-2" />
-                  Workflow
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem
                 className="cursor-pointer text-red-500 hover:bg-zinc-800 hover:text-red-400 focus:bg-zinc-800"
                 onClick={() => onDelete(agent)}
@@ -266,15 +268,6 @@ export function AgentCard({
             <ExternalLink className="h-4 w-4 mr-2" />
             Agent Card
           </a>
-          {agent.type === "workflow" && (
-            <a
-              href={`/agents/workflows?agentId=${agent.id}`}
-              className="flex-1 flex items-center justify-center rounded-none h-12 text-blue-400 hover:text-blue-300 hover:bg-zinc-800"
-            >
-              <Workflow className="h-4 w-4 mr-2" />
-              Open
-            </a>
-          )}
         </div>
       </CardContent>
     </Card>
