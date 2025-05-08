@@ -89,8 +89,8 @@ export default function LoginPage() {
         <Image 
           src="/images/evolution-api-logo.png" 
           alt="Evolution API" 
-          width={220} 
-          height={50}
+          width={140} 
+          height={30}
           priority 
         />
       </div>
