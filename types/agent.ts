@@ -77,6 +77,7 @@ export interface AgentConfig {
 export interface Agent {
   id: string;
   client_id: string;
+  folder_id?: string;
   name: string;
   description?: string;
   type: AgentType;
