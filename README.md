@@ -1,74 +1,113 @@
-# Next.js Frontend Project
+# Evo AI - AI Agents Platform (Frontend)
 
-A modern frontend application built with Next.js 15, React 18, and Tailwind CSS.
+A modern frontend application for the Evo AI platform built with Next.js 15, React 18, and Tailwind CSS.
 
-## Requirements
+## 🚀 Overview
+
+The Evo AI frontend platform enables:
+
+- User-friendly interface for creating and managing AI agents
+- Integration with different language models
+- Client management
+- Visual configuration of MCP servers
+- Custom tools management
+- JWT authentication with email verification
+- **Agent 2 Agent (A2A) Protocol Support**: Interface for interoperability between AI agents following Google's A2A specification
+- **Workflow Agent with ReactFlow**: Visual interface for building complex agent workflows
+- **Secure API Key Management**: Interface for encrypted storage of API keys
+- **Agent Organization**: Folder structure for organizing agents by categories
+
+## 🧩 Agent Creation Interface
+
+The frontend offers intuitive interfaces for creating different types of agents:
+
+### 1. LLM Agent (Language Model)
+
+Interface for configuring agents based on models like GPT-4, Claude, etc. with tools, MCP servers, and sub-agents.
+
+### 2. A2A Agent (Agent-to-Agent)
+
+Interface for implementing Google's A2A protocol for agent interoperability.
+
+### 3. Sequential Agent
+
+Interface for executing sub-agents in a specific order.
+
+### 4. Parallel Agent
+
+Interface for executing multiple sub-agents simultaneously.
+
+### 5. Loop Agent
+
+Interface for executing sub-agents in a loop with a defined number of iterations.
+
+### 6. Workflow Agent
+
+Visual interface based on ReactFlow for creating complex workflows between agents.
+
+## 🛠️ Technologies
+
+- [Next.js](https://nextjs.org/) - React framework for production
+- [React](https://reactjs.org/) - JavaScript library for building user interfaces
+- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
+- [Shadcn UI](https://ui.shadcn.com/) - UI component library
+- [Radix UI](https://www.radix-ui.com/) - Unstyled, accessible components
+- [TypeScript](https://www.typescriptlang.org/) - Typed JavaScript
+- [React Query](https://tanstack.com/query/latest) - Data fetching and state management
+- [Zustand](https://zustand-demo.pmnd.rs/) - Global state management
+- [React Flow](https://reactflow.dev/) - Library for building node-based visual workflows
+- [Axios](https://axios-http.com/) - HTTP client for API communication
+
+## 📋 Requirements
 
 - Node.js 18+ (LTS recommended)
 - npm, yarn, or pnpm package manager
+- Evo AI backend running
 
-## Installation
+## 🔧 Installation
 
-You can install the project dependencies using npm, yarn, or pnpm:
+1. Clone the repository:
 
-### Using npm
+```bash
+git clone https://github.com/your-username/evo-ai-a2a-saas-frontend.git
+cd evo-ai-a2a-saas-frontend
+```
+
+2. Install dependencies:
 
 ```bash
 npm install
-```
-
-### Using yarn
-
-```bash
+# or
 yarn install
-```
-
-### Using pnpm
-
-```bash
+# or
 pnpm install
 ```
 
-## Environment Variables
-
-Create a `.env.local` file in the root directory with the following variables:
-
-```env
-# Environment variables example
-NEXT_PUBLIC_API_URL=your_api_url_here
-```
-
-## Running the Project
-
-### Development Mode
-
-To run the project in development mode with hot-reload:
+3. Configure environment variables:
 
 ```bash
+cp .env.example .env.local
+# Edit the .env.local file with your settings
+```
+
+## 🚀 Running the Project
+
+```bash
+# Development mode
 npm run dev
 # or
 yarn dev
 # or
 pnpm dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to see the result.
-
-### Production Build
-
-To create a production build:
-
-```bash
+# Production build
 npm run build
 # or
 yarn build
 # or
 pnpm build
-```
 
-Then, to start the production server:
-
-```bash
+# Start production server
 npm run start
 # or
 yarn start
@@ -76,7 +115,69 @@ yarn start
 pnpm start
 ```
 
-## Docker Support
+The project will be available at [http://localhost:3000](http://localhost:3000)
+
+## 🔐 Authentication
+
+The frontend implements JWT authentication integrated with the backend:
+
+- **User Registration**: Form for creating new accounts
+- **Email Verification**: Process for verifying via email
+- **Login**: Authentication of existing users
+- **Password Recovery**: Complete password recovery flow
+- **Secure Storage**: Tokens stored in HttpOnly cookies
+
+## 🖥️ Main Interface Features
+
+### Dashboard
+
+Main dashboard showing:
+- Agent overview
+- Usage statistics
+- Recent activities
+- Quick links for agent creation
+
+### Agent Editor
+
+Complete interface for:
+- Creating new agents
+- Editing existing agents
+- Configuring instructions
+- Selecting models
+- Setting up API keys
+
+### Workflow Editor
+
+Visual editor based on ReactFlow for:
+- Creating complex workflows
+- Connecting different agents
+- Defining conditionals and decision flows
+- Visualizing data flow
+
+### API Key Manager
+
+Interface for:
+- Adding new API keys
+- Securely encrypting keys
+- Managing existing keys
+- Rotating and updating keys
+
+### Agent Organization
+
+System for:
+- Creating folders and categories
+- Organizing agents by type or use case
+- Searching and filtering agents
+
+## 🔄 Backend Integration
+
+The frontend communicates with the backend through:
+
+- **RESTful API**: Endpoints for resource management
+- **WebSockets**: Real-time communication for agent messages
+- **Response Streaming**: Support for streaming model responses
+
+## 🐳 Docker Support
 
 The project includes Docker configuration for containerized deployment:
 
@@ -90,34 +191,36 @@ docker build -t nextjs-frontend .
 docker run -p 3000:3000 nextjs-frontend
 ```
 
-## Project Structure
+## 🤝 Contributing
 
-```
-.
-├── app/                # App router pages and API routes
-├── components/         # Reusable UI components
-│   └── ui/             # Shadcn UI components
-├── contexts/           # React Context providers
-├── hooks/              # Custom React hooks
-├── lib/                # Utility functions
-├── public/             # Static assets
-├── services/           # API service functions
-├── styles/             # Global styles
-└── types/              # TypeScript type definitions
-```
+We welcome contributions from the community! Here's how you can help:
 
-## Technologies
+1. Fork the project
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Make your changes and add tests if possible
+4. Run tests and make sure they pass
+5. Commit your changes following conventional commits format (`feat: add amazing feature`)
+6. Push to the branch (`git push origin feature/AmazingFeature`)
+7. Open a Pull Request
 
-- [Next.js](https://nextjs.org/) - React framework for production
-- [React](https://reactjs.org/) - JavaScript library for building user interfaces
-- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
-- [Shadcn UI](https://ui.shadcn.com/) - UI component library
-- [Radix UI](https://www.radix-ui.com/) - Unstyled, accessible components
-- [TypeScript](https://www.typescriptlang.org/) - Typed JavaScript
+Please read our [Contributing Guidelines](CONTRIBUTING.md) for more details.
 
-## Development Commands
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Development Commands
 
 - `npm run dev` - Start the development server
 - `npm run build` - Build the application for production
 - `npm run start` - Start the production server
-- `npm run lint` - Run ESLint to check code quality 
+- `npm run lint` - Run ESLint to check code quality
+- `npm run format` - Format code with Prettier
+
+## 🙏 Acknowledgments
+
+- [Next.js](https://nextjs.org/)
+- [React](https://reactjs.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Shadcn UI](https://ui.shadcn.com/)
+- [ReactFlow](https://reactflow.dev/) 
