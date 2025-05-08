@@ -4,7 +4,7 @@ FROM node:20.15.1-alpine AS builder
 WORKDIR /app
 
 # Define build arguments with default values
-ARG NEXT_PUBLIC_API_URL=https://api.evo-ai.co
+ARG NEXT_PUBLIC_API_URL=https://api-evoai.evoapicloud.com
 
 # Install dependencies first (caching)
 COPY package.json package-lock.json ./
@@ -24,7 +24,7 @@ FROM node:20.15.1-alpine AS runner
 WORKDIR /app
 
 # Define build arguments again for the runner stage
-ARG NEXT_PUBLIC_API_URL=https://api.evo-ai.co
+ARG NEXT_PUBLIC_API_URL=https://api-evoai.evoapicloud.com
 
 # Install production dependencies only
 COPY package.json package-lock.json ./

@@ -16,19 +16,19 @@ import {
   Bot,
   ChevronDown,
   ChevronUp,
-  CircleEllipsis,
   Code,
   ExternalLink,
   GitBranch,
   MoveRight,
   Pencil,
   RefreshCw,
-  Server,
   Settings,
   Trash2,
   Workflow,
+  TextSelect,
 } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface AgentCardProps {
   agent: Agent;
@@ -54,6 +54,7 @@ export function AgentCard({
   folders = [],
 }: AgentCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const router = useRouter();
 
   const getAgentTypeIcon = (type: AgentType) => {
     const agentTypes = [
@@ -200,7 +201,7 @@ export function AgentCard({
             )}
 
             <div className="flex justify-between items-center">
-              <span className="text-zinc-500">Criado em:</span>
+              <span className="text-zinc-500">Created at:</span>
               <span className="text-zinc-300">{getCreatedAtFormatted()}</span>
             </div>
 
@@ -235,6 +236,17 @@ export function AgentCard({
                   Open Workflow
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem
+                className="cursor-pointer hover:bg-zinc-800 focus:bg-zinc-800"
+                onClick={() =>
+                  router.push(
+                    `/documentation?agent_url=${agent.agent_card_url || ""}`
+                  )
+                }
+              >
+                <TextSelect className="h-4 w-4 mr-2" />
+                Test A2A
+              </DropdownMenuItem>
               <DropdownMenuItem
                 className="cursor-pointer hover:bg-zinc-800 focus:bg-zinc-800"
                 onClick={() => onEdit(agent)}

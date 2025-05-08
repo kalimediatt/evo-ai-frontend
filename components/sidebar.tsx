@@ -14,6 +14,7 @@ import {
   ChevronUp,
   ChevronDown,
   AlertCircle,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -59,6 +60,11 @@ export default function Sidebar() {
             href: "/chat",
             icon: MessageSquare,
           },
+          {
+            name: "Documentation",
+            href: "/documentation",
+            icon: FileText,
+          },
         ]
       : []),
     ...(isAdmin
@@ -72,6 +78,11 @@ export default function Sidebar() {
             name: "Clients",
             href: "/clients",
             icon: Users,
+          },
+          {
+            name: "Documentation",
+            href: "/documentation",
+            icon: FileText,
           },
         ]
       : []),
