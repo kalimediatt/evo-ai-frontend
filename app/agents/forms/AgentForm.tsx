@@ -60,8 +60,7 @@ export function AgentForm({
 }: AgentFormProps) {
   const [values, setValues] = useState<Partial<Agent>>(initialValues);
   const [activeTab, setActiveTab] = useState("basic");
-  
-  // Estados para controlar os diálogos MCP
+
   const [mcpDialogOpen, setMcpDialogOpen] = useState(false);
   const [selectedMCP, setSelectedMCP] = useState<any>(null);
   const [customMcpDialogOpen, setCustomMcpDialogOpen] = useState(false);
@@ -118,39 +117,43 @@ export function AgentForm({
 
   const handleSaveMCP = (mcpConfig: any) => {
     const updatedMcpServers = [...(values.config?.mcp_servers || [])];
-    const existingIndex = updatedMcpServers.findIndex(mcp => mcp.id === mcpConfig.id);
-    
+    const existingIndex = updatedMcpServers.findIndex(
+      (mcp) => mcp.id === mcpConfig.id
+    );
+
     if (existingIndex >= 0) {
       updatedMcpServers[existingIndex] = mcpConfig;
     } else {
       updatedMcpServers.push(mcpConfig);
     }
-    
+
     setValues({
       ...values,
       config: {
         ...(values.config || {}),
-        mcp_servers: updatedMcpServers
-      }
+        mcp_servers: updatedMcpServers,
+      },
     });
   };
 
   const handleSaveCustomMCP = (customMCP: any) => {
-    const updatedCustomMcps = [...(values.config?.custom_mcp_servers || [])];
-    const existingIndex = updatedCustomMcps.findIndex(mcp => mcp.url === customMCP.url);
-    
+    const updatedCustomMCPs = [...(values.config?.custom_mcp_servers || [])];
+    const existingIndex = updatedCustomMCPs.findIndex(
+      (mcp) => mcp.url === customMCP.url
+    );
+
     if (existingIndex >= 0) {
-      updatedCustomMcps[existingIndex] = customMCP;
+      updatedCustomMCPs[existingIndex] = customMCP;
     } else {
-      updatedCustomMcps.push(customMCP);
+      updatedCustomMCPs.push(customMCP);
     }
-    
+
     setValues({
       ...values,
       config: {
         ...(values.config || {}),
-        custom_mcp_servers: updatedCustomMcps
-      }
+        custom_mcp_servers: updatedCustomMCPs,
+      },
     });
   };
 
@@ -269,7 +272,9 @@ export function AgentForm({
         onOpenChange={setMcpDialogOpen}
         onSave={handleSaveMCP}
         availableMCPs={availableMCPs}
-        selectedMCP={availableMCPs.find(m => selectedMCP?.id === m.id) || null}
+        selectedMCP={
+          availableMCPs.find((m) => selectedMCP?.id === m.id) || null
+        }
         initialEnvs={selectedMCP?.envs || {}}
         initialTools={selectedMCP?.tools || []}
       />

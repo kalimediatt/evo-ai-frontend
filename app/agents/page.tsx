@@ -90,6 +90,7 @@ export default function AgentsPage() {
         http_tools: [],
       },
       sub_agents: [],
+      agent_tools: [],
     },
   });
 
@@ -347,6 +348,7 @@ export default function AgentsPage() {
           http_tools: [],
         },
         sub_agents: [],
+        agent_tools: [],
       },
     });
     setEditingAgent(null);
