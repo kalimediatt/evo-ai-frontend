@@ -63,7 +63,7 @@ export default function ClientsPage() {
   })
 
   const [page, setPage] = useState(1)
-  const [limit, setLimit] = useState(10)
+  const [limit, setLimit] = useState(1000)
   const [total, setTotal] = useState(0)
 
   const [clients, setClients] = useState<Client[]>([])
