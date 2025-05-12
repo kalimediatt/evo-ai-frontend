@@ -8,8 +8,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { User, Loader2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { AgentForm as GlobalAgentForm } from "@/app/agents/forms/AgentForm";
+import { ApiKey, listApiKeys } from "@/services/agentService";
+import { listMCPServers } from "@/services/mcpServerService";
+import { availableModels } from "@/types/aiModels";
+import { MCPServer } from "@/types/mcpServer";
+import { AgentTestChatModal } from "./AgentTestChatModal";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || '{}') : {};
+const clientId: string = user?.client_id ? String(user.client_id) : "";
+
 function AgentForm({
   selectedNode,
   handleUpdateNode,
@@ -30,6 +39,28 @@ function AgentForm({
   const [searchTerm, setSearchTerm] = useState("");
   const edges = useEdges();
   const nodes = useNodes();
+  const [isAgentDialogOpen, setIsAgentDialogOpen] = useState(false);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [availableMCPs, setAvailableMCPs] = useState<MCPServer[]>([]);
+  const [newAgent, setNewAgent] = useState<Partial<Agent>>({
+    client_id: clientId || "",
+    name: "",
+    description: "",
+    type: "llm",
+    model: "openai/gpt-4.1-nano",
+    instruction: "",
+    api_key_id: "",
+    config: {
+      tools: [],
+      mcp_servers: [],
+      custom_mcp_servers: [],
+      custom_tools: { http_tools: [] },
+      sub_agents: [],
+      agent_tools: [],
+    },
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
 
   const connectedNode = useMemo(() => {
     const edge = edges.find((edge) => edge.source === selectedNode.id);
@@ -37,9 +68,6 @@ function AgentForm({
     const node = nodes.find((node) => node.id === edge.target);
     return node || null;
   }, [edges, nodes, selectedNode.id]);
-  
-  const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || '{}') : {};
-  const clientId = user?.client_id || "";
   
   const currentAgent = typeof window !== "undefined" ? 
     JSON.parse(localStorage.getItem("current_workflow_agent") || '{}') : {};
@@ -75,6 +103,12 @@ function AgentForm({
     }
   }, [searchTerm, allAgents]);
 
+  useEffect(() => {
+    if (!clientId) return;
+    listApiKeys(clientId).then((res) => setApiKeys(res.data));
+    listMCPServers().then((res) => setAvailableMCPs(res.data));
+  }, [clientId]);
+
   const handleDeleteEdge = useCallback(() => {
     const id = edges.find((edge: any) => edge.source === selectedNode.id)?.id;
     setEdges((edges: any) => {
@@ -106,10 +140,61 @@ function AgentForm({
     return agentTypes[type] || type;
   };
 
+  const handleOpenAgentDialog = () => {
+    setNewAgent({
+      client_id: clientId || "",
+      name: "",
+      description: "",
+      type: "llm",
+      model: "openai/gpt-4.1-nano",
+      instruction: "",
+      api_key_id: "",
+      config: {
+        tools: [],
+        mcp_servers: [],
+        custom_mcp_servers: [],
+        custom_tools: { http_tools: [] },
+        sub_agents: [],
+        agent_tools: [],
+      },
+    });
+    setIsAgentDialogOpen(true);
+  };
+
+  const handleSaveAgent = async (agentData: Partial<Agent>) => {
+    setIsLoading(true);
+    try {
+      const { createAgent } = await import("@/services/agentService");
+      const created = await createAgent({ ...(agentData as any), client_id: clientId });
+
+      const res = await listAgents(clientId);
+      setAllAgents(res.data.filter((agent: Agent) => agent.id !== currentAgentId));
+      setAgents(res.data.filter((agent: Agent) => agent.id !== currentAgentId));
+
+      if (created.data) {
+        handleSelectAgent(created.data);
+      }
+      setIsAgentDialogOpen(false);
+    } catch (e) {
+      setIsAgentDialogOpen(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const renderForm = () => {
     return (
       <div className="pb-4 pl-8 pr-8 pt-2 text-white">
-        <h3 className="text-lg font-medium mb-4">Select an Agent</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium">Select an Agent</h3>
+          <Button
+            size="sm"
+            className="bg-green-700 hover:bg-green-800 text-white"
+            onClick={handleOpenAgentDialog}
+          >
+            + Create new agent
+          </Button>
+        </div>
         
         <div className="relative mb-4">
           <Input
@@ -206,8 +291,39 @@ function AgentForm({
             >
               Remove Agent
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-2 border-green-500 text-green-500 hover:bg-green-900/20"
+              onClick={() => setIsTestModalOpen(true)}
+            >
+              Test Agent
+            </Button>
+            {isTestModalOpen && (
+              <AgentTestChatModal
+                open={isTestModalOpen}
+                onOpenChange={setIsTestModalOpen}
+                agent={node.data.agent}
+              />
+            )}
           </div>
         )}
+
+        <GlobalAgentForm
+          open={isAgentDialogOpen}
+          onOpenChange={setIsAgentDialogOpen}
+          initialValues={newAgent}
+          apiKeys={apiKeys}
+          availableModels={availableModels}
+          availableMCPs={availableMCPs}
+          agents={allAgents}
+          onOpenApiKeysDialog={() => {}}
+          onOpenMCPDialog={() => {}}
+          onOpenCustomMCPDialog={() => {}}
+          onSave={handleSaveAgent}
+          isLoading={isLoading}
+          getAgentNameById={(id) => allAgents.find((a) => a.id === id)?.name || id}
+        />
       </div>
     );
   };

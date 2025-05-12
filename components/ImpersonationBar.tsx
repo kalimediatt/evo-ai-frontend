@@ -36,8 +36,6 @@ export default function ImpersonationBar() {
     
     setIsImpersonating(lsImpersonating || cookieImpersonating);
     setClientName(name);
-    
-    console.log('Impersonation check:', { lsImpersonating, cookieImpersonating, name });
   };
 
   useEffect(() => {
