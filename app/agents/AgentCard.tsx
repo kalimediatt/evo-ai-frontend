@@ -240,7 +240,7 @@ export function AgentCard({
                 className="cursor-pointer hover:bg-zinc-800 focus:bg-zinc-800"
                 onClick={() =>
                   router.push(
-                    `/documentation?agent_url=${agent.agent_card_url || ""}`
+                    `/documentation?agent_url=${agent.agent_card_url?.replace("/.well-known/agent.json", "") || ""}&api_key=${agent.config?.api_key}`
                   )
                 }
               >

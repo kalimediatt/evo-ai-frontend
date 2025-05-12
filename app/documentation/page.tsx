@@ -15,6 +15,7 @@ function DocumentationContent() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const agentUrlParam = searchParams.get("agent_url");
+  const apiKeyParam = searchParams.get("api_key");
 
   const [agentUrl, setAgentUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -29,11 +30,14 @@ function DocumentationContent() {
     if (agentUrlParam) {
       setAgentUrl(agentUrlParam);
     }
-  }, [agentUrlParam]);
+    if (apiKeyParam) {
+      setApiKey(apiKeyParam);
+    }
+  }, [agentUrlParam, apiKeyParam]);
 
   const jsonRpcRequest = {
     jsonrpc: "2.0",
-    method: "sendTask",
+    method: "tasks/send",
     params: {
       message: {
         role: "user",
@@ -283,6 +287,27 @@ function DocumentationContent() {
                 </div>
               )}
             </Button>
+            {response && (
+              <div className="mt-6">
+                <h3 className="text-[#00ff9d] mb-2">Agent Response</h3>
+                <div className="relative">
+                  <CopyBlock
+                    text={response}
+                    language="json"
+                    theme={dracula}
+                    codeBlock
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="absolute top-2 right-2 text-white hover:bg-[#333]"
+                    onClick={() => copyToClipboard(response)}
+                  >
+                    <ClipboardCopy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -432,32 +457,6 @@ function DocumentationContent() {
           </Card>
         </TabsContent>
       </Tabs>
-      
-      {response && (
-        <Card className="bg-[#1a1a1a] border-[#333] text-white mb-8">
-          <CardHeader>
-            <CardTitle className="text-[#00ff9d]">Agent Response</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative">
-              <CopyBlock
-                text={response}
-                language="json"
-                theme={dracula}
-                codeBlock
-              />
-              <Button
-                size="sm"
-                variant="ghost"
-                className="absolute top-2 right-2 text-white hover:bg-[#333]"
-                onClick={() => copyToClipboard(response)}
-              >
-                <ClipboardCopy className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
       
       <Card className="bg-[#1a1a1a] border-[#333] text-white">
         <CardHeader>
