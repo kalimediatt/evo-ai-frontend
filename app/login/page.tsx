@@ -182,7 +182,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#121212] p-4">
       <div className="mb-8">
         <Image
-          src="/images/evolution-api-logo.png"
+          src="https://evolution-api.com/files/evo/evolution-ai-logo.png"
           alt="Evolution API"
           width={140}
           height={30}
