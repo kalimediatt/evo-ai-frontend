@@ -46,35 +46,19 @@ export function AgentSidebar({
 }: AgentSidebarProps) {
   return (
     <>
-      <button
-        onClick={onClose}
-        className={`absolute left-0 top-6 z-20 bg-[#222] p-2 rounded-r-md text-[#00ff9d] hover:bg-[#333] hover:text-[#00ff9d] shadow-md transition-all ${
-          visible ? "left-64" : "left-0"
-        }`}
-        aria-label={visible ? "Hide folders" : "Show folders"}
-      >
-        {visible ? (
-          <X className="h-5 w-5" />
-        ) : (
-          <div className="relative">
-            <Folder className="h-5 w-5" />
-            {folders.length > 0 && (
-              <span className="absolute -top-1 -right-1 h-3 w-3 bg-[#00ff9d] rounded-full border-2 border-[#222]" />
-            )}
-          </div>
-        )}
-      </button>
-
       {visible && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-10 transition-opacity duration-300"
+        <button
           onClick={onClose}
-        />
+          className="absolute right-4 top-4 z-40 bg-[#222] p-2 rounded-md text-[#00ff9d] hover:bg-[#333] hover:text-[#00ff9d] shadow-md transition-all"
+          aria-label="Hide folders"
+        >
+          <X className="h-5 w-5" />
+        </button>
       )}
 
       <div
-        className={`absolute top-0 left-0 h-full w-64 bg-[#1a1a1a] p-4 shadow-xl z-20 transition-all duration-300 ease-in-out ${
-          visible ? "translate-x-0" : "-translate-x-full"
+        className={`fixed top-0 z-30 h-full w-64 bg-[#1a1a1a] p-4 shadow-xl transition-all duration-300 ease-in-out ${
+          visible ? "left-64 translate-x-0" : "left-0 -translate-x-full pointer-events-none"
         }`}
       >
         <div className="flex justify-between items-center mb-6">

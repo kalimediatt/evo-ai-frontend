@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Key, Plus } from "lucide-react";
+import { Key, Plus, Folder } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 
 import { Agent, AgentCreate } from "@/types/agent";
-import { Folder } from "@/services/agentService";
+import { Folder as AgentFolder } from "@/services/agentService";
 import {
   listAgents,
   createAgent,
@@ -49,7 +49,7 @@ export default function AgentsPage() {
 
   const [agents, setAgents] = useState<Agent[]>([]);
   const [filteredAgents, setFilteredAgents] = useState<Agent[]>([]);
-  const [folders, setFolders] = useState<Folder[]>([]);
+  const [folders, setFolders] = useState<AgentFolder[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [availableMCPs, setAvailableMCPs] = useState<MCPServer[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -69,10 +69,10 @@ export default function AgentsPage() {
   const [isCustomMCPDialogOpen, setIsCustomMCPDialogOpen] = useState(false);
 
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
-  const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+  const [editingFolder, setEditingFolder] = useState<AgentFolder | null>(null);
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
   const [agentToMove, setAgentToMove] = useState<Agent | null>(null);
-  const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
+  const [folderToDelete, setFolderToDelete] = useState<AgentFolder | null>(null);
 
   const [newAgent, setNewAgent] = useState<Partial<Agent>>({
     client_id: clientId || "",
@@ -366,11 +366,11 @@ export default function AgentsPage() {
           setIsFolderDialogOpen(true);
         }}
         onEditFolder={(folder) => {
-          setEditingFolder(folder as Folder);
+          setEditingFolder(folder as AgentFolder);
           setIsFolderDialogOpen(true);
         }}
         onDeleteFolder={(folder) => {
-          setFolderToDelete(folder as Folder);
+          setFolderToDelete(folder as AgentFolder);
           setIsDeleteFolderDialogOpen(true);
         }}
         onClose={() => setIsSidebarVisible(!isSidebarVisible)}
@@ -382,17 +382,21 @@ export default function AgentsPage() {
         }`}
       >
         <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white flex items-center ml-4">
+          <div className="flex items-center">
+            {!isSidebarVisible && (
+              <button
+                onClick={() => setIsSidebarVisible(true)}
+                className="mr-2 bg-[#222] p-2 rounded-md text-[#00ff9d] hover:bg-[#333] hover:text-[#00ff9d] shadow-md transition-all"
+                aria-label="Show folders"
+              >
+                <Folder className="h-5 w-5" />
+              </button>
+            )}
+            <h1 className="text-3xl font-bold text-white flex items-center ml-2">
               {selectedFolderId
                 ? folders.find((f) => f.id === selectedFolderId)?.name
                 : "Agents"}
             </h1>
-            {selectedFolderId && (
-              <p className="text-sm text-gray-400 mt-1">
-                {folders.find((f) => f.id === selectedFolderId)?.description}
-              </p>
-            )}
           </div>
 
           <div className="flex items-center gap-4">
