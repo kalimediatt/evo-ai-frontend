@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Agent } from "@/types/agent";
 import { MCPServer } from "@/types/mcpServer";
-import { Plus, Server, Settings, X } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, Plus, Server, Settings, X } from "lucide-react";
 import { ParallelAgentConfig } from "../config/ParallelAgentConfig";
 import { SequentialAgentConfig } from "../config/SequentialAgentConfig";
 import { ApiKey } from "@/services/agentService";
@@ -15,6 +15,7 @@ import { MCPDialog } from "../dialogs/MCPDialog";
 import { CustomMCPDialog } from "../dialogs/CustomMCPDialog";
 import { AgentToolDialog } from "../dialogs/AgentToolDialog";
 import { CustomToolDialog } from "../dialogs/CustomToolDialog";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ConfigurationTabProps {
   values: Partial<Agent>;
@@ -49,91 +50,151 @@ export function ConfigurationTab({
   onOpenMCPDialog,
   onOpenCustomMCPDialog,
 }: ConfigurationTabProps) {
+  const [agentToolDialogOpen, setAgentToolDialogOpen] = useState(false);
+  const [customToolDialogOpen, setCustomToolDialogOpen] = useState(false);
+  const [editingCustomTool, setEditingCustomTool] = useState<any>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+
+  const handleAddAgentTool = (tool: { id: string }) => {
+    const updatedAgentTools = [...(values.config?.agent_tools || [])];
+    if (!updatedAgentTools.includes(tool.id)) {
+      updatedAgentTools.push(tool.id);
+      onChange({
+        ...values,
+        config: {
+          ...(values.config || {}),
+          agent_tools: updatedAgentTools,
+        },
+      });
+    }
+  };
+  const handleRemoveAgentTool = (id: string) => {
+    onChange({
+      ...values,
+      config: {
+        ...(values.config || {}),
+        agent_tools: (values.config?.agent_tools || []).filter(
+          (toolId) => toolId !== id
+        ),
+      },
+    });
+  };
+
+  // Custom Tools handlers
+  const handleAddCustomTool = (tool: any) => {
+    const updatedTools = [...(values.config?.custom_tools?.http_tools || [])];
+    updatedTools.push(tool);
+    onChange({
+      ...values,
+      config: {
+        ...(values.config || {}),
+        custom_tools: {
+          ...(values.config?.custom_tools || { http_tools: [] }),
+          http_tools: updatedTools,
+        },
+      },
+    });
+  };
+  const handleEditCustomTool = (tool: any, idx: number) => {
+    setEditingCustomTool({ ...tool, idx });
+    setCustomToolDialogOpen(true);
+  };
+  const handleSaveEditCustomTool = (tool: any) => {
+    const updatedTools = [...(values.config?.custom_tools?.http_tools || [])];
+    if (editingCustomTool && typeof editingCustomTool.idx === "number") {
+      updatedTools[editingCustomTool.idx] = tool;
+    }
+    onChange({
+      ...values,
+      config: {
+        ...(values.config || {}),
+        custom_tools: {
+          ...(values.config?.custom_tools || { http_tools: [] }),
+          http_tools: updatedTools,
+        },
+      },
+    });
+    setEditingCustomTool(null);
+  };
+  const handleRemoveCustomTool = (idx: number) => {
+    const updatedTools = [...(values.config?.custom_tools?.http_tools || [])];
+    updatedTools.splice(idx, 1);
+    onChange({
+      ...values,
+      config: {
+        ...(values.config || {}),
+        custom_tools: {
+          ...(values.config?.custom_tools || { http_tools: [] }),
+          http_tools: updatedTools,
+        },
+      },
+    });
+  };
+
+  const apiKeyField = (
+    <div className="space-y-2 mb-4">
+      <h3 className="text-lg font-medium text-white">API Key</h3>
+      <div className="border border-[#444] rounded-md p-4 bg-[#222] flex flex-col gap-2">
+        <label className="text-sm text-gray-400 mb-1" htmlFor="agent-api_key">
+          Configure the API key for this agent. This key will be used for
+          authentication with external services.
+        </label>
+        <div className="relative flex items-center">
+          <input
+            id="agent-api_key"
+            type={showApiKey ? "text" : "password"}
+            className="w-full bg-[#2a2a2a] border border-[#444] rounded-md px-3 py-2 text-white pr-24 focus:outline-none focus:ring-2 focus:ring-[#00ff9d]/40"
+            value={values.config?.api_key || ""}
+            onChange={(e) =>
+              onChange({
+                ...values,
+                config: {
+                  ...(values.config || {}),
+                  api_key: e.target.value,
+                },
+              })
+            }
+            autoComplete="off"
+          />
+          <button
+            type="button"
+            className="absolute right-9 text-gray-400 hover:text-[#00ff9d] px-1 py-1"
+            onClick={() => setShowApiKey((v) => !v)}
+            tabIndex={-1}
+          >
+            {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+          <button
+            type="button"
+            className="absolute right-2 text-gray-400 hover:text-[#00ff9d] px-1 py-1"
+            onClick={async () => {
+              if (values.config?.api_key) {
+                await navigator.clipboard.writeText(values.config.api_key);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1200);
+                toast({
+                  title: "Copied!",
+                  description: "The API key has been copied to the clipboard."
+                });
+              }
+            }}
+            tabIndex={-1}
+          >
+            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (values.type === "llm") {
-    const [agentToolDialogOpen, setAgentToolDialogOpen] = useState(false);
-    const [customToolDialogOpen, setCustomToolDialogOpen] = useState(false);
-    const [editingCustomTool, setEditingCustomTool] = useState<any>(null);
-
-    const handleAddAgentTool = (tool: { id: string }) => {
-      const updatedAgentTools = [...(values.config?.agent_tools || [])];
-      if (!updatedAgentTools.includes(tool.id)) {
-        updatedAgentTools.push(tool.id);
-        onChange({
-          ...values,
-          config: {
-            ...(values.config || {}),
-            agent_tools: updatedAgentTools,
-          },
-        });
-      }
-    };
-    const handleRemoveAgentTool = (id: string) => {
-      onChange({
-        ...values,
-        config: {
-          ...(values.config || {}),
-          agent_tools: (values.config?.agent_tools || []).filter((toolId) => toolId !== id),
-        },
-      });
-    };
-
-    // Custom Tools handlers
-    const handleAddCustomTool = (tool: any) => {
-      const updatedTools = [...(values.config?.custom_tools?.http_tools || [])];
-      updatedTools.push(tool);
-      onChange({
-        ...values,
-        config: {
-          ...(values.config || {}),
-          custom_tools: {
-            ...(values.config?.custom_tools || { http_tools: [] }),
-            http_tools: updatedTools,
-          },
-        },
-      });
-    };
-    const handleEditCustomTool = (tool: any, idx: number) => {
-      setEditingCustomTool({ ...tool, idx });
-      setCustomToolDialogOpen(true);
-    };
-    const handleSaveEditCustomTool = (tool: any) => {
-      const updatedTools = [...(values.config?.custom_tools?.http_tools || [])];
-      if (editingCustomTool && typeof editingCustomTool.idx === "number") {
-        updatedTools[editingCustomTool.idx] = tool;
-      }
-      onChange({
-        ...values,
-        config: {
-          ...(values.config || {}),
-          custom_tools: {
-            ...(values.config?.custom_tools || { http_tools: [] }),
-            http_tools: updatedTools,
-          },
-        },
-      });
-      setEditingCustomTool(null);
-    };
-    const handleRemoveCustomTool = (idx: number) => {
-      const updatedTools = [...(values.config?.custom_tools?.http_tools || [])];
-      updatedTools.splice(idx, 1);
-      onChange({
-        ...values,
-        config: {
-          ...(values.config || {}),
-          custom_tools: {
-            ...(values.config?.custom_tools || { http_tools: [] }),
-            http_tools: updatedTools,
-          },
-        },
-      });
-    };
-
     return (
       <div className="space-y-4">
+        {apiKeyField}
         <div className="space-y-4">
-          <h3 className="text-lg font-medium text-white">
-            MCP Servers
-          </h3>
+          <h3 className="text-lg font-medium text-white">MCP Servers</h3>
           <div className="border border-[#444] rounded-md p-4 bg-[#222]">
             <p className="text-sm text-gray-400 mb-4">
               Configure the MCP servers that this agent can use.
@@ -142,67 +203,58 @@ export function ConfigurationTab({
             {values.config?.mcp_servers &&
             values.config.mcp_servers.length > 0 ? (
               <div className="space-y-2">
-                {values.config.mcp_servers.map(
-                  (mcpConfig) => {
-                    const mcpServer = availableMCPs.find(
-                      (mcp) => mcp.id === mcpConfig.id
-                    );
-                    return (
-                      <div
-                        key={mcpConfig.id}
-                        className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md"
-                      >
-                        <div>
-                          <p className="font-medium text-white">
-                            {mcpServer?.name || mcpConfig.id}
-                          </p>
-                          <p className="text-sm text-gray-400">
-                            {mcpServer?.description?.substring(
-                              0,
-                              100
-                            )}
-                            ...
-                          </p>
-                          {mcpConfig.tools &&
-                            mcpConfig.tools.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {mcpConfig.tools.map(
-                                  (toolId) => (
-                                    <Badge
-                                      key={toolId}
-                                      variant="outline"
-                                      className="text-xs bg-[#333] text-[#00ff9d] border-[#00ff9d]/30"
-                                    >
-                                      {toolId}
-                                    </Badge>
-                                  )
-                                )}
-                              </div>
-                            )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onConfigureMCP(mcpConfig)}
-                            className="flex items-center text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
-                          >
-                            <Settings className="h-4 w-4 mr-1" />{" "}
-                            Configure
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onRemoveMCP(mcpConfig.id)}
-                            className="text-red-500 hover:text-red-400 hover:bg-[#333]"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
+                {values.config.mcp_servers.map((mcpConfig) => {
+                  const mcpServer = availableMCPs.find(
+                    (mcp) => mcp.id === mcpConfig.id
+                  );
+                  return (
+                    <div
+                      key={mcpConfig.id}
+                      className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md"
+                    >
+                      <div>
+                        <p className="font-medium text-white">
+                          {mcpServer?.name || mcpConfig.id}
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          {mcpServer?.description?.substring(0, 100)}
+                          ...
+                        </p>
+                        {mcpConfig.tools && mcpConfig.tools.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {mcpConfig.tools.map((toolId) => (
+                              <Badge
+                                key={toolId}
+                                variant="outline"
+                                className="text-xs bg-[#333] text-[#00ff9d] border-[#00ff9d]/30"
+                              >
+                                {toolId}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    );
-                  }
-                )}
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onConfigureMCP(mcpConfig)}
+                          className="flex items-center text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
+                        >
+                          <Settings className="h-4 w-4 mr-1" /> Configure
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onRemoveMCP(mcpConfig.id)}
+                          className="text-red-500 hover:text-red-400 hover:bg-[#333]"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
 
                 <Button
                   variant="outline"
@@ -237,9 +289,7 @@ export function ConfigurationTab({
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-lg font-medium text-white">
-            Custom MCPs
-          </h3>
+          <h3 className="text-lg font-medium text-white">Custom MCPs</h3>
           <div className="border border-[#444] rounded-md p-4 bg-[#222]">
             <p className="text-sm text-gray-400 mb-4">
               Configure custom MCPs with URL and HTTP headers.
@@ -248,50 +298,41 @@ export function ConfigurationTab({
             {values.config?.custom_mcp_servers &&
             values.config.custom_mcp_servers.length > 0 ? (
               <div className="space-y-2">
-                {values.config.custom_mcp_servers.map(
-                  (customMCP) => (
-                    <div
-                      key={customMCP.url}
-                      className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md"
-                    >
-                      <div>
-                        <p className="font-medium text-white">
-                          {customMCP.url}
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          {Object.keys(
-                            customMCP.headers || {}
-                          ).length > 0
-                            ? `${
-                                Object.keys(
-                                  customMCP.headers || {}
-                                ).length
-                              } headers configured`
-                            : "No headers configured"}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onConfigureCustomMCP(customMCP)}
-                          className="flex items-center text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
-                        >
-                          <Settings className="h-4 w-4 mr-1" />{" "}
-                          Configure
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onRemoveCustomMCP(customMCP.url)}
-                          className="text-red-500 hover:text-red-400 hover:bg-[#333]"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
+                {values.config.custom_mcp_servers.map((customMCP) => (
+                  <div
+                    key={customMCP.url}
+                    className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md"
+                  >
+                    <div>
+                      <p className="font-medium text-white">{customMCP.url}</p>
+                      <p className="text-sm text-gray-400">
+                        {Object.keys(customMCP.headers || {}).length > 0
+                          ? `${
+                              Object.keys(customMCP.headers || {}).length
+                            } headers configured`
+                          : "No headers configured"}
+                      </p>
                     </div>
-                  )
-                )}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onConfigureCustomMCP(customMCP)}
+                        className="flex items-center text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
+                      >
+                        <Settings className="h-4 w-4 mr-1" /> Configure
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onRemoveCustomMCP(customMCP.url)}
+                        className="text-red-500 hover:text-red-400 hover:bg-[#333]"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
 
                 <Button
                   variant="outline"
@@ -328,16 +369,26 @@ export function ConfigurationTab({
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-white">Agent Tools</h3>
           <div className="border border-[#444] rounded-md p-4 bg-[#222]">
-            <p className="text-sm text-gray-400 mb-4">Configure other agents as tools for this agent.</p>
-            {values.config?.agent_tools && values.config.agent_tools.length > 0 ? (
+            <p className="text-sm text-gray-400 mb-4">
+              Configure other agents as tools for this agent.
+            </p>
+            {values.config?.agent_tools &&
+            values.config.agent_tools.length > 0 ? (
               <div className="space-y-2">
                 {values.config.agent_tools.map((toolId) => {
                   const agent = agents.find((a) => a.id === toolId);
                   return (
-                    <div key={toolId} className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md">
+                    <div
+                      key={toolId}
+                      className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md"
+                    >
                       <div>
-                        <p className="font-medium text-white">{agent?.name || toolId}</p>
-                        <p className="text-sm text-gray-400">{agent?.description || "No description"}</p>
+                        <p className="font-medium text-white">
+                          {agent?.name || toolId}
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          {agent?.description || "No description"}
+                        </p>
                       </div>
                       <Button
                         variant="ghost"
@@ -362,8 +413,12 @@ export function ConfigurationTab({
             ) : (
               <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
                 <div>
-                  <p className="font-medium text-white">No agent tools configured</p>
-                  <p className="text-sm text-gray-400">Add agent tools for this agent</p>
+                  <p className="font-medium text-white">
+                    No agent tools configured
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    Add agent tools for this agent
+                  </p>
                 </div>
                 <Button
                   variant="outline"
@@ -379,17 +434,29 @@ export function ConfigurationTab({
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-lg font-medium text-white">Custom Tools (HTTP Tools)</h3>
+          <h3 className="text-lg font-medium text-white">
+            Custom Tools (HTTP Tools)
+          </h3>
           <div className="border border-[#444] rounded-md p-4 bg-[#222]">
-            <p className="text-sm text-gray-400 mb-4">Configure HTTP tools for this agent.</p>
-            {values.config?.custom_tools?.http_tools && values.config.custom_tools.http_tools.length > 0 ? (
+            <p className="text-sm text-gray-400 mb-4">
+              Configure HTTP tools for this agent.
+            </p>
+            {values.config?.custom_tools?.http_tools &&
+            values.config.custom_tools.http_tools.length > 0 ? (
               <div className="space-y-2">
                 {values.config.custom_tools.http_tools.map((tool, idx) => (
-                  <div key={tool.name + idx} className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md">
+                  <div
+                    key={tool.name + idx}
+                    className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md"
+                  >
                     <div>
                       <p className="font-medium text-white">{tool.name}</p>
-                      <p className="text-xs text-gray-400">{tool.method} {tool.endpoint}</p>
-                      <p className="text-xs text-gray-400">{tool.description}</p>
+                      <p className="text-xs text-gray-400">
+                        {tool.method} {tool.endpoint}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {tool.description}
+                      </p>
                     </div>
                     <div className="flex gap-2">
                       <Button
@@ -414,7 +481,10 @@ export function ConfigurationTab({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => { setEditingCustomTool(null); setCustomToolDialogOpen(true); }}
+                  onClick={() => {
+                    setEditingCustomTool(null);
+                    setCustomToolDialogOpen(true);
+                  }}
                   className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
                 >
                   <Plus className="h-4 w-4 mr-1" /> Add Custom Tool
@@ -423,13 +493,20 @@ export function ConfigurationTab({
             ) : (
               <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
                 <div>
-                  <p className="font-medium text-white">No custom tools configured</p>
-                  <p className="text-sm text-gray-400">Add HTTP tools for this agent</p>
+                  <p className="font-medium text-white">
+                    No custom tools configured
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    Add HTTP tools for this agent
+                  </p>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => { setEditingCustomTool(null); setCustomToolDialogOpen(true); }}
+                  onClick={() => {
+                    setEditingCustomTool(null);
+                    setCustomToolDialogOpen(true);
+                  }}
                   className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
                 >
                   <Plus className="h-4 w-4 mr-1" /> Add
@@ -444,14 +521,19 @@ export function ConfigurationTab({
             setCustomToolDialogOpen(open);
             if (!open) setEditingCustomTool(null);
           }}
-          onSave={editingCustomTool ? handleSaveEditCustomTool : handleAddCustomTool}
+          onSave={
+            editingCustomTool ? handleSaveEditCustomTool : handleAddCustomTool
+          }
           initialTool={editingCustomTool}
         />
         <AgentToolDialog
           open={agentToolDialogOpen}
           onOpenChange={setAgentToolDialogOpen}
           onSave={handleAddAgentTool}
-          agents={agents.filter((a) => !values.config?.agent_tools?.includes(a.id) && a.id !== values.id)}
+          agents={agents.filter(
+            (a) =>
+              !values.config?.agent_tools?.includes(a.id) && a.id !== values.id
+          )}
         />
       </div>
     );
@@ -459,52 +541,64 @@ export function ConfigurationTab({
 
   if (values.type === "a2a") {
     return (
-      <A2AAgentConfig
-        values={values}
-        onChange={onChange}
-      />
+      <div className="space-y-4">
+        {apiKeyField}
+        <A2AAgentConfig values={values} onChange={onChange} />
+      </div>
     );
   }
 
   if (values.type === "sequential") {
     return (
-      <SequentialAgentConfig
-        values={values}
-        onChange={onChange}
-        agents={agents}
-        getAgentNameById={getAgentNameById}
-      />
+      <div className="space-y-4">
+        {apiKeyField}
+        <SequentialAgentConfig
+          values={values}
+          onChange={onChange}
+          agents={agents}
+          getAgentNameById={getAgentNameById}
+        />
+      </div>
     );
   }
 
   if (values.type === "parallel") {
     return (
-      <ParallelAgentConfig
-        values={values}
-        onChange={onChange}
-        agents={agents}
-        getAgentNameById={getAgentNameById}
-      />
+      <div className="space-y-4">
+        {apiKeyField}
+        <ParallelAgentConfig
+          values={values}
+          onChange={onChange}
+          agents={agents}
+          getAgentNameById={getAgentNameById}
+        />
+      </div>
     );
   }
 
   if (values.type === "loop") {
     return (
-      <LoopAgentConfig
-        values={values}
-        onChange={onChange}
-        agents={agents}
-        getAgentNameById={getAgentNameById}
-      />
+      <div className="space-y-4">
+        {apiKeyField}
+        <LoopAgentConfig
+          values={values}
+          onChange={onChange}
+          agents={agents}
+          getAgentNameById={getAgentNameById}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center h-40">
-      <div className="text-center">
-        <p className="text-gray-400">
-          Configure the sub-agents in the "Sub-Agents" tab
-        </p>
+    <div className="space-y-4">
+      {apiKeyField}
+      <div className="flex items-center justify-center h-40">
+        <div className="text-center">
+          <p className="text-gray-400">
+            Configure the sub-agents in the "Sub-Agents" tab
+          </p>
+        </div>
       </div>
     </div>
   );
