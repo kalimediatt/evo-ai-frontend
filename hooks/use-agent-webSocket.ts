@@ -18,12 +18,10 @@ export function useAgentWebSocket({
     const wsRef = useRef<WebSocket | null>(null);
     const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 
-    // Função para abrir conexão WebSocket
     const openWebSocket = useCallback(() => {
         if (!agentId || !externalId || !jwt) {
             return;
         }
-        // Monta a URL do WebSocket e loga
         const wsUrl = `${process.env.NEXT_PUBLIC_API_URL?.replace("http", "ws").replace("https", "wss")}/api/v1/chat/ws/${agentId}/${externalId}`;
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
@@ -50,7 +48,7 @@ export function useAgentWebSocket({
                         try {
                             eventObj = JSON.parse(data.message);
                         } catch (e) {
-                            console.warn("[WebSocket] data.message não é JSON válido:", data.message);
+                            console.warn("[WebSocket] data.message is not valid JSON:", data.message);
                         }
                     }
                     onEvent(eventObj);

@@ -13,6 +13,7 @@ import { ApiKey, listApiKeys } from "@/services/agentService";
 import { listMCPServers } from "@/services/mcpServerService";
 import { availableModels } from "@/types/aiModels";
 import { MCPServer } from "@/types/mcpServer";
+import { AgentTestChatModal } from "./AgentTestChatModal";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || '{}') : {};
@@ -59,6 +60,7 @@ function AgentForm({
     },
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
 
   const connectedNode = useMemo(() => {
     const edge = edges.find((edge) => edge.source === selectedNode.id);
@@ -162,20 +164,18 @@ function AgentForm({
   const handleSaveAgent = async (agentData: Partial<Agent>) => {
     setIsLoading(true);
     try {
-      // Cria o agente
       const { createAgent } = await import("@/services/agentService");
       const created = await createAgent({ ...(agentData as any), client_id: clientId });
-      // Atualiza lista de agentes
+
       const res = await listAgents(clientId);
       setAllAgents(res.data.filter((agent: Agent) => agent.id !== currentAgentId));
       setAgents(res.data.filter((agent: Agent) => agent.id !== currentAgentId));
-      // Seleciona o novo agente
+
       if (created.data) {
         handleSelectAgent(created.data);
       }
       setIsAgentDialogOpen(false);
     } catch (e) {
-      // TODO: feedback de erro
       setIsAgentDialogOpen(false);
     } finally {
       setIsLoading(false);
@@ -291,6 +291,21 @@ function AgentForm({
             >
               Remove Agent
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-2 border-green-500 text-green-500 hover:bg-green-900/20"
+              onClick={() => setIsTestModalOpen(true)}
+            >
+              Test Agent
+            </Button>
+            {isTestModalOpen && (
+              <AgentTestChatModal
+                open={isTestModalOpen}
+                onOpenChange={setIsTestModalOpen}
+                agent={node.data.agent}
+              />
+            )}
           </div>
         )}
 

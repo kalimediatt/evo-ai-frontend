@@ -446,8 +446,8 @@ Args: ${
     }
   };
 
-  const onEvent = useCallback((evento: any) => {
-    setMessages((prev) => [...prev, evento]);
+  const onEvent = useCallback((event: any) => {
+    setMessages((prev) => [...prev, event]);
   }, []);
 
   const onTurnComplete = useCallback(() => {

@@ -13,6 +13,7 @@ import { DnDProvider } from "@/contexts/DnDContext";
 import { NodeDataProvider } from "@/contexts/NodeDataContext";
 import { SourceClickProvider } from "@/contexts/SourceClickContext";
 import { useToast } from '@/components/ui/use-toast';
+import { AgentTestChatModal } from "./nodes/components/agent/AgentTestChatModal";
 
 function WorkflowsContent() {
   const searchParams = useSearchParams();
@@ -21,6 +22,7 @@ function WorkflowsContent() {
   const [loading, setLoading] = useState(false);
   const canvaRef = useRef<any>(null);
   const { toast } = useToast();
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
   
   const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || '{}') : {};
   const clientId = user?.client_id || "";
@@ -145,7 +147,23 @@ function WorkflowsContent() {
           <Download className="mr-2 h-4 w-4" />
           Export
         </Button>
+        {agent && (
+          <Button
+            variant="outline"
+            className="bg-green-800 border-green-700 text-green-200 hover:bg-green-700"
+            onClick={() => setIsTestModalOpen(true)}
+          >
+            Test Workflow
+          </Button>
+        )}
       </div>
+      {agent && isTestModalOpen && (
+        <AgentTestChatModal
+          open={isTestModalOpen}
+          onOpenChange={setIsTestModalOpen}
+          agent={agent}
+        />
+      )}
       {agent && <div className="absolute top-4 right-4 z-10 bg-gray-800 px-4 py-2 rounded-md">
         <h2 className="text-gray-200 font-medium">{agent.name}</h2>
         <p className="text-gray-400 text-sm">{agent.type}</p>
