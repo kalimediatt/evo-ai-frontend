@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
-import { login, forgotPassword, getMe } from "@/services/authService"
+import { login, forgotPassword, getMe, register } from "@/services/authService"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -23,6 +23,13 @@ export default function LoginPage() {
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
+  })
+
+  const [registerData, setRegisterData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    name: "",
   })
 
   const [forgotEmail, setForgotEmail] = useState("")
@@ -54,6 +61,65 @@ export default function LoginPage() {
       toast({
         title: "Error logging in",
         description: error?.response?.data?.detail || "Check your credentials and try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const validDomains = [
+    "brius.com.br",
+    "etus.digital",
+    "etusdigital.com.br",
+  ]
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!validDomains.some(domain => registerData.email.endsWith(`@${domain}`))) {
+      toast({
+        title: "Invalid email",
+        description: "Domain not allowed",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    if (registerData.password !== registerData.confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please make sure your passwords match.",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    setIsLoading(true)
+
+    try {
+      await register({
+        email: registerData.email,
+        password: registerData.password,
+        name: registerData.name,
+      })
+      
+      toast({
+        title: "Registration successful",
+        description: "Please check your email to verify your account.",
+      })
+      
+      // Switch to login tab after successful registration
+      setActiveTab("login")
+      // Pre-fill login email with the registered email
+      setLoginData({
+        ...loginData,
+        email: registerData.email
+      })
+      
+    } catch (error: any) {
+      toast({
+        title: "Error registering",
+        description: error?.response?.data?.detail || "Unable to register. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -97,12 +163,15 @@ export default function LoginPage() {
 
       <Card className="w-full max-w-md bg-[#1a1a1a] border-[#333]">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 bg-[#222]">
+          <TabsList className="grid w-full grid-cols-3 bg-[#222]">
             <TabsTrigger value="login" className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]">
               Login
             </TabsTrigger>
+            <TabsTrigger value="register" className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]">
+              Register
+            </TabsTrigger>
             <TabsTrigger value="forgot" className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]">
-              Forgot Password
+              Forgot
             </TabsTrigger>
           </TabsList>
 
@@ -152,6 +221,82 @@ export default function LoginPage() {
                   disabled={isLoading}
                 >
                   {isLoading ? "Entering..." : "Enter"}
+                </Button>
+              </CardFooter>
+            </form>
+          </TabsContent>
+
+          <TabsContent value="register">
+            <form onSubmit={handleRegister}>
+              <CardHeader>
+                <CardTitle className="text-white">Register</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Create a new account to get started.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="register-name" className="text-gray-300">
+                    Name
+                  </Label>
+                  <Input
+                    id="register-name"
+                    type="text"
+                    placeholder="Your name"
+                    required
+                    value={registerData.name}
+                    onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
+                    className="bg-[#222] border-[#444] text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="register-email" className="text-gray-300">
+                    Email
+                  </Label>
+                  <Input
+                    id="register-email"
+                    type="email"
+                    placeholder="your@email.com"
+                    required
+                    value={registerData.email}
+                    onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                    className="bg-[#222] border-[#444] text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="register-password" className="text-gray-300">
+                    Password
+                  </Label>
+                  <Input
+                    id="register-password"
+                    type="password"
+                    required
+                    value={registerData.password}
+                    onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                    className="bg-[#222] border-[#444] text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="register-confirm-password" className="text-gray-300">
+                    Confirm Password
+                  </Label>
+                  <Input
+                    id="register-confirm-password"
+                    type="password"
+                    required
+                    value={registerData.confirmPassword}
+                    onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
+                    className="bg-[#222] border-[#444] text-white"
+                  />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  type="submit"
+                  className="w-full bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Registering..." : "Register"}
                 </Button>
               </CardFooter>
             </form>

@@ -11,8 +11,11 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Evo AI",
-  description: "A chat system with multiple AI agents",
-    generator: 'v0.dev'
+  description: "AI Multi-Agent Platform",
+  icons: {
+    icon: '/favicon.svg',
+  },
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({

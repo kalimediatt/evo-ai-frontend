@@ -131,28 +131,49 @@ export function LLMAgentConfig({
           <SelectTrigger className="col-span-3 bg-[#222] border-[#444] text-white">
             <SelectValue placeholder="Select the model" />
           </SelectTrigger>
-          <SelectContent className="bg-[#222] border-[#444] text-white">
-            {availableModels
-              .filter((model) => {
-                if (!values.api_key_id) return true;
+          <SelectContent className="bg-[#222] border-[#444] text-white p-0">
+            <div className="sticky top-0 z-10 p-2 bg-[#222] border-b border-[#444]">
+              <Input
+                placeholder="Search models..."
+                className="bg-[#333] border-[#444] text-white h-8"
+                onChange={(e) => {
+                  const searchQuery = e.target.value.toLowerCase();
+                  const items = document.querySelectorAll('[data-model-item="true"]');
+                  items.forEach((item) => {
+                    const text = item.textContent?.toLowerCase() || '';
+                    if (text.includes(searchQuery)) {
+                      (item as HTMLElement).style.display = 'flex';
+                    } else {
+                      (item as HTMLElement).style.display = 'none';
+                    }
+                  });
+                }}
+              />
+            </div>
+            <div className="max-h-[200px] overflow-y-auto py-1">
+              {availableModels
+                .filter((model) => {
+                  if (!values.api_key_id) return true;
 
-                const selectedKey = apiKeys.find(
-                  (key) => key.id === values.api_key_id
-                );
+                  const selectedKey = apiKeys.find(
+                    (key) => key.id === values.api_key_id
+                  );
 
-                if (!selectedKey) return true;
+                  if (!selectedKey) return true;
 
-                return model.provider === selectedKey.provider;
-              })
-              .map((model) => (
-                <SelectItem
-                  key={model.value}
-                  value={model.value}
-                  className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
-                >
-                  {model.label}
-                </SelectItem>
-              ))}
+                  return model.provider === selectedKey.provider;
+                })
+                .map((model) => (
+                  <SelectItem
+                    key={model.value}
+                    value={model.value}
+                    className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
+                    data-model-item="true"
+                  >
+                    {model.label}
+                  </SelectItem>
+                ))}
+            </div>
           </SelectContent>
         </Select>
       </div>

@@ -10,9 +10,16 @@ export default function LogoutPage() {
 
   useEffect(() => {
     const performLogout = () => {
-      document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
       localStorage.removeItem("access_token")
       localStorage.removeItem("user")
+
+      localStorage.removeItem("impersonatedClient")
+      localStorage.removeItem("isImpersonating")
+
+      document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+      document.cookie = "user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+      document.cookie = "impersonatedClient=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+      document.cookie = "isImpersonating=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
       
       setTimeout(() => {
         router.push("/login")

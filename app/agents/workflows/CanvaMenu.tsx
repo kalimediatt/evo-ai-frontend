@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Clock, FilterIcon, PlusIcon, Shuffle, User, Zap } from "lucide-react";
+import { Clock, FilterIcon, MessageCircle, PlusIcon, Shuffle, User, Zap } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -121,6 +121,17 @@ function CanvaMenu({
                   >
                     <User size={20} className="text-blue-500" />
                     <span>Agent</span>
+                  </div>
+                  <div
+                    className="flex cursor-pointer items-center justify-between rounded-lg border-2 border-dashed p-4 border-gray-700 hover:bg-gray-700"
+                    draggable={true}
+                    onDragStart={(event) => {
+                      handleDragStart(event, "message-node");
+                    }}
+                    onClick={() => handleItemClick("message-node")}
+                  >
+                    <MessageCircle size={20} className="text-orange-500" />
+                    <span>Message</span>
                   </div>
                 </div>
               </div>

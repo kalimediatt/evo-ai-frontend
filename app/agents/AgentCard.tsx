@@ -16,18 +16,19 @@ import {
   Bot,
   ChevronDown,
   ChevronUp,
-  CircleEllipsis,
   Code,
   ExternalLink,
   GitBranch,
   MoveRight,
+  Pencil,
   RefreshCw,
-  Server,
   Settings,
   Trash2,
   Workflow,
+  TextSelect,
 } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface AgentCardProps {
   agent: Agent;
@@ -53,6 +54,7 @@ export function AgentCard({
   folders = [],
 }: AgentCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const router = useRouter();
 
   const getAgentTypeIcon = (type: AgentType) => {
     const agentTypes = [
@@ -199,7 +201,7 @@ export function AgentCard({
             )}
 
             <div className="flex justify-between items-center">
-              <span className="text-zinc-500">Criado em:</span>
+              <span className="text-zinc-500">Created at:</span>
               <span className="text-zinc-300">{getCreatedAtFormatted()}</span>
             </div>
 
@@ -225,10 +227,31 @@ export function AgentCard({
               align="end"
               className="bg-zinc-900 border-zinc-800 text-white"
             >
+              {agent.type === "workflow" && onWorkflow && (
+                <DropdownMenuItem
+                  className="cursor-pointer hover:bg-zinc-800 focus:bg-zinc-800"
+                  onClick={() => onWorkflow(agent.id)}
+                >
+                  <Workflow className="h-4 w-4 mr-2" />
+                  Open Workflow
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                className="cursor-pointer hover:bg-zinc-800 focus:bg-zinc-800"
+                onClick={() =>
+                  router.push(
+                    `/documentation?agent_url=${agent.agent_card_url || ""}`
+                  )
+                }
+              >
+                <TextSelect className="h-4 w-4 mr-2" />
+                Test A2A
+              </DropdownMenuItem>
               <DropdownMenuItem
                 className="cursor-pointer hover:bg-zinc-800 focus:bg-zinc-800"
                 onClick={() => onEdit(agent)}
               >
+                <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -238,15 +261,6 @@ export function AgentCard({
                 <MoveRight className="h-4 w-4 mr-2" />
                 Move to Folder
               </DropdownMenuItem>
-              {agent.type === "workflow" && onWorkflow && (
-                <DropdownMenuItem
-                  className="cursor-pointer hover:bg-zinc-800 focus:bg-zinc-800"
-                  onClick={() => onWorkflow(agent.id)}
-                >
-                  <Workflow className="h-4 w-4 mr-2" />
-                  Workflow
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem
                 className="cursor-pointer text-red-500 hover:bg-zinc-800 hover:text-red-400 focus:bg-zinc-800"
                 onClick={() => onDelete(agent)}
@@ -266,15 +280,6 @@ export function AgentCard({
             <ExternalLink className="h-4 w-4 mr-2" />
             Agent Card
           </a>
-          {agent.type === "workflow" && (
-            <a
-              href={`/agents/workflows?agentId=${agent.id}`}
-              className="flex-1 flex items-center justify-center rounded-none h-12 text-blue-400 hover:text-blue-300 hover:bg-zinc-800"
-            >
-              <Workflow className="h-4 w-4 mr-2" />
-              Open
-            </a>
-          )}
         </div>
       </CardContent>
     </Card>

@@ -13,6 +13,8 @@ import { A2AAgentConfig } from "../config/A2AAgentConfig";
 import { useState } from "react";
 import { MCPDialog } from "../dialogs/MCPDialog";
 import { CustomMCPDialog } from "../dialogs/CustomMCPDialog";
+import { AgentToolDialog } from "../dialogs/AgentToolDialog";
+import { CustomToolDialog } from "../dialogs/CustomToolDialog";
 
 interface ConfigurationTabProps {
   values: Partial<Agent>;
@@ -48,6 +50,84 @@ export function ConfigurationTab({
   onOpenCustomMCPDialog,
 }: ConfigurationTabProps) {
   if (values.type === "llm") {
+    const [agentToolDialogOpen, setAgentToolDialogOpen] = useState(false);
+    const [customToolDialogOpen, setCustomToolDialogOpen] = useState(false);
+    const [editingCustomTool, setEditingCustomTool] = useState<any>(null);
+
+    const handleAddAgentTool = (tool: { id: string }) => {
+      const updatedAgentTools = [...(values.config?.agent_tools || [])];
+      if (!updatedAgentTools.includes(tool.id)) {
+        updatedAgentTools.push(tool.id);
+        onChange({
+          ...values,
+          config: {
+            ...(values.config || {}),
+            agent_tools: updatedAgentTools,
+          },
+        });
+      }
+    };
+    const handleRemoveAgentTool = (id: string) => {
+      onChange({
+        ...values,
+        config: {
+          ...(values.config || {}),
+          agent_tools: (values.config?.agent_tools || []).filter((toolId) => toolId !== id),
+        },
+      });
+    };
+
+    // Custom Tools handlers
+    const handleAddCustomTool = (tool: any) => {
+      const updatedTools = [...(values.config?.custom_tools?.http_tools || [])];
+      updatedTools.push(tool);
+      onChange({
+        ...values,
+        config: {
+          ...(values.config || {}),
+          custom_tools: {
+            ...(values.config?.custom_tools || { http_tools: [] }),
+            http_tools: updatedTools,
+          },
+        },
+      });
+    };
+    const handleEditCustomTool = (tool: any, idx: number) => {
+      setEditingCustomTool({ ...tool, idx });
+      setCustomToolDialogOpen(true);
+    };
+    const handleSaveEditCustomTool = (tool: any) => {
+      const updatedTools = [...(values.config?.custom_tools?.http_tools || [])];
+      if (editingCustomTool && typeof editingCustomTool.idx === "number") {
+        updatedTools[editingCustomTool.idx] = tool;
+      }
+      onChange({
+        ...values,
+        config: {
+          ...(values.config || {}),
+          custom_tools: {
+            ...(values.config?.custom_tools || { http_tools: [] }),
+            http_tools: updatedTools,
+          },
+        },
+      });
+      setEditingCustomTool(null);
+    };
+    const handleRemoveCustomTool = (idx: number) => {
+      const updatedTools = [...(values.config?.custom_tools?.http_tools || [])];
+      updatedTools.splice(idx, 1);
+      onChange({
+        ...values,
+        config: {
+          ...(values.config || {}),
+          custom_tools: {
+            ...(values.config?.custom_tools || { http_tools: [] }),
+            http_tools: updatedTools,
+          },
+        },
+      });
+    };
+
     return (
       <div className="space-y-4">
         <div className="space-y-4">
@@ -244,6 +324,135 @@ export function ConfigurationTab({
             )}
           </div>
         </div>
+
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium text-white">Agent Tools</h3>
+          <div className="border border-[#444] rounded-md p-4 bg-[#222]">
+            <p className="text-sm text-gray-400 mb-4">Configure other agents as tools for this agent.</p>
+            {values.config?.agent_tools && values.config.agent_tools.length > 0 ? (
+              <div className="space-y-2">
+                {values.config.agent_tools.map((toolId) => {
+                  const agent = agents.find((a) => a.id === toolId);
+                  return (
+                    <div key={toolId} className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md">
+                      <div>
+                        <p className="font-medium text-white">{agent?.name || toolId}</p>
+                        <p className="text-sm text-gray-400">{agent?.description || "No description"}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveAgentTool(toolId)}
+                        className="text-red-500 hover:text-red-400 hover:bg-[#333]"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAgentToolDialogOpen(true)}
+                  className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add Agent Tool
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
+                <div>
+                  <p className="font-medium text-white">No agent tools configured</p>
+                  <p className="text-sm text-gray-400">Add agent tools for this agent</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAgentToolDialogOpen(true)}
+                  className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium text-white">Custom Tools (HTTP Tools)</h3>
+          <div className="border border-[#444] rounded-md p-4 bg-[#222]">
+            <p className="text-sm text-gray-400 mb-4">Configure HTTP tools for this agent.</p>
+            {values.config?.custom_tools?.http_tools && values.config.custom_tools.http_tools.length > 0 ? (
+              <div className="space-y-2">
+                {values.config.custom_tools.http_tools.map((tool, idx) => (
+                  <div key={tool.name + idx} className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md">
+                    <div>
+                      <p className="font-medium text-white">{tool.name}</p>
+                      <p className="text-xs text-gray-400">{tool.method} {tool.endpoint}</p>
+                      <p className="text-xs text-gray-400">{tool.description}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditCustomTool(tool, idx)}
+                        className="flex items-center text-gray-300 hover:text-[#00ff9d] hover:bg-[#333]"
+                      >
+                        <span className="mr-1">Edit</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveCustomTool(idx)}
+                        className="text-red-500 hover:text-red-400 hover:bg-[#333]"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setEditingCustomTool(null); setCustomToolDialogOpen(true); }}
+                  className="w-full mt-2 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add Custom Tool
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between p-2 bg-[#2a2a2a] rounded-md mb-2">
+                <div>
+                  <p className="font-medium text-white">No custom tools configured</p>
+                  <p className="text-sm text-gray-400">Add HTTP tools for this agent</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setEditingCustomTool(null); setCustomToolDialogOpen(true); }}
+                  className="border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/10 bg-[#222] hover:text-[#00ff9d]"
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+        <CustomToolDialog
+          open={customToolDialogOpen}
+          onOpenChange={(open) => {
+            setCustomToolDialogOpen(open);
+            if (!open) setEditingCustomTool(null);
+          }}
+          onSave={editingCustomTool ? handleSaveEditCustomTool : handleAddCustomTool}
+          initialTool={editingCustomTool}
+        />
+        <AgentToolDialog
+          open={agentToolDialogOpen}
+          onOpenChange={setAgentToolDialogOpen}
+          onSave={handleAddAgentTool}
+          agents={agents.filter((a) => !values.config?.agent_tools?.includes(a.id) && a.id !== values.id)}
+        />
       </div>
     );
   }

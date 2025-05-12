@@ -65,6 +65,7 @@ export interface AgentConfig {
   
   // Sequential, Parallel e Loop config
   sub_agents?: string[];
+  agent_tools?: string[];
   
   // Loop config
   max_iterations?: number;

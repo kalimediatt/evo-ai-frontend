@@ -24,6 +24,7 @@ import { ConfirmationDialog } from "./ConfirmationDialog";
 import { ApiKey } from "@/services/agentService";
 import { Edit, Eye, Key, Plus, Trash2, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import { availableModelProviders } from "@/types/aiModels";
 
 interface ApiKeysDialogProps {
   open: boolean;
@@ -118,7 +119,7 @@ export function ApiKeysDialog({
 
   const handleDeleteConfirm = async () => {
     if (!apiKeyToDelete) return;
-    
+
     try {
       await onDeleteApiKey(apiKeyToDelete.id);
       setApiKeyToDelete(null);
@@ -198,24 +199,15 @@ export function ApiKeysDialog({
                       <SelectValue placeholder="Select Provider" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#222] border-[#444] text-white">
-                      <SelectItem
-                        value="openai"
-                        className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
-                      >
-                        OpenAI
-                      </SelectItem>
-                      <SelectItem
-                        value="anthropic"
-                        className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
-                      >
-                        Anthropic
-                      </SelectItem>
-                      <SelectItem
-                        value="gemini"
-                        className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
-                      >
-                        Gemini
-                      </SelectItem>
+                      {availableModelProviders.map((provider) => (
+                        <SelectItem
+                          key={provider.value}
+                          value={provider.value}
+                          className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white focus:!text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
+                        >
+                          {provider.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
