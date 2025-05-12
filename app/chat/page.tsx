@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,6 +46,9 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAgentWebSocket } from "@/hooks/use-agent-webSocket";
+import { getAccessTokenFromCookie } from "@/lib/utils";
+
 interface FunctionMessageContent {
   title: string;
   content: string;
@@ -189,23 +192,11 @@ export default function Chat() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!messageInput.trim() || !currentAgentId) return;
-
-    let sessionId = selectedSession;
-    let responseData = null;
-
-    try {
-      setIsSending(true);
-
-      if (!selectedSession) {
-        const externalId = generateExternalId();
-        const newSessionId = `${externalId}_${currentAgentId}`;
-        setSelectedSession(newSessionId);
-        sessionId = newSessionId;
-      }
-
-      const tempMessage: ChatMessage = {
+    setIsSending(true);
+    setMessages((prev) => [
+      ...prev,
+      {
         id: `temp-${Date.now()}`,
         content: {
           parts: [{ text: messageInput }],
@@ -213,79 +204,12 @@ export default function Chat() {
         },
         author: "user",
         timestamp: Date.now() / 1000,
-      };
-
-      setMessages((prev) => [...prev, tempMessage]);
-      setTimeout(scrollToBottom, 100);
-
-      if (!sessionId) {
-        throw new Error("Session ID not defined");
-      }
-
-      const response = await sendMessage(
-        sessionId,
-        currentAgentId,
-        messageInput
-      );
-
-      responseData = response.data;
-
-      const sessionsResponse = await listSessions(clientId);
-      setSessions(sessionsResponse.data);
-
-      setMessageInput("");
-
-      const textarea = document.querySelector("textarea");
-      if (textarea) {
-        textarea.style.height = "auto";
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
-      toast({
-        title: "Error sending message",
-        variant: "destructive",
-      });
-    } finally {
-      if (responseData && responseData.session_id) {
-        sessionId = responseData.session_id;
-        setSelectedSession(sessionId);
-      }
-
-      setTimeout(async () => {
-        try {
-          if (sessionId) {
-            const messagesResponse = await getSessionMessages(sessionId);
-            setMessages(messagesResponse.data);
-          }
-        } catch (error) {
-          console.error("Error updating messages:", error);
-
-          if (sessionId && sessionId.includes("_")) {
-            try {
-              const parts = sessionId.split("_");
-              const externalId = parts[0];
-              const agentId = parts[parts.length - 1];
-
-              const alternativeId = `${externalId}_${agentId}`;
-
-              if (alternativeId !== sessionId) {
-                console.log(
-                  "Trying alternative ID format:",
-                  alternativeId
-                );
-                const altResponse = await getSessionMessages(alternativeId);
-                setMessages(altResponse.data);
-                setSelectedSession(alternativeId);
-              }
-            } catch (altError) {
-              console.error("Error trying alternative ID format:", altError);
-            }
-          }
-        } finally {
-          setIsSending(false);
-        }
-      }, 1500);
-    }
+      },
+    ]);
+    wsSendMessage(messageInput);
+    setMessageInput("");
+    const textarea = document.querySelector("textarea");
+    if (textarea) textarea.style.height = "auto";
   };
 
   const generateExternalId = () => {
@@ -521,6 +445,30 @@ Args: ${
       });
     }
   };
+
+  const onEvent = useCallback((evento: any) => {
+    setMessages((prev) => [...prev, evento]);
+  }, []);
+
+  const onTurnComplete = useCallback(() => {
+    setIsSending(false);
+  }, []);
+
+  const jwt = getAccessTokenFromCookie();
+
+  const agentId = useMemo(() => currentAgentId || "", [currentAgentId]);
+  const externalId = useMemo(
+    () => (selectedSession ? getExternalId(selectedSession) : generateExternalId()),
+    [selectedSession]
+  );
+
+  const { sendMessage: wsSendMessage } = useAgentWebSocket({
+    agentId,
+    externalId,
+    jwt,
+    onEvent,
+    onTurnComplete,
+  });
 
   return (
     <div className="flex h-screen max-h-screen bg-[#121212]">
