@@ -36,6 +36,7 @@ import { ConditionForm } from "./nodes/components/condition/ConditionForm";
 import { Agent, WorkflowData } from "@/types/agent";
 import { updateAgent } from "@/services/agentService";
 import { useToast } from "@/components/ui/use-toast";
+import { MessageForm } from "./nodes/components/message/MessageForm";
 
 const proOptions: ProOptions = { account: "paid-pro", hideAttribution: true };
 
@@ -214,6 +215,8 @@ const Canva = forwardRef(({ agent }: { agent: Agent | null }, ref) => {
         return `Agent #${order}`;
       case "condition-node":
         return `Condition #${order}`;
+      case "message-node":
+        return `Message #${order}`;
       default:
         return "Node";
     }
@@ -485,6 +488,15 @@ const Canva = forwardRef(({ agent }: { agent: Agent | null }, ref) => {
               )}
               {selectedNode.type === "condition-node" && (
                 <ConditionForm
+                  selectedNode={selectedNode}
+                  handleUpdateNode={handleUpdateNode}
+                  setEdges={setEdges}
+                  setIsOpen={setIsOpen}
+                  setSelectedNode={setSelectedNode}
+                />
+              )}
+              {selectedNode.type === "message-node" && (
+                <MessageForm
                   selectedNode={selectedNode}
                   handleUpdateNode={handleUpdateNode}
                   setEdges={setEdges}
