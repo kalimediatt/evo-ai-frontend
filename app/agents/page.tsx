@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/page.tsx                                                  │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -51,6 +51,7 @@ import {
   createApiKey,
   updateApiKey,
   deleteApiKey,
+  shareAgent,
 } from "@/services/agentService";
 import { listMCPServers } from "@/services/mcpServerService";
 import { AgentSidebar } from "./AgentSidebar";
@@ -62,6 +63,7 @@ import { FolderDialog } from "./dialogs/FolderDialog";
 import { MoveAgentDialog } from "./dialogs/MoveAgentDialog";
 import { ConfirmationDialog } from "./dialogs/ConfirmationDialog";
 import { ApiKeysDialog } from "./dialogs/ApiKeysDialog";
+import { ShareAgentDialog } from "./dialogs/ShareAgentDialog";
 import { MCPServer } from "@/types/mcpServer";
 import { availableModels } from "@/types/aiModels";
 
@@ -95,11 +97,14 @@ export default function AgentsPage() {
   const [isApiKeysDialogOpen, setIsApiKeysDialogOpen] = useState(false);
   const [isMCPDialogOpen, setIsMCPDialogOpen] = useState(false);
   const [isCustomMCPDialogOpen, setIsCustomMCPDialogOpen] = useState(false);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [editingFolder, setEditingFolder] = useState<AgentFolder | null>(null);
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
   const [agentToMove, setAgentToMove] = useState<Agent | null>(null);
+  const [agentToShare, setAgentToShare] = useState<Agent | null>(null);
+  const [sharedApiKey, setSharedApiKey] = useState<string>("");
   const [folderToDelete, setFolderToDelete] = useState<AgentFolder | null>(null);
 
   const [newAgent, setNewAgent] = useState<Partial<Agent>>({
@@ -359,6 +364,32 @@ export default function AgentsPage() {
     }
   };
 
+  const handleShareAgent = async (agent: Agent) => {
+    try {
+      setIsLoading(true);
+      setAgentToShare(agent);
+      const response = await shareAgent(agent.id, clientId);
+      
+      if (response.data && response.data.api_key) {
+        setSharedApiKey(response.data.api_key);
+        setIsShareDialogOpen(true);
+        
+        toast({
+          title: "Agent shared",
+          description: "API key generated successfully",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Unable to share agent",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setNewAgent({
       client_id: clientId || "",
@@ -481,6 +512,7 @@ export default function AgentsPage() {
               setAgentToMove(agent);
               setIsMovingDialogOpen(true);
             }}
+            onShare={handleShareAgent}
             onClearSearch={() => setSearchTerm("")}
             onCreateAgent={() => {
               resetForm();
@@ -578,6 +610,13 @@ export default function AgentsPage() {
           await deleteApiKey(id, clientId);
           loadApiKeys();
         }}
+      />
+
+      <ShareAgentDialog
+        open={isShareDialogOpen}
+        onOpenChange={setIsShareDialogOpen}
+        agent={agentToShare || ({} as Agent)}
+        apiKey={sharedApiKey}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/AgentCard.tsx                                             │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -51,6 +51,7 @@ import {
   Pencil,
   RefreshCw,
   Settings,
+  Share2,
   Trash2,
   Workflow,
   TextSelect,
@@ -63,6 +64,7 @@ interface AgentCardProps {
   onEdit: (agent: Agent) => void;
   onDelete: (agent: Agent) => void;
   onMove: (agent: Agent) => void;
+  onShare?: (agent: Agent) => void;
   onWorkflow?: (agentId: string) => void;
   availableMCPs?: MCPServer[];
   getApiKeyNameById?: (id: string | undefined) => string | null;
@@ -75,6 +77,7 @@ export function AgentCard({
   onEdit,
   onDelete,
   onMove,
+  onShare,
   onWorkflow,
   availableMCPs = [],
   getApiKeyNameById = () => null,
@@ -289,6 +292,15 @@ export function AgentCard({
                 <MoveRight className="h-4 w-4 mr-2" />
                 Move to Folder
               </DropdownMenuItem>
+              {onShare && (
+                <DropdownMenuItem
+                  className="cursor-pointer hover:bg-zinc-800 focus:bg-zinc-800"
+                  onClick={() => onShare(agent)}
+                >
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 className="cursor-pointer text-red-500 hover:bg-zinc-800 hover:text-red-400 focus:bg-zinc-800"
                 onClick={() => onDelete(agent)}

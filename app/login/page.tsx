@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/login/page.tsx                                                   │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -47,8 +47,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { login, forgotPassword, getMe, register } from "@/services/authService";
-import { CheckCircle2 } from "lucide-react";
+import { login, forgotPassword, getMe, register, resendVerification } from "@/services/authService";
+import { CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -60,6 +60,8 @@ export default function LoginPage() {
   const [redirectSeconds, setRedirectSeconds] = useState(5);
   const redirectTimer = useRef<NodeJS.Timeout | null>(null);
   const [loginError, setLoginError] = useState("");
+  const [isEmailNotVerified, setIsEmailNotVerified] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
 
   const [loginData, setLoginData] = useState({
     email: "",
@@ -79,6 +81,7 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     setLoginError("");
+    setIsEmailNotVerified(false);
 
     try {
       const response = await login({
@@ -100,12 +103,38 @@ export default function LoginPage() {
       }
       router.push("/");
     } catch (error: any) {
-      setLoginError(
-        error?.response?.data?.detail ||
-        "Check your credentials and try again."
-      );
+      const errorDetail = error?.response?.data?.detail || "Check your credentials and try again.";
+      
+      if (errorDetail === "Email not verified") {
+        setIsEmailNotVerified(true);
+      }
+      
+      setLoginError(errorDetail);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!loginData.email) return;
+    
+    setIsResendingVerification(true);
+    try {
+      await resendVerification({ email: loginData.email });
+      toast({
+        title: "Verification email sent",
+        description: "Please check your inbox to verify your account.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error sending verification email",
+        description:
+          error?.response?.data?.detail ||
+          "Unable to send verification email. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResendingVerification(false);
     }
   };
 
@@ -137,7 +166,6 @@ export default function LoginPage() {
 
       setShowRegisterSuccess(true);
       setRedirectSeconds(5);
-      // Inicia o timer de redirecionamento
       if (redirectTimer.current) clearTimeout(redirectTimer.current);
       redirectTimer.current = setInterval(() => {
         setRedirectSeconds((s) => s - 1);
@@ -155,7 +183,6 @@ export default function LoginPage() {
     }
   };
 
-  // Efeito para redirecionar após o sucesso
   useEffect(() => {
     if ((showRegisterSuccess || showForgotSuccess) && redirectSeconds === 0) {
       setShowRegisterSuccess(false);
@@ -299,7 +326,26 @@ export default function LoginPage() {
                 </div>
                 {loginError && (
                   <div className="text-red-500 text-sm mt-2" data-testid="login-error">
-                    {loginError}
+                    {isEmailNotVerified ? (
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4" />
+                          <span>{loginError}</span>
+                        </div>
+                        <Button 
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleResendVerification}
+                          disabled={isResendingVerification}
+                          className="text-[#00ff9d] border-[#00ff9d] hover:bg-[#00ff9d]/10"
+                        >
+                          {isResendingVerification ? "Sending..." : "Resend verification email"}
+                        </Button>
+                      </div>
+                    ) : (
+                      loginError
+                    )}
                   </div>
                 )}
               </CardContent>

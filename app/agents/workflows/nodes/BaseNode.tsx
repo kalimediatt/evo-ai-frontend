@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/workflows/nodes/BaseNode.tsx                              │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │

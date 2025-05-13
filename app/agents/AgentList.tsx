@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/AgentList.tsx                                             │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -45,6 +45,7 @@ interface AgentListProps {
   onEdit: (agent: Agent) => void;
   onDelete: (agent: Agent) => void;
   onMove: (agent: Agent) => void;
+  onShare?: (agent: Agent) => void;
   onWorkflow?: (agentId: string) => void;
   onClearSearch?: () => void;
   onCreateAgent?: () => void;
@@ -63,6 +64,7 @@ export function AgentList({
   onEdit,
   onDelete,
   onMove,
+  onShare,
   onWorkflow,
   onClearSearch,
   onCreateAgent,
@@ -114,6 +116,7 @@ export function AgentList({
           onEdit={onEdit}
           onDelete={onDelete}
           onMove={onMove}
+          onShare={onShare}
           onWorkflow={onWorkflow}
           availableMCPs={availableMCPs}
           getApiKeyNameById={getApiKeyNameById}

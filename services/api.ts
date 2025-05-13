@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /services/api.ts                                                      │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -62,12 +62,28 @@ const forceLogout = () => {
 // Interceptor to add the token from the cookie to the Authorization header
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    // Browser: reads the token from the cookie
-    const match = document.cookie.match(/(?:^|; )access_token=([^;]*)/);
-    const token = match ? decodeURIComponent(match[1]) : null;
-    if (token) {
+    // Verificar primeiro se estamos em uma rota de agente compartilhado
+    const isSharedAgentRequest = config.url && (
+      config.url.includes('/agents/shared') || 
+      config.url.includes('/chat/ws/')
+    );
+
+    const isSharedChatPage = typeof window !== "undefined" && 
+      window.location.pathname.startsWith('/shared-chat');
+
+    // Usar API key apenas para requisições específicas de agentes compartilhados ou na página de chat compartilhado
+    if ((isSharedAgentRequest || isSharedChatPage) && localStorage.getItem("shared_agent_api_key")) {
+      const apiKey = localStorage.getItem("shared_agent_api_key");
       config.headers = config.headers || {};
-      config.headers["Authorization"] = `Bearer ${token}`;
+      config.headers["x-api-key"] = apiKey;
+    } else {
+      // Caso contrário, usar a autenticação normal com JWT
+      const match = document.cookie.match(/(?:^|; )access_token=([^;]*)/);
+      const token = match ? decodeURIComponent(match[1]) : null;
+      if (token) {
+        config.headers = config.headers || {};
+        config.headers["Authorization"] = `Bearer ${token}`;
+      }
     }
   }
   return config;
@@ -87,7 +103,11 @@ api.interceptors.response.use(
         error.config.url.includes('/auth/reset-password')
       );
 
-      if (!isAuthEndpoint) {
+      // Skip logout for shared chat page
+      const isSharedChatPage = typeof window !== "undefined" && 
+        window.location.pathname.startsWith('/shared-chat');
+
+      if (!isAuthEndpoint && !isSharedChatPage) {
         forceLogout();
       }
     }

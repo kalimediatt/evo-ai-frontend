@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/workflows/nodes/components/agent/AgentTestChatModal.tsx   │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -26,19 +26,15 @@
 │ who changed it and the date of modification.                                 │
 └──────────────────────────────────────────────────────────────────────────────┘
 */
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, Send, ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { useAgentWebSocket } from "@/hooks/use-agent-webSocket";
 import { getAccessTokenFromCookie } from "@/lib/utils";
 import { Agent } from "@/types/agent";
+import { ChatInput } from "@/app/chat/components/ChatInput";
+import { AgentChatMessageList } from "./AgentChatMessageList";
 
 interface FunctionMessageContent {
     title: string;
@@ -61,19 +57,11 @@ interface AgentTestChatModalProps {
 
 export function AgentTestChatModal({ open, onOpenChange, agent }: AgentTestChatModalProps) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [messageInput, setMessageInput] = useState("");
     const [isSending, setIsSending] = useState(false);
     const [expandedFunctions, setExpandedFunctions] = useState<Record<string, boolean>>({});
-    const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "{}") : {};
     const clientId = user?.client_id || "test";
-
-    const scrollToBottom = () => {
-        if (messagesContainerRef.current) {
-            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        }
-    };
 
     const generateExternalId = () => {
         const now = new Date();
@@ -93,7 +81,6 @@ export function AgentTestChatModal({ open, onOpenChange, agent }: AgentTestChatM
 
     const onEvent = useCallback((event: any) => {
         setMessages((prev) => [...prev, event]);
-        setTimeout(scrollToBottom, 100);
     }, []);
 
     const onTurnComplete = useCallback(() => {
@@ -108,27 +95,22 @@ export function AgentTestChatModal({ open, onOpenChange, agent }: AgentTestChatM
         onTurnComplete,
     });
 
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!messageInput.trim()) return;
+    const handleSendMessage = async (message: string) => {
+        if (!message.trim()) return;
         setIsSending(true);
         setMessages((prev) => [
             ...prev,
             {
                 id: `temp-${Date.now()}`,
                 content: {
-                    parts: [{ text: messageInput }],
+                    parts: [{ text: message }],
                     role: "user",
                 },
                 author: "user",
                 timestamp: Date.now() / 1000,
             },
         ]);
-        wsSendMessage(messageInput);
-        setMessageInput("");
-        const textarea = document.querySelector("textarea");
-        if (textarea) textarea.style.height = "auto";
-        setTimeout(scrollToBottom, 100);
+        wsSendMessage(message);
     };
 
     const containsMarkdown = (text: string): boolean => {
@@ -225,37 +207,9 @@ export function AgentTestChatModal({ open, onOpenChange, agent }: AgentTestChatM
         setExpandedFunctions((prev) => ({ ...prev, [messageId]: !prev[messageId] }));
     };
 
-    const getAgentColor = (agentName: string) => {
-        const agentColors: Record<string, string> = {
-            Assistant: "bg-[#00ff9d]",
-            Programmer: "bg-[#00cc7d]",
-            Writer: "bg-[#00b8ff]",
-            Researcher: "bg-[#ff9d00]",
-            Planner: "bg-[#9d00ff]",
-            default: "bg-[#333]",
-        };
-        return agentColors[agentName] || agentColors.default;
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleSendMessage(e as unknown as React.FormEvent);
-        }
-    };
-
-    const autoResizeTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const textarea = e.target;
-        textarea.style.height = "auto";
-        const maxHeight = 10 * 24;
-        const newHeight = Math.min(textarea.scrollHeight, maxHeight);
-        textarea.style.height = `${newHeight}px`;
-        setMessageInput(textarea.value);
-    };
-
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-[#1a1a1a] border-[#333] text-white max-w-2xl w-full">
+            <DialogContent className="bg-[#1a1a1a] border-[#333] text-white max-w-3xl w-full">
                 <DialogHeader>
                     <DialogTitle>Test Agent: {agent.name}</DialogTitle>
                 </DialogHeader>
@@ -266,86 +220,22 @@ export function AgentTestChatModal({ open, onOpenChange, agent }: AgentTestChatM
                         </Badge>
                         <span className="text-xs text-gray-400">{agent.model}</span>
                     </div>
-                    <ScrollArea className="flex-1 pr-2" ref={messagesContainerRef}>
-                        <div className="space-y-4 w-full max-w-full">
-                            {messages.length === 0 ? (
-                                <div className="flex h-full items-center justify-center text-center text-gray-400">
-                                    <p>No messages yet. Start typing below.</p>
-                                </div>
-                            ) : (
-                                messages.map((message) => {
-                                    const isUser = message.author === "user";
-                                    const agentColor = getAgentColor(agent.name);
-                                    const messageContent = getMessageText(message);
-                                    const hasFunctionCall = message.content.parts.some((part: any) => part.functionCall || part.function_call);
-                                    const hasFunctionResponse = message.content.parts.some((part: any) => part.functionResponse || part.function_response);
-                                    const isFunctionMessage = hasFunctionCall || hasFunctionResponse;
-                                    const isExpanded = expandedFunctions[message.id] || false;
-                                    return (
-                                        <div key={message.id} className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>
-                                            <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""} max-w-[90%]`}>
-                                                <Avatar className={isUser ? "bg-[#333]" : agentColor}>
-                                                    <AvatarFallback>{isUser ? "U" : agent.name[0]}</AvatarFallback>
-                                                </Avatar>
-                                                <div className={`rounded-lg p-3 ${isFunctionMessage ? "bg-[#333] text-[#00ff9d] font-mono text-sm" : isUser ? "bg-[#00ff9d] text-black" : "bg-[#222] text-white"} w-full overflow-hidden`} style={{ wordBreak: "break-word" }}>
-                                                    {isFunctionMessage ? (
-                                                        <div className="w-full">
-                                                            <div className="flex items-center gap-2 cursor-pointer hover:bg-[#444] rounded px-1 py-0.5 transition-colors" onClick={() => toggleFunctionExpansion(message.id)}>
-                                                                {typeof messageContent === "object" && "title" in messageContent && (
-                                                                    <>
-                                                                        <div className="flex-1 font-semibold">{(messageContent as FunctionMessageContent).title}</div>
-                                                                        <div className="flex items-center justify-center w-5 h-5 text-[#00ff9d]">
-                                                                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                                                        </div>
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                            {isExpanded && typeof messageContent === "object" && "content" in messageContent && (
-                                                                <div className="mt-2 pt-2 border-t border-[#555]">
-                                                                    <pre className="whitespace-pre-wrap break-all overflow-hidden text-xs">{(messageContent as FunctionMessageContent).content}</pre>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        <div className="markdown-content break-words">
-                                                            {typeof messageContent === "object" && "author" in messageContent && messageContent.author !== "user" && (
-                                                                <div className="text-xs text-gray-400 mb-1">{messageContent.author}</div>
-                                                            )}
-                                                            {(typeof messageContent === "string" && containsMarkdown(messageContent)) ||
-                                                            (typeof messageContent === "object" && "content" in messageContent && typeof messageContent.content === "string" && containsMarkdown(messageContent.content)) ? (
-                                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{typeof messageContent === "string" ? messageContent : typeof messageContent === "object" && "content" in messageContent ? messageContent.content : ""}</ReactMarkdown>
-                                                            ) : (
-                                                                <span>{typeof messageContent === "string" ? messageContent : typeof messageContent === "object" && "content" in messageContent ? messageContent.content : JSON.stringify(messageContent)}</span>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-                    </ScrollArea>
+                    
+                    <AgentChatMessageList
+                      messages={messages}
+                      agent={agent}
+                      expandedFunctions={expandedFunctions}
+                      toggleFunctionExpansion={toggleFunctionExpansion}
+                      getMessageText={getMessageText}
+                      containsMarkdown={containsMarkdown}
+                    />
+                    
                     <div className="p-2 border-t border-[#333] bg-[#1a1a1a] mt-2">
-                        <form onSubmit={handleSendMessage} className="flex w-full gap-2">
-                            <Textarea
-                                value={messageInput}
-                                onChange={autoResizeTextarea}
-                                onKeyDown={handleKeyDown}
-                                placeholder="Type your message..."
-                                className="flex-1 bg-[#222] border-[#444] text-white focus-visible:ring-[#00ff9d] min-h-[40px] max-h-[240px] resize-none"
-                                disabled={isSending}
-                                rows={1}
-                            />
-                            <Button
-                                type="submit"
-                                disabled={isSending || !messageInput.trim()}
-                                className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
-                            >
-                                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                            </Button>
-                        </form>
+                        <ChatInput
+                          onSendMessage={handleSendMessage}
+                          isLoading={isSending}
+                          placeholder="Digite sua mensagem..."
+                        />
                     </div>
                 </div>
                 <DialogFooter>

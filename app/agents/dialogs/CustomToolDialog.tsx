@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/dialogs/CustomToolDialog.tsx                             │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -42,6 +42,7 @@ import { Label } from "@/components/ui/label";
 import { X, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { HTTPTool, HTTPToolParameter } from "@/types/agent";
+import { sanitizeAgentName } from "@/lib/utils";
 
 interface CustomToolDialogProps {
   open: boolean;
@@ -239,8 +240,13 @@ export function CustomToolDialog({
     valuesList.forEach((v) => {
       if (v.key.trim()) valuesObject[v.key] = v.value;
     });
+    
+    // Sanitize the tool name
+    const sanitizedName = sanitizeAgentName(tool.name);
+    
     onSave({
       ...(tool as HTTPTool),
+      name: sanitizedName,
       headers: headersObject,
       values: valuesObject,
       parameters: {
@@ -279,6 +285,12 @@ export function CustomToolDialog({
               <Input
                 value={tool.name || ""}
                 onChange={(e) => setTool({ ...tool, name: e.target.value })}
+                onBlur={(e) => {
+                  const sanitizedName = sanitizeAgentName(e.target.value);
+                  if (sanitizedName !== e.target.value) {
+                    setTool({ ...tool, name: sanitizedName });
+                  }
+                }}
                 className="bg-[#222] border-[#444] text-white"
                 placeholder="Tool name"
               />

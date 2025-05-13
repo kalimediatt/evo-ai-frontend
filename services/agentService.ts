@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /services/agentService.ts                                             │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -71,6 +71,9 @@ export const getAgent = (agentId: string, clientId: string) =>
   api.get<Agent>(`/api/v1/agents/${agentId}`, {
     headers: { "x-client-id": clientId },
   });
+
+export const getSharedAgent = (agentId: string) =>
+  api.get<Agent>(`/api/v1/agents/${agentId}/shared`);
 
 export const updateAgent = (agentId: string, data: Partial<AgentCreate>) =>
   api.put<Agent>(`/api/v1/agents/${agentId}`, processAgentData(data));
@@ -157,6 +160,11 @@ export const assignAgentToFolder = (
     }
   );
 };
+
+export const shareAgent = (agentId: string, clientId: string) => 
+  api.post<{ api_key: string }>(`/api/v1/agents/${agentId}/share`, {}, {
+    headers: { "x-client-id": clientId },
+  });
 
 // API Key Interfaces and Services
 

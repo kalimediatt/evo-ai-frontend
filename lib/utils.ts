@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /lib/utils.ts                                                         │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -37,6 +37,15 @@ export function getAccessTokenFromCookie() {
   if (typeof document === "undefined") return "";
   const match = document.cookie.match(/(?:^|; )access_token=([^;]*)/);
   return match ? decodeURIComponent(match[1]) : "";
+}
+
+/**
+ * Obtém um parâmetro específico da URL atual
+ */
+export function getQueryParam(param: string): string | null {
+  if (typeof window === "undefined") return null;
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(param);
 }
 
 /**

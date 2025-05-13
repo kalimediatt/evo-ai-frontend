@@ -5,12 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.6] - develop
+## [0.0.6] - 2025-05-13
+
+### Added
+
+- Agent sharing functionality with third parties via API keys
+- Dedicated shared-chat page for accessing shared agents
+- Local storage mechanism to save recently used shared agents
+- Public access to shared agents without full authentication
 
 ### Changed
 
 - Add example environment file and update .gitignore
 - Add clientId prop to agent-related components and improve agent data processing
+- Refactor middleware to handle shared agent routes as public paths
+- Update API interceptors to prevent forced logout on shared chat pages
 
 ### security
 

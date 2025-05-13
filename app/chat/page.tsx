@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/chat/page.tsx                                                    │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -40,9 +40,6 @@ import {
   Search,
   Loader2,
   X,
-  Filter,
-  ChevronDown,
-  ChevronRight,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -55,27 +52,19 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { listAgents } from "@/services/agentService";
 import {
   listSessions,
   getSessionMessages,
-  sendMessage,
   ChatMessage,
   deleteSession,
   ChatSession,
 } from "@/services/sessionService";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAgentWebSocket } from "@/hooks/use-agent-webSocket";
 import { getAccessTokenFromCookie } from "@/lib/utils";
+import { ChatMessage as ChatMessageComponent } from "./components/ChatMessage";
+import { SessionList } from "./components/SessionList";
 
 interface FunctionMessageContent {
   title: string;
@@ -500,137 +489,20 @@ Args: ${
 
   return (
     <div className="flex h-screen max-h-screen bg-[#121212]">
-      <div className="w-64 border-r border-[#333] flex flex-col bg-[#1a1a1a]">
-        <div className="p-4 border-b border-[#333]">
-          <div className="flex items-center justify-between mb-4">
-            <Button
-              onClick={() => setIsNewChatDialogOpen(true)}
-              className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
-              size="sm"
-            >
-              <Plus className="h-4 w-4 mr-1" /> New Conversation
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
-              <Input
-                placeholder="Search conversations..."
-                className="pl-8 bg-[#222] border-[#444] text-white"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-gray-400 hover:text-white hover:bg-[#333]"
-                onClick={() => setShowAgentFilter(!showAgentFilter)}
-              >
-                <Filter className="h-4 w-4 mr-1" />
-                Filter
-              </Button>
-
-              {selectedAgentFilter !== "all" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedAgentFilter("all")}
-                  className="text-gray-400 hover:text-white hover:bg-[#333]"
-                >
-                  Clear filter
-                </Button>
-              )}
-            </div>
-
-            {showAgentFilter && (
-              <div className="pt-1">
-                <Select
-                  value={selectedAgentFilter}
-                  onValueChange={setSelectedAgentFilter}
-                >
-                  <SelectTrigger className="bg-[#222] border-[#444] text-white">
-                    <SelectValue placeholder="Filter by agent" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#222] border-[#444] text-white">
-                    <SelectItem
-                      value="all"
-                      className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
-                    >
-                      All agents
-                    </SelectItem>
-                    {agents.map((agent) => (
-                      <SelectItem
-                        key={agent.id}
-                        value={agent.id}
-                        className="data-[selected]:bg-[#333] data-[highlighted]:bg-[#333] !text-white hover:text-[#00ff9d] data-[selected]:!text-[#00ff9d]"
-                      >
-                        {agent.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {isLoading ? (
-            <div className="flex justify-center items-center h-24">
-              <Loader2 className="h-5 w-5 text-[#00ff9d] animate-spin" />
-            </div>
-          ) : sortedSessions.length > 0 ? (
-            <div className="divide-y divide-[#333]">
-              {sortedSessions.map((session) => {
-                const agentId = session.id.split("_")[1];
-                const agentInfo = agents.find((a) => a.id === agentId);
-                const externalId = getExternalId(session.id);
-
-                return (
-                  <div
-                    key={session.id}
-                    className={`p-3 hover:bg-[#222] cursor-pointer ${
-                      selectedSession === session.id ? "bg-[#2a2a2a]" : ""
-                    }`}
-                    onClick={() => setSelectedSession(session.id)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-[#00ff9d] mr-2"></div>
-                        <div className="text-white font-medium truncate max-w-[200px]">
-                          {externalId}
-                        </div>
-                      </div>
-                      {agentInfo && (
-                        <Badge className="bg-[#333] text-[#00ff9d] border-none text-xs">
-                          {agentInfo.name}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="mt-1">
-                      <div className="text-xs text-gray-500">
-                        {formatDateTime(session.update_time)}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : searchTerm || selectedAgentFilter !== "all" ? (
-            <div className="p-4 text-center text-gray-400">
-              No results found
-            </div>
-          ) : (
-            <div className="p-4 text-center text-gray-400">
-              Click "New" to start
-            </div>
-          )}
-        </div>
-      </div>
+      <SessionList 
+        sessions={sessions}
+        agents={agents}
+        selectedSession={selectedSession}
+        isLoading={isLoading}
+        searchTerm={searchTerm}
+        selectedAgentFilter={selectedAgentFilter}
+        showAgentFilter={showAgentFilter}
+        setSearchTerm={setSearchTerm}
+        setSelectedAgentFilter={setSelectedAgentFilter}
+        setShowAgentFilter={setShowAgentFilter}
+        setSelectedSession={setSelectedSession}
+        setIsNewChatDialogOpen={setIsNewChatDialogOpen}
+      />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {selectedSession || currentAgentId ? (
@@ -688,293 +560,20 @@ Args: ${
               ) : (
                 <div className="space-y-4 w-full max-w-full">
                   {messages.map((message) => {
-                    const isUser = message.author === "user";
-                    const agentColor = getAgentColor(message.author);
                     const messageContent = getMessageText(message);
-                    const hasFunctionCall = message.content.parts.some(
-                      (part) => part.functionCall || part.function_call
-                    );
-                    const hasFunctionResponse = message.content.parts.some(
-                      (part) => part.functionResponse || part.function_response
-                    );
-                    const isFunctionMessage =
-                      hasFunctionCall || hasFunctionResponse;
+                    const agentColor = getAgentColor(message.author);
                     const isExpanded = expandedFunctions[message.id] || false;
 
                     return (
-                      <div
+                      <ChatMessageComponent
                         key={message.id}
-                        className={`flex ${
-                          isUser ? "justify-end" : "justify-start"
-                        } w-full`}
-                      >
-                        <div
-                          className={`flex gap-3 ${
-                            isUser ? "flex-row-reverse" : ""
-                          } max-w-[90%]`}
-                        >
-                          <Avatar className={isUser ? "bg-[#333]" : agentColor}>
-                            <AvatarFallback>
-                              {isUser ? "U" : message.author[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div
-                            className={`rounded-lg p-3 ${
-                              isFunctionMessage
-                                ? "bg-[#333] text-[#00ff9d] font-mono text-sm"
-                                : isUser
-                                ? "bg-[#00ff9d] text-black"
-                                : "bg-[#222] text-white"
-                            } w-full overflow-hidden`}
-                            style={{ wordBreak: "break-word" }}
-                          >
-                            {isFunctionMessage ? (
-                              <div className="w-full">
-                                <div
-                                  className="flex items-center gap-2 cursor-pointer hover:bg-[#444] rounded px-1 py-0.5 transition-colors"
-                                  onClick={() =>
-                                    toggleFunctionExpansion(message.id)
-                                  }
-                                >
-                                  {typeof messageContent === "object" &&
-                                    "title" in messageContent && (
-                                      <>
-                                        <div className="flex-1 font-semibold">
-                                          {
-                                            (
-                                              messageContent as FunctionMessageContent
-                                            ).title
-                                          }
-                                        </div>
-                                        <div className="flex items-center justify-center w-5 h-5 text-[#00ff9d]">
-                                          {isExpanded ? (
-                                            <ChevronDown className="h-4 w-4" />
-                                          ) : (
-                                            <ChevronRight className="h-4 w-4" />
-                                          )}
-                                        </div>
-                                      </>
-                                    )}
-                                </div>
-
-                                {isExpanded &&
-                                  typeof messageContent === "object" &&
-                                  "content" in messageContent && (
-                                    <div className="mt-2 pt-2 border-t border-[#555]">
-                                      <pre className="whitespace-pre-wrap break-all overflow-hidden text-xs">
-                                        {
-                                          (
-                                            messageContent as FunctionMessageContent
-                                          ).content
-                                        }
-                                      </pre>
-                                    </div>
-                                  )}
-                              </div>
-                            ) : (
-                              <div className="markdown-content break-words">
-                                {typeof messageContent === "object" &&
-                                  "author" in messageContent &&
-                                  messageContent.author !== "user" && (
-                                    <div className="text-xs text-gray-400 mb-1">
-                                      {messageContent.author}
-                                    </div>
-                                  )}
-                                {(typeof messageContent === "string" &&
-                                  containsMarkdown(messageContent)) ||
-                                (typeof messageContent === "object" &&
-                                  "content" in messageContent &&
-                                  typeof messageContent.content === "string" &&
-                                  containsMarkdown(messageContent.content)) ? (
-                                  <ReactMarkdown
-                                    remarkPlugins={[remarkGfm]}
-                                    components={{
-                                      h1: ({ ...props }) => (
-                                        <h1
-                                          className="text-xl font-bold my-4"
-                                          {...props}
-                                        />
-                                      ),
-                                      h2: ({ ...props }) => (
-                                        <h2
-                                          className="text-lg font-bold my-3"
-                                          {...props}
-                                        />
-                                      ),
-                                      h3: ({ ...props }) => (
-                                        <h3
-                                          className="text-base font-bold my-2"
-                                          {...props}
-                                        />
-                                      ),
-                                      h4: ({ ...props }) => (
-                                        <h4
-                                          className="font-semibold my-2"
-                                          {...props}
-                                        />
-                                      ),
-                                      p: ({ ...props }) => (
-                                        <p className="mb-3" {...props} />
-                                      ),
-                                      ul: ({ ...props }) => (
-                                        <ul
-                                          className="list-disc pl-6 mb-3 space-y-1"
-                                          {...props}
-                                        />
-                                      ),
-                                      ol: ({ ...props }) => (
-                                        <ol
-                                          className="list-decimal pl-6 mb-3 space-y-1"
-                                          {...props}
-                                        />
-                                      ),
-                                      li: ({ ...props }) => (
-                                        <li className="mb-1" {...props} />
-                                      ),
-                                      a: ({ ...props }) => (
-                                        <a
-                                          className="text-[#00ff9d] underline hover:opacity-80 transition-opacity"
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          {...props}
-                                        />
-                                      ),
-                                      blockquote: ({ ...props }) => (
-                                        <blockquote
-                                          className="border-l-4 border-[#444] pl-4 py-1 italic my-3 text-gray-300"
-                                          {...props}
-                                        />
-                                      ),
-                                      code: ({
-                                        className,
-                                        children,
-                                        ...props
-                                      }: any) => {
-                                        const match = /language-(\w+)/.exec(
-                                          className || ""
-                                        );
-                                        const isInline =
-                                          !match &&
-                                          typeof children === "string" &&
-                                          !children.includes("\n");
-
-                                        if (isInline) {
-                                          return (
-                                            <code
-                                              className="bg-[#333] px-1.5 py-0.5 rounded text-[#00ff9d] text-sm font-mono"
-                                              {...props}
-                                            >
-                                              {children}
-                                            </code>
-                                          );
-                                        }
-
-                                        return (
-                                          <pre className="bg-[#2a2a2a] p-3 rounded-md my-3 overflow-x-auto">
-                                            <code
-                                              className="text-[#00ff9d] font-mono text-sm"
-                                              {...props}
-                                            >
-                                              {children}
-                                            </code>
-                                          </pre>
-                                        );
-                                      },
-                                      pre: ({ ...props }) => (
-                                        <pre
-                                          className="bg-[#2a2a2a] p-0 rounded-md my-3 overflow-x-auto font-mono text-sm"
-                                          {...props}
-                                        />
-                                      ),
-                                      table: ({ ...props }) => (
-                                        <div className="overflow-x-auto my-3 rounded border border-[#444]">
-                                          <table
-                                            className="min-w-full border-collapse text-sm"
-                                            {...props}
-                                          />
-                                        </div>
-                                      ),
-                                      thead: ({ ...props }) => (
-                                        <thead
-                                          className="bg-[#333]"
-                                          {...props}
-                                        />
-                                      ),
-                                      tbody: ({ ...props }) => (
-                                        <tbody
-                                          className="divide-y divide-[#444]"
-                                          {...props}
-                                        />
-                                      ),
-                                      tr: ({ ...props }) => (
-                                        <tr
-                                          className="hover:bg-[#2a2a2a] transition-colors"
-                                          {...props}
-                                        />
-                                      ),
-                                      th: ({ ...props }) => (
-                                        <th
-                                          className="px-4 py-2 text-left font-medium text-gray-300"
-                                          {...props}
-                                        />
-                                      ),
-                                      td: ({ ...props }) => (
-                                        <td
-                                          className="px-4 py-2 border-[#444]"
-                                          {...props}
-                                        />
-                                      ),
-                                      img: ({ ...props }) => (
-                                        <img
-                                          className="max-w-full h-auto my-3 rounded"
-                                          {...props}
-                                        />
-                                      ),
-                                      hr: ({ ...props }) => (
-                                        <hr
-                                          className="border-[#444] my-4"
-                                          {...props}
-                                        />
-                                      ),
-                                      strong: ({ ...props }) => (
-                                        <strong
-                                          className="font-bold"
-                                          {...props}
-                                        />
-                                      ),
-                                      em: ({ ...props }) => (
-                                        <em className="italic" {...props} />
-                                      ),
-                                      del: ({ ...props }) => (
-                                        <del
-                                          className="line-through"
-                                          {...props}
-                                        />
-                                      ),
-                                    }}
-                                  >
-                                    {typeof messageContent === "string"
-                                      ? messageContent
-                                      : typeof messageContent === "object" &&
-                                        "content" in messageContent
-                                      ? messageContent.content
-                                      : ""}
-                                  </ReactMarkdown>
-                                ) : (
-                                  <span>
-                                    {typeof messageContent === "string"
-                                      ? messageContent
-                                      : typeof messageContent === "object" &&
-                                        "content" in messageContent
-                                      ? messageContent.content
-                                      : JSON.stringify(messageContent)}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                        message={message}
+                        agentColor={agentColor}
+                        isExpanded={isExpanded}
+                        toggleExpansion={toggleFunctionExpansion}
+                        containsMarkdown={containsMarkdown}
+                        messageContent={messageContent}
+                      />
                     );
                   })}
 
