@@ -1,6 +1,6 @@
 # Evo AI - AI Agents Platform (Frontend)
 
-A modern frontend application for the Evo AI platform built with Next.js 15, React 18, and Tailwind CSS.
+Evo AI is an open-source platform for creating and managing AI agents, enabling integration with different AI models and services.
 
 ## 🚀 Overview
 
@@ -69,8 +69,8 @@ Visual interface based on ReactFlow for creating complex workflows between agent
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/your-username/evo-ai-a2a-saas-frontend.git
-cd evo-ai-a2a-saas-frontend
+git clone https://github.com/EvolutionAPI/evo-ai-frontend.git
+cd evo-ai-frontend
 ```
 
 2. Install dependencies:
@@ -207,7 +207,9 @@ Please read our [Contributing Guidelines](CONTRIBUTING.md) for more details.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+**Trademark Notice:** The name "Evo AI" and related branding are protected trademarks. Unauthorized use is prohibited.
 
 ## 👨‍💻 Development Commands
 

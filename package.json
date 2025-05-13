@@ -1,7 +1,29 @@
 {
-  "name": "my-v0-project",
+  "name": "evo-ai-frontend",
   "version": "0.1.0",
-  "private": true,
+  "license": "Apache-2.0",
+  "private": false,
+  "description": "Evo AI is an open-source platform for creating and managing AI agents, enabling integration with different AI models and services.",
+  "author": "Evolution API <contato@evolutionapi.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EvolutionAPI/evo-ai-frontend.git"
+  },
+  "homepage": "https://github.com/EvolutionAPI/evo-ai-frontend",
+  "bugs": {
+    "url": "https://github.com/EvolutionAPI/evo-ai-frontend/issues"
+  },
+  "keywords": [
+    "ai",
+    "nextjs",
+    "react",
+    "frontend",
+    "open-source",
+    "evo-ai"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
