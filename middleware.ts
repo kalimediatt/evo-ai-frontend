@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const PUBLIC_PATHS = ['/login']
+const PUBLIC_PATHS = ['/login', '/security/verify-email', '/security/reset-password']
 const ADMIN_PATHS = ['/clients', '/mcp-servers']
 const CLIENT_PATHS = ['/agents', '/chat']
 

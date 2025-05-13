@@ -123,7 +123,7 @@ export default function Sidebar() {
       <div className="mb-8">
         <Link href="/">
           <Image
-            src="/images/evolution-api-logo.png"
+            src="https://evolution-api.com/files/evo/evolution-ai-logo.png"
             alt="Evolution API"
             width={90}
             height={40}
