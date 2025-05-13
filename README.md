@@ -86,8 +86,8 @@ pnpm install
 3. Configure environment variables:
 
 ```bash
-cp .env.example .env.local
-# Edit the .env.local file with your settings
+cp .env.example .env
+# Edit the .env file with your settings
 ```
 
 ## 🚀 Running the Project
