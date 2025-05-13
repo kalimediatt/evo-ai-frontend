@@ -30,11 +30,11 @@
 import { useEdges, useNodes } from "@xyflow/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Agent } from "@/types/agent";
-import { listAgents } from "@/services/agentService";
+import { listAgents, listFolders, Folder, getAgent } from "@/services/agentService";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { User, Loader2, Search } from "lucide-react";
+import { User, Loader2, Search, FolderIcon, Trash2, Play, MessageSquare, PlayIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AgentForm as GlobalAgentForm } from "@/app/agents/forms/AgentForm";
 import { ApiKey, listApiKeys } from "@/services/agentService";
@@ -42,6 +42,14 @@ import { listMCPServers } from "@/services/mcpServerService";
 import { availableModels } from "@/types/aiModels";
 import { MCPServer } from "@/types/mcpServer";
 import { AgentTestChatModal } from "./AgentTestChatModal";
+import { sanitizeAgentName, escapePromptBraces } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || '{}') : {};
@@ -61,10 +69,15 @@ function AgentForm({
   setSelectedNode: any;
 }) {
   const [node, setNode] = useState(selectedNode);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingFolders, setLoadingFolders] = useState(true);
+  const [loadingCurrentAgent, setLoadingCurrentAgent] = useState(false);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [allAgents, setAllAgents] = useState<Agent[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [agentFolderId, setAgentFolderId] = useState<string | null>(null);
   const edges = useEdges();
   const nodes = useNodes();
   const [isAgentDialogOpen, setIsAgentDialogOpen] = useState(false);
@@ -91,9 +104,9 @@ function AgentForm({
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
 
   const connectedNode = useMemo(() => {
-    const edge = edges.find((edge) => edge.source === selectedNode.id);
+    const edge = edges.find((edge: any) => edge.source === selectedNode.id);
     if (!edge) return null;
-    const node = nodes.find((node) => node.id === edge.target);
+    const node = nodes.find((node: any) => node.id === edge.target);
     return node || null;
   }, [edges, nodes, selectedNode.id]);
   
@@ -109,8 +122,42 @@ function AgentForm({
 
   useEffect(() => {
     if (!clientId) return;
+    setLoadingFolders(true);
+    listFolders(clientId)
+      .then((res) => {
+        setFolders(res.data);
+      })
+      .catch((error) => console.error("Error loading folders:", error))
+      .finally(() => setLoadingFolders(false));
+  }, [clientId]);
+
+  useEffect(() => {
+    if (!currentAgentId || !clientId) {
+      return;
+    }
+    
+    setLoadingCurrentAgent(true);
+    
+    getAgent(currentAgentId, clientId)
+      .then((res) => {
+        const agent = res.data;
+        if (agent.folder_id) {
+          setAgentFolderId(agent.folder_id);
+          setSelectedFolderId(agent.folder_id);
+        }
+      })
+      .catch((error) => console.error("Error loading current agent:", error))
+      .finally(() => setLoadingCurrentAgent(false));
+  }, [currentAgentId, clientId]);
+
+  useEffect(() => {
+    if (!clientId) return;
+    
+    if (loadingFolders || loadingCurrentAgent) return;
+    
     setLoading(true);
-    listAgents(clientId)
+    
+    listAgents(clientId, 0, 100, selectedFolderId || undefined)
       .then((res) => {
         const filteredAgents = res.data.filter((agent: Agent) => agent.id !== currentAgentId);
         setAllAgents(filteredAgents);
@@ -118,7 +165,7 @@ function AgentForm({
       })
       .catch((error) => console.error("Error loading agents:", error))
       .finally(() => setLoading(false));
-  }, [clientId, currentAgentId]);
+  }, [clientId, currentAgentId, selectedFolderId, loadingFolders, loadingCurrentAgent]);
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
@@ -185,6 +232,7 @@ function AgentForm({
         sub_agents: [],
         agent_tools: [],
       },
+      folder_id: selectedFolderId || undefined,
     });
     setIsAgentDialogOpen(true);
   };
@@ -192,12 +240,20 @@ function AgentForm({
   const handleSaveAgent = async (agentData: Partial<Agent>) => {
     setIsLoading(true);
     try {
-      const { createAgent } = await import("@/services/agentService");
-      const created = await createAgent({ ...(agentData as any), client_id: clientId });
+      const sanitizedData = {
+        ...agentData,
+        client_id: clientId,
+        name: agentData.name ? sanitizeAgentName(agentData.name) : agentData.name,
+        instruction: agentData.instruction ? escapePromptBraces(agentData.instruction) : agentData.instruction
+      };
 
-      const res = await listAgents(clientId);
-      setAllAgents(res.data.filter((agent: Agent) => agent.id !== currentAgentId));
-      setAgents(res.data.filter((agent: Agent) => agent.id !== currentAgentId));
+      const { createAgent } = await import("@/services/agentService");
+      const created = await createAgent(sanitizedData as any);
+
+      const res = await listAgents(clientId, 0, 100, selectedFolderId || undefined);
+      const filteredAgents = res.data.filter((agent: Agent) => agent.id !== currentAgentId);
+      setAllAgents(filteredAgents);
+      setAgents(filteredAgents);
 
       if (created.data) {
         handleSelectAgent(created.data);
@@ -208,6 +264,15 @@ function AgentForm({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleFolderChange = (value: string) => {
+    setSelectedFolderId(value === "all" ? null : value);
+  };
+
+  const getFolderNameById = (id: string) => {
+    const folder = folders.find((f) => f.id === id);
+    return folder?.name || id;
   };
 
   const renderForm = () => {
@@ -224,26 +289,64 @@ function AgentForm({
           </Button>
         </div>
         
-        <div className="relative mb-4">
-          <Input
-            type="text"
-            placeholder="Search for an agent..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-gray-700 border-gray-600 text-gray-200 focus:border-green-500 py-2 pl-10"
-          />
-          <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          {searchTerm && (
-            <button
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200"
-              onClick={() => setSearchTerm("")}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          )}
+        <div className="flex gap-2 mb-4">
+          <div className="relative flex-1">
+            <Input
+              type="text"
+              placeholder="Search for an agent..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-gray-700 border-gray-600 text-gray-200 focus:border-green-500 py-2 pl-10"
+            />
+            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            {searchTerm && (
+              <button
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                onClick={() => setSearchTerm("")}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          
+          <Select
+            value={selectedFolderId || "all"}
+            onValueChange={handleFolderChange}
+          >
+            <SelectTrigger className="w-[180px] bg-gray-700 border-gray-600 text-gray-200 focus:border-green-500">
+              <SelectValue placeholder="All Folders" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
+              <SelectItem value="all">All Folders</SelectItem>
+              {folders.map((folder) => (
+                <SelectItem key={folder.id} value={folder.id}>
+                  {folder.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+        
+        {agentFolderId && selectedFolderId !== agentFolderId && (
+          <div className="mb-4 p-2 bg-green-800/20 border border-green-700/40 rounded-md text-xs text-green-400">
+            <div className="flex items-center gap-2">
+              <FolderIcon size={12} />
+              <span>
+                Showing agents from {selectedFolderId ? `folder "${getFolderNameById(selectedFolderId)}"` : "all folders"}. Current workflow agent is in folder "{getFolderNameById(agentFolderId)}".
+              </span>
+            </div>
+            <Button 
+              variant="link" 
+              size="sm" 
+              className="text-green-400 p-0 h-auto mt-1"
+              onClick={() => setSelectedFolderId(agentFolderId)}
+            >
+              Show agents from the same folder as current workflow
+            </Button>
+          </div>
+        )}
         
         {loading ? (
           <div className="flex justify-center items-center py-8">
@@ -288,14 +391,18 @@ function AgentForm({
           </ScrollArea>
         ) : (
           <div className="text-center py-8 text-gray-400">
-            {searchTerm ? (
-              <p>No agents found for "{searchTerm}"</p>
+            {searchTerm || selectedFolderId ? (
+              <p>
+                No agents found 
+                {searchTerm ? ` for "${searchTerm}"` : ""} 
+                {selectedFolderId ? ` in this folder` : ""}
+              </p>
             ) : (
               <>
-            <p>No agents available</p>
-            <p className="text-sm mt-2">
-              Create agents in the Agent Management screen
-            </p>
+                <p>No agents available</p>
+                <p className="text-sm mt-2">
+                  Create agents in the Agent Management screen
+                </p>
               </>
             )}
           </div>
@@ -303,30 +410,34 @@ function AgentForm({
 
         {node.data.agent && (
           <div className="mt-4 pt-4 border-t border-gray-700">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full border-red-500 text-red-500 hover:bg-red-900/20"
-              onClick={() => {
-                handleUpdateNode({
-                  ...node,
-                  data: {
-                    ...node.data,
-                    agent: undefined,
-                  },
-                });
-              }}
-            >
-              Remove Agent
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full mt-2 border-green-500 text-green-500 hover:bg-green-900/20"
-              onClick={() => setIsTestModalOpen(true)}
-            >
-              Test Agent
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 border-red-500 text-red-500 hover:bg-red-900/20"
+                onClick={() => {
+                  handleUpdateNode({
+                    ...node,
+                    data: {
+                      ...node.data,
+                      agent: undefined,
+                    },
+                  });
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Remove Agent
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 border-green-500 text-green-500 hover:bg-green-900/20"
+                onClick={() => setIsTestModalOpen(true)}
+              >
+                <PlayIcon className="h-4 w-4 mr-2" />
+                Test Agent
+              </Button>
+            </div>
             {isTestModalOpen && (
               <AgentTestChatModal
                 open={isTestModalOpen}
@@ -351,6 +462,7 @@ function AgentForm({
           onSave={handleSaveAgent}
           isLoading={isLoading}
           getAgentNameById={(id) => allAgents.find((a) => a.id === id)?.name || id}
+          clientId={clientId}
         />
       </div>
     );

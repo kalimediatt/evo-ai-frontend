@@ -48,6 +48,7 @@ interface AgentToolDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (tool: { id: string; envs: Record<string, string> }) => void;
   agents: Agent[];
+  clientId: string;
 }
 
 export function AgentToolDialog({
@@ -55,6 +56,7 @@ export function AgentToolDialog({
   onOpenChange,
   onSave,
   agents,
+  clientId,
 }: AgentToolDialogProps) {
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
   const [search, setSearch] = useState("");

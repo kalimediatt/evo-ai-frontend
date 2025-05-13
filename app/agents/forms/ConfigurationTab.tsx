@@ -60,6 +60,7 @@ interface ConfigurationTabProps {
   onRemoveCustomMCP: (url: string) => void;
   onOpenMCPDialog: (mcpConfig?: any) => void;
   onOpenCustomMCPDialog: (customMCP?: any) => void;
+  clientId: string;
 }
 
 export function ConfigurationTab({
@@ -77,6 +78,7 @@ export function ConfigurationTab({
   onRemoveCustomMCP,
   onOpenMCPDialog,
   onOpenCustomMCPDialog,
+  clientId,
 }: ConfigurationTabProps) {
   const [agentToolDialogOpen, setAgentToolDialogOpen] = useState(false);
   const [customToolDialogOpen, setCustomToolDialogOpen] = useState(false);
@@ -562,6 +564,7 @@ export function ConfigurationTab({
             (a) =>
               !values.config?.agent_tools?.includes(a.id) && a.id !== values.id
           )}
+          clientId={clientId}
         />
       </div>
     );

@@ -525,6 +525,7 @@ export default function AgentsPage() {
         onOpenCustomMCPDialog={() => setIsCustomMCPDialogOpen(true)}
         onSave={handleAddAgent}
         getAgentNameById={(id) => agents.find((a) => a.id === id)?.name || id}
+        clientId={clientId}
       />
 
       <FolderDialog

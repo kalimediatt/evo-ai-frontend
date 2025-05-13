@@ -34,7 +34,7 @@ import Canva from "./Canva";
 import { Agent } from '@/types/agent';
 import { getAgent, updateAgent } from '@/services/agentService';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Save, Download } from 'lucide-react';
+import { ArrowLeft, Save, Download, PlayIcon } from 'lucide-react';
 import Link from 'next/link';
 import { ReactFlowProvider } from "@xyflow/react";
 import { DnDProvider } from "@/contexts/DnDContext";
@@ -181,6 +181,7 @@ function WorkflowsContent() {
             className="bg-green-800 border-green-700 text-green-200 hover:bg-green-700"
             onClick={() => setIsTestModalOpen(true)}
           >
+            <PlayIcon className="h-4 w-4 mr-2" />
             Test Workflow
           </Button>
         )}

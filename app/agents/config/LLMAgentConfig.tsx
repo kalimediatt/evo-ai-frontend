@@ -42,6 +42,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ApiKey } from "@/services/agentService";
 import { Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface ModelOption {
   value: string;
@@ -68,6 +69,22 @@ export function LLMAgentConfig({
   onChange,
   onOpenApiKeysDialog,
 }: LLMAgentConfigProps) {
+  const [instructionText, setInstructionText] = useState(values.instruction || "");
+  
+  useEffect(() => {
+    setInstructionText(values.instruction || "");
+  }, [values.instruction]);
+  
+  const handleInstructionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setInstructionText(newValue);
+    
+    onChange({
+      ...values,
+      instruction: newValue,
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-4 items-center gap-4">
@@ -210,18 +227,21 @@ export function LLMAgentConfig({
         <Label htmlFor="instruction" className="text-right text-gray-300">
           Instructions
         </Label>
-        <Textarea
-          id="instruction"
-          value={values.instruction || ""}
-          onChange={(e) =>
-            onChange({
-              ...values,
-              instruction: e.target.value,
-            })
-          }
-          className="col-span-3 bg-[#222] border-[#444] text-white"
-          rows={4}
-        />
+        <div className="col-span-3">
+          <Textarea
+            id="instruction"
+            value={instructionText}
+            onChange={handleInstructionChange}
+            className="w-full bg-[#222] border-[#444] text-white"
+            rows={4}
+          />
+          <div className="mt-1 text-xs text-gray-400">
+            <span className="inline-block h-3 w-3 mr-1">ℹ️</span>
+            <span>
+              Characters like {"{"} and {"}"} or {"{{"} and {"}}"} are automatically escaped to avoid errors in Python.
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -63,6 +63,7 @@ interface MCPDialogProps {
   selectedMCP?: MCPServer | null;
   initialEnvs?: Record<string, string>;
   initialTools?: string[];
+  clientId: string;
 }
 
 export function MCPDialog({
@@ -73,6 +74,7 @@ export function MCPDialog({
   selectedMCP: initialSelectedMCP = null,
   initialEnvs = {},
   initialTools = [],
+  clientId,
 }: MCPDialogProps) {
   const [selectedMCP, setSelectedMCP] = useState<MCPServer | null>(null);
   const [mcpEnvs, setMcpEnvs] = useState<Record<string, string>>({});

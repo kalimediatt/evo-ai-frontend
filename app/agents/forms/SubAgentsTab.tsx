@@ -38,6 +38,7 @@ interface SubAgentsTabProps {
   agents: Agent[];
   getAgentNameById: (id: string) => string;
   editingAgentId?: string;
+  clientId: string;
 }
 
 export function SubAgentsTab({
@@ -46,6 +47,7 @@ export function SubAgentsTab({
   agents,
   getAgentNameById,
   editingAgentId,
+  clientId,
 }: SubAgentsTabProps) {
   const handleAddSubAgent = (agentId: string) => {
     if (!values.config?.sub_agents?.includes(agentId)) {
