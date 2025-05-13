@@ -1,19 +1,52 @@
+/*
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ @author: Davidson Gomes                                                      │
+│ @file: A2AAgentConfig.tsx                                                    │
+│ Developed by: Davidson Gomes                                                 │
+│ Creation date: May 13, 2025                                                  │
+│ Contact: contato@evolution-api.com                                           │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ @copyright © Evolution API 2025. All rights reserved.                        │
+│ Licensed under the Apache License, Version 2.0                               │
+│                                                                              │
+│ You may not use this file except in compliance with the License.             │
+│ You may obtain a copy of the License at                                      │
+│                                                                              │
+│    http://www.apache.org/licenses/LICENSE-2.0                                │
+│                                                                              │
+│ Unless required by applicable law or agreed to in writing, software          │
+│ distributed under the License is distributed on an "AS IS" BASIS,            │
+│ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.     │
+│ See the License for the specific language governing permissions and          │
+│ limitations under the License.                                               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ @important                                                                   │
+│ For any future changes to the code in this file, it is recommended to        │
+│ include, together with the modification, the information of the developer    │
+│ who changed it and the date of modification.                                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+*/
 import api from "./api";
 import { Agent, AgentCreate } from "../types/agent";
 
 export const createAgent = (data: AgentCreate) =>
   api.post<Agent>("/api/v1/agents/", data);
 
-export const listAgents = (clientId: string, skip = 0, limit = 100, folderId?: string) => {
+export const listAgents = (
+  clientId: string,
+  skip = 0,
+  limit = 100,
+  folderId?: string
+) => {
   const queryParams = new URLSearchParams({
     skip: skip.toString(),
     limit: limit.toString(),
   });
-  
+
   if (folderId) {
     queryParams.append("folder_id", folderId);
   }
-  
+
   return api.get<Agent[]>(`/api/v1/agents/?${queryParams.toString()}`, {
     headers: { "x-client-id": clientId },
   });
@@ -65,7 +98,11 @@ export const getFolder = (folderId: string, clientId: string) =>
     headers: { "x-client-id": clientId },
   });
 
-export const updateFolder = (folderId: string, data: FolderUpdate, clientId: string) =>
+export const updateFolder = (
+  folderId: string,
+  data: FolderUpdate,
+  clientId: string
+) =>
   api.put<Folder>(`/api/v1/agents/folders/${folderId}`, data, {
     headers: { "x-client-id": clientId },
   });
@@ -75,19 +112,35 @@ export const deleteFolder = (folderId: string, clientId: string) =>
     headers: { "x-client-id": clientId },
   });
 
-export const listAgentsInFolder = (folderId: string, clientId: string, skip = 0, limit = 100) =>
-  api.get<Agent[]>(`/api/v1/agents/folders/${folderId}/agents?skip=${skip}&limit=${limit}`, {
-    headers: { "x-client-id": clientId },
-  });
+export const listAgentsInFolder = (
+  folderId: string,
+  clientId: string,
+  skip = 0,
+  limit = 100
+) =>
+  api.get<Agent[]>(
+    `/api/v1/agents/folders/${folderId}/agents?skip=${skip}&limit=${limit}`,
+    {
+      headers: { "x-client-id": clientId },
+    }
+  );
 
-export const assignAgentToFolder = (agentId: string, folderId: string | null, clientId: string) => {
+export const assignAgentToFolder = (
+  agentId: string,
+  folderId: string | null,
+  clientId: string
+) => {
   const url = folderId
     ? `/api/v1/agents/${agentId}/folder?folder_id=${folderId}`
     : `/api/v1/agents/${agentId}/folder`;
-  
-  return api.put<Agent>(url, {}, {
-    headers: { "x-client-id": clientId },
-  });
+
+  return api.put<Agent>(
+    url,
+    {},
+    {
+      headers: { "x-client-id": clientId },
+    }
+  );
 };
 
 // API Key Interfaces and Services
@@ -129,7 +182,11 @@ export const getApiKey = (keyId: string, clientId: string) =>
     headers: { "x-client-id": clientId },
   });
 
-export const updateApiKey = (keyId: string, data: ApiKeyUpdate, clientId: string) =>
+export const updateApiKey = (
+  keyId: string,
+  data: ApiKeyUpdate,
+  clientId: string
+) =>
   api.put<ApiKey>(`/api/v1/agents/apikeys/${keyId}`, data, {
     headers: { "x-client-id": clientId },
   });
@@ -137,4 +194,4 @@ export const updateApiKey = (keyId: string, data: ApiKeyUpdate, clientId: string
 export const deleteApiKey = (keyId: string, clientId: string) =>
   api.delete(`/api/v1/agents/apikeys/${keyId}`, {
     headers: { "x-client-id": clientId },
-  }); 
+  });
