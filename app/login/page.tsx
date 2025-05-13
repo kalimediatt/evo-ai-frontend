@@ -59,6 +59,7 @@ export default function LoginPage() {
   const [showForgotSuccess, setShowForgotSuccess] = useState(false);
   const [redirectSeconds, setRedirectSeconds] = useState(5);
   const redirectTimer = useRef<NodeJS.Timeout | null>(null);
+  const [loginError, setLoginError] = useState("");
 
   const [loginData, setLoginData] = useState({
     email: "",
@@ -77,6 +78,7 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setLoginError("");
 
     try {
       const response = await login({
@@ -96,19 +98,12 @@ export default function LoginPage() {
           )}; path=/; max-age=${60 * 60 * 24 * 7}`;
         }
       }
-      toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
       router.push("/");
     } catch (error: any) {
-      toast({
-        title: "Error logging in",
-        description:
-          error?.response?.data?.detail ||
-          "Check your credentials and try again.",
-        variant: "destructive",
-      });
+      setLoginError(
+        error?.response?.data?.detail ||
+        "Check your credentials and try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -302,6 +297,11 @@ export default function LoginPage() {
                     className="bg-[#222] border-[#444] text-white"
                   />
                 </div>
+                {loginError && (
+                  <div className="text-red-500 text-sm mt-2" data-testid="login-error">
+                    {loginError}
+                  </div>
+                )}
               </CardContent>
               <CardFooter>
                 <Button
