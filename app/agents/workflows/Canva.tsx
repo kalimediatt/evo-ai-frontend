@@ -63,7 +63,7 @@ import { AgentForm } from "./nodes/components/agent/AgentForm";
 import { ConditionForm } from "./nodes/components/condition/ConditionForm";
 import { Agent, WorkflowData } from "@/types/agent";
 import { updateAgent } from "@/services/agentService";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { MessageForm } from "./nodes/components/message/MessageForm";
 
 const proOptions: ProOptions = { account: "paid-pro", hideAttribution: true };

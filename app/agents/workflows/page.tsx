@@ -40,7 +40,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { DnDProvider } from "@/contexts/DnDContext";
 import { NodeDataProvider } from "@/contexts/NodeDataContext";
 import { SourceClickProvider } from "@/contexts/SourceClickContext";
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from "@/hooks/use-toast";
 import { AgentTestChatModal } from "./nodes/components/agent/AgentTestChatModal";
 
 function WorkflowsContent() {

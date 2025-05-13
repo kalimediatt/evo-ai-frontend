@@ -36,7 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CopyBlock, dracula } from "react-code-blocks";
 import { ClipboardCopy, Send } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useSearchParams } from "next/navigation";
 
 function DocumentationContent() {

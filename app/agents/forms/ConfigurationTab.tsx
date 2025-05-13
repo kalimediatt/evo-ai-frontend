@@ -43,7 +43,7 @@ import { MCPDialog } from "../dialogs/MCPDialog";
 import { CustomMCPDialog } from "../dialogs/CustomMCPDialog";
 import { AgentToolDialog } from "../dialogs/AgentToolDialog";
 import { CustomToolDialog } from "../dialogs/CustomToolDialog";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface ConfigurationTabProps {
   values: Partial<Agent>;

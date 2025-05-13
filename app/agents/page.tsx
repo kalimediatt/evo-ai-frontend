@@ -31,7 +31,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Key, Plus, Folder } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
 import { Agent, AgentCreate } from "@/types/agent";

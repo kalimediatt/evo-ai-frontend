@@ -102,6 +102,7 @@ function AgentForm({
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const connectedNode = useMemo(() => {
     const edge = edges.find((edge: any) => edge.source === selectedNode.id);
@@ -247,20 +248,41 @@ function AgentForm({
         instruction: agentData.instruction ? escapePromptBraces(agentData.instruction) : agentData.instruction
       };
 
-      const { createAgent } = await import("@/services/agentService");
-      const created = await createAgent(sanitizedData as any);
+      if (isEditMode && node.data.agent?.id) {
+        // Update existing agent
+        const { updateAgent } = await import("@/services/agentService");
+        const updated = await updateAgent(node.data.agent.id, sanitizedData as any);
+        
+        // Refresh the agent list
+        const res = await listAgents(clientId, 0, 100, selectedFolderId || undefined);
+        const filteredAgents = res.data.filter((agent: Agent) => agent.id !== currentAgentId);
+        setAllAgents(filteredAgents);
+        setAgents(filteredAgents);
+        
+        if (updated.data) {
+          handleSelectAgent(updated.data);
+        }
+      } else {
+        // Create new agent
+        const { createAgent } = await import("@/services/agentService");
+        const created = await createAgent(sanitizedData as any);
 
-      const res = await listAgents(clientId, 0, 100, selectedFolderId || undefined);
-      const filteredAgents = res.data.filter((agent: Agent) => agent.id !== currentAgentId);
-      setAllAgents(filteredAgents);
-      setAgents(filteredAgents);
+        const res = await listAgents(clientId, 0, 100, selectedFolderId || undefined);
+        const filteredAgents = res.data.filter((agent: Agent) => agent.id !== currentAgentId);
+        setAllAgents(filteredAgents);
+        setAgents(filteredAgents);
 
-      if (created.data) {
-        handleSelectAgent(created.data);
+        if (created.data) {
+          handleSelectAgent(created.data);
+        }
       }
+      
       setIsAgentDialogOpen(false);
+      setIsEditMode(false);
     } catch (e) {
+      console.error("Error saving agent:", e);
       setIsAgentDialogOpen(false);
+      setIsEditMode(false);
     } finally {
       setIsLoading(false);
     }
@@ -273,6 +295,18 @@ function AgentForm({
   const getFolderNameById = (id: string) => {
     const folder = folders.find((f) => f.id === id);
     return folder?.name || id;
+  };
+
+  const handleEditAgent = () => {
+    if (!node.data.agent) return;
+    
+    setNewAgent({
+      ...node.data.agent,
+      client_id: clientId || "",
+    });
+    
+    setIsEditMode(true);
+    setIsAgentDialogOpen(true);
   };
 
   const renderForm = () => {
@@ -368,6 +402,33 @@ function AgentForm({
                   <div className="flex items-center gap-2 mb-1">
                     <User size={16} className="text-gray-300" />
                     <span className="font-medium">{agent.name}</span>
+                    <div 
+                      className="ml-auto text-gray-400 hover:text-yellow-500 transition-colors p-1 rounded hover:bg-yellow-900/20"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setNewAgent({
+                          ...agent,
+                          client_id: clientId || "",
+                        });
+                        setIsEditMode(true);
+                        setIsAgentDialogOpen(true);
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        <path d="m15 5 4 4" />
+                      </svg>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between mt-1">
                     <Badge
@@ -450,7 +511,10 @@ function AgentForm({
 
         <GlobalAgentForm
           open={isAgentDialogOpen}
-          onOpenChange={setIsAgentDialogOpen}
+          onOpenChange={(open) => {
+            setIsAgentDialogOpen(open);
+            if (!open) setIsEditMode(false);
+          }}
           initialValues={newAgent}
           apiKeys={apiKeys}
           availableModels={availableModels}

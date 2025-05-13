@@ -41,8 +41,15 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiKey } from "@/services/agentService";
-import { Plus } from "lucide-react";
+import { Plus, Maximize2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface ModelOption {
   value: string;
@@ -70,6 +77,8 @@ export function LLMAgentConfig({
   onOpenApiKeysDialog,
 }: LLMAgentConfigProps) {
   const [instructionText, setInstructionText] = useState(values.instruction || "");
+  const [isInstructionModalOpen, setIsInstructionModalOpen] = useState(false);
+  const [expandedInstructionText, setExpandedInstructionText] = useState("");
   
   useEffect(() => {
     setInstructionText(values.instruction || "");
@@ -83,6 +92,20 @@ export function LLMAgentConfig({
       ...values,
       instruction: newValue,
     });
+  };
+
+  const handleExpandInstruction = () => {
+    setExpandedInstructionText(instructionText);
+    setIsInstructionModalOpen(true);
+  };
+
+  const handleSaveExpandedInstruction = () => {
+    setInstructionText(expandedInstructionText);
+    onChange({
+      ...values,
+      instruction: expandedInstructionText,
+    });
+    setIsInstructionModalOpen(false);
   };
 
   return (
@@ -228,21 +251,67 @@ export function LLMAgentConfig({
           Instructions
         </Label>
         <div className="col-span-3">
-          <Textarea
-            id="instruction"
-            value={instructionText}
-            onChange={handleInstructionChange}
-            className="w-full bg-[#222] border-[#444] text-white"
-            rows={4}
-          />
+          <div className="relative">
+            <Textarea
+              id="instruction"
+              value={instructionText}
+              onChange={handleInstructionChange}
+              className="w-full bg-[#222] border-[#444] text-white pr-10"
+              rows={4}
+              onClick={handleExpandInstruction}
+            />
+            <button
+              type="button"
+              className="absolute top-3 right-5 text-gray-400 hover:text-[#00ff9d] focus:outline-none"
+              onClick={handleExpandInstruction}
+            >
+              <Maximize2 className="h-4 w-4" />
+            </button>
+          </div>
           <div className="mt-1 text-xs text-gray-400">
             <span className="inline-block h-3 w-3 mr-1">ℹ️</span>
             <span>
               Characters like {"{"} and {"}"} or {"{{"} and {"}}"} are automatically escaped to avoid errors in Python.
+              <span className="ml-2 text-[#00ff9d]">Click to expand editor.</span>
             </span>
           </div>
         </div>
       </div>
+
+      {/* Expanded Instruction Modal */}
+      <Dialog open={isInstructionModalOpen} onOpenChange={setIsInstructionModalOpen}>
+        <DialogContent className="sm:max-w-[1200px] max-h-[90vh] bg-[#1a1a1a] border-[#333] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-white">Agent Instructions</DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-hidden flex flex-col min-h-[60vh]">
+            <Textarea
+              value={expandedInstructionText}
+              onChange={(e) => setExpandedInstructionText(e.target.value)}
+              className="flex-1 min-h-full bg-[#222] border-[#444] text-white p-4 focus:border-[#00ff9d] focus:ring-[#00ff9d] focus:ring-opacity-50 resize-none"
+              placeholder="Enter detailed instructions for the agent..."
+            />
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsInstructionModalOpen(false)}
+              className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveExpandedInstruction}
+              className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save Instructions
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
