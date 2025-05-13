@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add example environment file and update .gitignore
 - Add clientId prop to agent-related components and improve agent data processing
 
+### security
+
+- Implement force logout functionality on 401 Unauthorized responses
+
 ## [0.0.5] - 2025-05-13
 
 ### Changed
