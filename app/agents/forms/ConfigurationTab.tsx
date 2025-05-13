@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/forms/ConfigurationTab.tsx                                │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -43,7 +43,7 @@ import { MCPDialog } from "../dialogs/MCPDialog";
 import { CustomMCPDialog } from "../dialogs/CustomMCPDialog";
 import { AgentToolDialog } from "../dialogs/AgentToolDialog";
 import { CustomToolDialog } from "../dialogs/CustomToolDialog";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface ConfigurationTabProps {
   values: Partial<Agent>;
@@ -60,6 +60,7 @@ interface ConfigurationTabProps {
   onRemoveCustomMCP: (url: string) => void;
   onOpenMCPDialog: (mcpConfig?: any) => void;
   onOpenCustomMCPDialog: (customMCP?: any) => void;
+  clientId: string;
 }
 
 export function ConfigurationTab({
@@ -77,6 +78,7 @@ export function ConfigurationTab({
   onRemoveCustomMCP,
   onOpenMCPDialog,
   onOpenCustomMCPDialog,
+  clientId,
 }: ConfigurationTabProps) {
   const [agentToolDialogOpen, setAgentToolDialogOpen] = useState(false);
   const [customToolDialogOpen, setCustomToolDialogOpen] = useState(false);
@@ -562,6 +564,7 @@ export function ConfigurationTab({
             (a) =>
               !values.config?.agent_tools?.includes(a.id) && a.id !== values.id
           )}
+          clientId={clientId}
         />
       </div>
     );

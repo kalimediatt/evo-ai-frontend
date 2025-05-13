@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /middleware.ts                                                        │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -28,7 +28,7 @@
 */
 import { NextRequest, NextResponse } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/security/verify-email', '/security/reset-password']
+const PUBLIC_PATHS = ['/login', '/security/verify-email', '/security/reset-password', '/shared-chat']
 const ADMIN_PATHS = ['/clients', '/mcp-servers']
 const CLIENT_PATHS = ['/agents', '/chat']
 
@@ -58,6 +58,9 @@ export function middleware(request: NextRequest) {
   }
 
   if (isPublic && token) {
+    if (pathname.startsWith('/shared-chat')) {
+      return NextResponse.next()
+    }
     return NextResponse.redirect(new URL('/', request.url))
   }
 

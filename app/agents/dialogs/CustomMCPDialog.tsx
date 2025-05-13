@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/dialogs/CustomMCPDialog.tsx                             │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -58,6 +58,7 @@ interface CustomMCPDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (customMCP: CustomMCPServer) => void;
   initialCustomMCP?: CustomMCPServer | null;
+  clientId: string;
 }
 
 export function CustomMCPDialog({
@@ -65,6 +66,7 @@ export function CustomMCPDialog({
   onOpenChange,
   onSave,
   initialCustomMCP = null,
+  clientId,
 }: CustomMCPDialogProps) {
   const [customMCP, setCustomMCP] = useState<Partial<CustomMCPServer>>({
     url: "",

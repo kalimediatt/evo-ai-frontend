@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/workflows/page.tsx                                        │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -34,13 +34,13 @@ import Canva from "./Canva";
 import { Agent } from '@/types/agent';
 import { getAgent, updateAgent } from '@/services/agentService';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Save, Download } from 'lucide-react';
+import { ArrowLeft, Save, Download, PlayIcon } from 'lucide-react';
 import Link from 'next/link';
 import { ReactFlowProvider } from "@xyflow/react";
 import { DnDProvider } from "@/contexts/DnDContext";
 import { NodeDataProvider } from "@/contexts/NodeDataContext";
 import { SourceClickProvider } from "@/contexts/SourceClickContext";
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from "@/hooks/use-toast";
 import { AgentTestChatModal } from "./nodes/components/agent/AgentTestChatModal";
 
 function WorkflowsContent() {
@@ -181,6 +181,7 @@ function WorkflowsContent() {
             className="bg-green-800 border-green-700 text-green-200 hover:bg-green-700"
             onClick={() => setIsTestModalOpen(true)}
           >
+            <PlayIcon className="h-4 w-4 mr-2" />
             Test Workflow
           </Button>
         )}

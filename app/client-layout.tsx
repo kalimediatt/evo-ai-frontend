@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/client-layout.tsx                                                │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -37,8 +37,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isLoginPage = pathname === "/login"
   const isVerifyEmailPage = pathname.startsWith("/security/verify-email")
   const isResetPasswordPage = pathname.startsWith("/security/reset-password")
+  const isSharedChatPage = pathname.startsWith("/shared-chat")
 
-  if (isLoginPage || isVerifyEmailPage || isResetPasswordPage) {
+  if (isLoginPage || isVerifyEmailPage || isResetPasswordPage || isSharedChatPage) {
     return children
   }
 

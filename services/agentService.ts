@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /services/agentService.ts                                             │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -28,9 +28,24 @@
 */
 import api from "./api";
 import { Agent, AgentCreate } from "../types/agent";
+import { escapePromptBraces, sanitizeAgentName } from "@/lib/utils";
+
+const processAgentData = (data: AgentCreate | Partial<AgentCreate>): AgentCreate | Partial<AgentCreate> => {
+  const updatedData = {...data};
+  
+  if (updatedData.instruction) {
+    updatedData.instruction = escapePromptBraces(updatedData.instruction);
+  }
+  
+  if (updatedData.name) {
+    updatedData.name = sanitizeAgentName(updatedData.name);
+  }
+  
+  return updatedData;
+};
 
 export const createAgent = (data: AgentCreate) =>
-  api.post<Agent>("/api/v1/agents/", data);
+  api.post<Agent>("/api/v1/agents/", processAgentData(data));
 
 export const listAgents = (
   clientId: string,
@@ -57,8 +72,11 @@ export const getAgent = (agentId: string, clientId: string) =>
     headers: { "x-client-id": clientId },
   });
 
+export const getSharedAgent = (agentId: string) =>
+  api.get<Agent>(`/api/v1/agents/${agentId}/shared`);
+
 export const updateAgent = (agentId: string, data: Partial<AgentCreate>) =>
-  api.put<Agent>(`/api/v1/agents/${agentId}`, data);
+  api.put<Agent>(`/api/v1/agents/${agentId}`, processAgentData(data));
 
 export const deleteAgent = (agentId: string) =>
   api.delete(`/api/v1/agents/${agentId}`);
@@ -142,6 +160,11 @@ export const assignAgentToFolder = (
     }
   );
 };
+
+export const shareAgent = (agentId: string, clientId: string) => 
+  api.post<{ api_key: string }>(`/api/v1/agents/${agentId}/share`, {}, {
+    headers: { "x-client-id": clientId },
+  });
 
 // API Key Interfaces and Services
 

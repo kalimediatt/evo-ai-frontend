@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/dialogs/MCPDialog.tsx                                    │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -63,6 +63,7 @@ interface MCPDialogProps {
   selectedMCP?: MCPServer | null;
   initialEnvs?: Record<string, string>;
   initialTools?: string[];
+  clientId: string;
 }
 
 export function MCPDialog({
@@ -73,6 +74,7 @@ export function MCPDialog({
   selectedMCP: initialSelectedMCP = null,
   initialEnvs = {},
   initialTools = [],
+  clientId,
 }: MCPDialogProps) {
   const [selectedMCP, setSelectedMCP] = useState<MCPServer | null>(null);
   const [mcpEnvs, setMcpEnvs] = useState<Record<string, string>>({});

@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/forms/BasicInfoTab.tsx                                    │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -36,6 +36,7 @@ import { Agent, AgentType } from "@/types/agent";
 import { ApiKey } from "@/services/agentService";
 import { A2AAgentConfig } from "../config/A2AAgentConfig";
 import { LLMAgentConfig } from "../config/LLMAgentConfig";
+import { sanitizeAgentName } from "@/lib/utils";
 
 interface ModelOption {
   value: string;
@@ -49,6 +50,7 @@ interface BasicInfoTabProps {
   apiKeys: ApiKey[];
   availableModels: ModelOption[];
   onOpenApiKeysDialog: () => void;
+  clientId: string;
 }
 
 export function BasicInfoTab({
@@ -58,6 +60,13 @@ export function BasicInfoTab({
   availableModels,
   onOpenApiKeysDialog,
 }: BasicInfoTabProps) {
+  const handleNameBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const sanitizedName = sanitizeAgentName(e.target.value);
+    if (sanitizedName !== e.target.value) {
+      onChange({ ...values, name: sanitizedName });
+    }
+  };
+
   const handleTypeChange = (type: AgentType) => {
     let newValues: Partial<Agent> = { ...values, type };
 
@@ -152,6 +161,7 @@ export function BasicInfoTab({
           id="name"
           value={values.name || ""}
           onChange={(e) => onChange({ ...values, name: e.target.value })}
+          onBlur={handleNameBlur}
           className="col-span-3 bg-[#222] border-[#444] text-white"
         />
       </div>

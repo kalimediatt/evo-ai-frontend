@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/dialogs/AgentToolDialog.tsx                               │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -48,6 +48,7 @@ interface AgentToolDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (tool: { id: string; envs: Record<string, string> }) => void;
   agents: Agent[];
+  clientId: string;
 }
 
 export function AgentToolDialog({
@@ -55,6 +56,7 @@ export function AgentToolDialog({
   onOpenChange,
   onSave,
   agents,
+  clientId,
 }: AgentToolDialogProps) {
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
   const [search, setSearch] = useState("");

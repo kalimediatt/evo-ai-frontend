@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/forms/SubAgentsTab.tsx                                    │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -38,6 +38,7 @@ interface SubAgentsTabProps {
   agents: Agent[];
   getAgentNameById: (id: string) => string;
   editingAgentId?: string;
+  clientId: string;
 }
 
 export function SubAgentsTab({
@@ -46,6 +47,7 @@ export function SubAgentsTab({
   agents,
   getAgentNameById,
   editingAgentId,
+  clientId,
 }: SubAgentsTabProps) {
   const handleAddSubAgent = (agentId: string) => {
     if (!values.config?.sub_agents?.includes(agentId)) {

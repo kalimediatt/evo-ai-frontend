@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/forms/AgentForm.tsx                                       │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -69,6 +69,7 @@ interface AgentFormProps {
   onSave: (values: Partial<Agent>) => Promise<void>;
   isLoading?: boolean;
   getAgentNameById: (id: string) => string;
+  clientId: string;
 }
 
 export function AgentForm({
@@ -85,6 +86,7 @@ export function AgentForm({
   onSave,
   isLoading = false,
   getAgentNameById,
+  clientId,
 }: AgentFormProps) {
   const [values, setValues] = useState<Partial<Agent>>(initialValues);
   const [activeTab, setActiveTab] = useState("basic");
@@ -186,7 +188,13 @@ export function AgentForm({
   };
 
   const handleSave = async () => {
-    await onSave(values);
+    const finalValues = {
+      ...values,
+      client_id: clientId,
+      name: values.name,
+    };
+
+    await onSave(finalValues);
   };
 
   return (
@@ -238,6 +246,7 @@ export function AgentForm({
                   apiKeys={apiKeys}
                   availableModels={availableModels}
                   onOpenApiKeysDialog={onOpenApiKeysDialog}
+                  clientId={clientId}
                 />
               </TabsContent>
 
@@ -257,6 +266,7 @@ export function AgentForm({
                   onRemoveCustomMCP={handleRemoveCustomMCP}
                   onOpenMCPDialog={handleOpenMCPDialog}
                   onOpenCustomMCPDialog={handleOpenCustomMCPDialog}
+                  clientId={clientId}
                 />
               </TabsContent>
 
@@ -267,6 +277,7 @@ export function AgentForm({
                   agents={agents}
                   getAgentNameById={getAgentNameById}
                   editingAgentId={initialValues.id}
+                  clientId={clientId}
                 />
               </TabsContent>
             </ScrollArea>
@@ -305,6 +316,7 @@ export function AgentForm({
         }
         initialEnvs={selectedMCP?.envs || {}}
         initialTools={selectedMCP?.tools || []}
+        clientId={clientId}
       />
 
       {/* Custom MCP Dialog */}
@@ -313,6 +325,7 @@ export function AgentForm({
         onOpenChange={setCustomMcpDialogOpen}
         onSave={handleSaveCustomMCP}
         initialCustomMCP={selectedCustomMCP}
+        clientId={clientId}
       />
     </>
   );

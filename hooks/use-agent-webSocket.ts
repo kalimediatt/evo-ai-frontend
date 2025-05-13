@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /hooks/use-agent-webSocket.ts                                         │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -31,7 +31,8 @@ import { useEffect, useRef, useCallback, useState } from "react";
 interface UseAgentWebSocketProps {
     agentId: string;
     externalId: string;
-    jwt: string;
+    jwt?: string;
+    apiKey?: string;
     onEvent: (event: any) => void;
     onTurnComplete?: () => void;
 }
@@ -40,6 +41,7 @@ export function useAgentWebSocket({
     agentId,
     externalId,
     jwt,
+    apiKey,
     onEvent,
     onTurnComplete,
 }: UseAgentWebSocketProps) {
@@ -47,7 +49,7 @@ export function useAgentWebSocket({
     const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 
     const openWebSocket = useCallback(() => {
-        if (!agentId || !externalId || !jwt) {
+        if (!agentId || !externalId || (!jwt && !apiKey)) {
             return;
         }
         const wsUrl = `${process.env.NEXT_PUBLIC_API_URL?.replace("http", "ws").replace("https", "wss")}/api/v1/chat/ws/${agentId}/${externalId}`;
@@ -55,12 +57,23 @@ export function useAgentWebSocket({
         wsRef.current = ws;
 
         ws.onopen = () => {
-            ws.send(
-                JSON.stringify({
-                    type: "authorization",
-                    token: jwt,
-                })
-            );
+            // Autenticação com JWT ou API key
+            if (apiKey) {
+                ws.send(
+                    JSON.stringify({
+                        type: "authorization",
+                        api_key: apiKey,
+                    })
+                );
+            } else if (jwt) {
+                ws.send(
+                    JSON.stringify({
+                        type: "authorization",
+                        token: jwt,
+                    })
+                );
+            }
+
             if (pendingMessage) {
                 ws.send(JSON.stringify({ message: pendingMessage }));
                 setPendingMessage(null);
@@ -96,7 +109,7 @@ export function useAgentWebSocket({
         ws.onclose = (event) => {
             console.warn("[WebSocket] connection closed:", event);
         };
-    }, [agentId, externalId, jwt, onEvent, onTurnComplete, pendingMessage]);
+    }, [agentId, externalId, jwt, apiKey, onEvent, onTurnComplete, pendingMessage]);
 
     useEffect(() => {
         openWebSocket();

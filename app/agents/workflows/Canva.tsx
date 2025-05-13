@@ -1,7 +1,7 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: A2AAgentConfig.tsx                                                    │
+│ @file: /app/agents/workflows/Canva.tsx                                       │
 │ Developed by: Davidson Gomes                                                 │
 │ Creation date: May 13, 2025                                                  │
 │ Contact: contato@evolution-api.com                                           │
@@ -63,7 +63,7 @@ import { AgentForm } from "./nodes/components/agent/AgentForm";
 import { ConditionForm } from "./nodes/components/condition/ConditionForm";
 import { Agent, WorkflowData } from "@/types/agent";
 import { updateAgent } from "@/services/agentService";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { MessageForm } from "./nodes/components/message/MessageForm";
 
 const proOptions: ProOptions = { account: "paid-pro", hideAttribution: true };
