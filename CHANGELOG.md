@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Add example environment file and update .gitignore
+- Add clientId prop to agent-related components and improve agent data processing
 
 ## [0.0.5] - 2025-05-13
 
