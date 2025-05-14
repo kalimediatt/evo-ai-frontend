@@ -118,6 +118,7 @@ export function AgentCard({
       { value: "parallel", label: "Parallel Agent" },
       { value: "loop", label: "Loop Agent" },
       { value: "workflow", label: "Workflow Agent" },
+      { value: "crew_ai", label: "CrewAI Agent" },
     ];
     return agentTypes.find((t) => t.value === type)?.label || type;
   };

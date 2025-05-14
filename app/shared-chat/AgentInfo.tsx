@@ -47,6 +47,7 @@ import {
   GitBranch,
   RefreshCw,
   Key,
+  Users,
 } from "lucide-react";
 import { Agent, AgentType } from "@/types/agent";
 import {
@@ -81,6 +82,7 @@ export function AgentInfo({ agent, apiKey }: AgentInfoProps) {
       parallel: { label: "Parallel Agent", icon: GitBranch, color: "#8b5cf6" },
       loop: { label: "Loop Agent", icon: RefreshCw, color: "#ec4899" },
       workflow: { label: "Workflow Agent", icon: Workflow, color: "#14b8a6" },
+      crew_ai: { label: "CrewAI Agent", icon: Users, color: "#00cc7d" },
     };
 
     return (
@@ -186,9 +188,7 @@ export function AgentInfo({ agent, apiKey }: AgentInfoProps) {
 
               {getTotalTools() > 0 && (
                 <div className="bg-[#141414] rounded p-3 flex flex-col justify-between">
-                  <span className="text-xs text-gray-500 mb-1">
-                    Tools
-                  </span>
+                  <span className="text-xs text-gray-500 mb-1">Tools</span>
                   <div className="flex items-center gap-2">
                     <Code className="h-3.5 w-3.5 text-emerald-400" />
                     <span className="text-sm text-white">
@@ -200,9 +200,7 @@ export function AgentInfo({ agent, apiKey }: AgentInfoProps) {
 
               {getSubAgents() > 0 && (
                 <div className="bg-[#141414] rounded p-3 flex flex-col justify-between">
-                  <span className="text-xs text-gray-500 mb-1">
-                    Sub-agents
-                  </span>
+                  <span className="text-xs text-gray-500 mb-1">Sub-agents</span>
                   <div className="flex items-center gap-2">
                     <Tag className="h-3.5 w-3.5 text-emerald-400" />
                     <span className="text-sm text-white">{getSubAgents()}</span>
@@ -255,7 +253,8 @@ export function AgentInfo({ agent, apiKey }: AgentInfoProps) {
             </div>
 
             <p className="text-xs text-gray-500 mt-2">
-              This is a shared API key. Be careful when sharing it with third parties.
+              This is a shared API key. Be careful when sharing it with third
+              parties.
             </p>
           </div>
         </div>

@@ -141,7 +141,8 @@ export function SubAgentsTab({
                      agent.type === "sequential" ? "Sequential Agent" :
                      agent.type === "parallel" ? "Parallel Agent" :
                      agent.type === "loop" ? "Loop Agent" :
-                     agent.type === "workflow" ? "Workflow Agent" : agent.type}
+                     agent.type === "workflow" ? "Workflow Agent" :
+                     agent.type === "crew_ai" ? "CrewAI Agent" : agent.type}
                   </Badge>
                 </div>
                 <Button

@@ -134,6 +134,8 @@ function MessageForm({
       sequential: "Sequential Agent",
       parallel: "Parallel Agent",
       loop: "Loop Agent",
+      workflow: "Workflow Agent",
+      crew_ai: "CrewAI Agent",
     };
     return agentTypes[type] || type;
   };
