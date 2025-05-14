@@ -85,9 +85,9 @@ export function AgentChatMessageList({
   return (
     <div 
       ref={messagesContainerRef} 
-      className="flex-1 overflow-y-auto pr-2"
+      className="flex-1 overflow-y-auto overflow-x-hidden pr-2"
     >
-      <div className="space-y-4 w-full max-w-full pb-4" style={{ minHeight: "100%" }}>
+      <div className="space-y-4 w-full max-w-full pb-4 flex flex-col" style={{ minHeight: "100%" }}>
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-center text-gray-400">
             <p>No messages yet. Start typing below.</p>
@@ -99,15 +99,17 @@ export function AgentChatMessageList({
             const isExpanded = expandedFunctions[message.id] || false;
             
             return (
-              <ChatMessageType
-                key={message.id}
-                message={message}
-                agentColor={agentColor}
-                isExpanded={isExpanded}
-                toggleExpansion={toggleFunctionExpansion}
-                containsMarkdown={containsMarkdown}
-                messageContent={messageContent}
-              />
+              <div key={message.id} className="w-full max-w-full overflow-hidden">
+                <ChatMessageType
+                  key={message.id}
+                  message={message}
+                  agentColor={agentColor}
+                  isExpanded={isExpanded}
+                  toggleExpansion={toggleFunctionExpansion}
+                  containsMarkdown={containsMarkdown}
+                  messageContent={messageContent}
+                />
+              </div>
             );
           })
         )}

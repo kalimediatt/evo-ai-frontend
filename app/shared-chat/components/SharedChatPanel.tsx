@@ -115,7 +115,7 @@ export function SharedChatPanel({
       >
         <ScrollArea
           ref={messagesContainerRef}
-          className="h-full pr-4"
+          className="h-full pr-4 overflow-x-hidden"
         >
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6">

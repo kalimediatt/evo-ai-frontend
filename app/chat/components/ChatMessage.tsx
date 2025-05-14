@@ -30,9 +30,10 @@
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ChatMessage as ChatMessageType } from "@/services/sessionService";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useState } from "react";
 
 interface FunctionMessageContent {
   title: string;
@@ -57,6 +58,8 @@ export function ChatMessage({
   containsMarkdown,
   messageContent,
 }: ChatMessageProps) {
+  const [isCopied, setIsCopied] = useState(false);
+  
   const isUser = message.author === "user";
   const hasFunctionCall = message.content.parts.some(
     (part) => part.functionCall || part.function_call
@@ -65,14 +68,35 @@ export function ChatMessage({
     (part) => part.functionResponse || part.function_response
   );
   const isFunctionMessage = hasFunctionCall || hasFunctionResponse;
+  const isTaskExecutor = typeof messageContent === "object" && 
+    "author" in messageContent && 
+    typeof messageContent.author === "string" && 
+    messageContent.author.endsWith("- Task executor");
+
+  const copyToClipboard = () => {
+    const textToCopy = typeof messageContent === "string" 
+      ? messageContent 
+      : messageContent.content;
+    
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    });
+  };
 
   return (
     <div
       key={message.id}
-      className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}
+      className="flex w-full"
+      style={{ 
+        justifyContent: isUser ? "flex-end" : "flex-start" 
+      }}
     >
       <div
-        className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""} max-w-[90%]`}
+        className="flex gap-3 max-w-[90%]"
+        style={{ 
+          flexDirection: isUser ? "row-reverse" : "row"
+        }}
       >
         <Avatar className={isUser ? "bg-[#333]" : agentColor}>
           <AvatarFallback>
@@ -81,15 +105,19 @@ export function ChatMessage({
         </Avatar>
         <div
           className={`rounded-lg p-3 ${
-            isFunctionMessage
+            isFunctionMessage || isTaskExecutor
               ? "bg-[#333] text-[#00ff9d] font-mono text-sm"
               : isUser
               ? "bg-[#00ff9d] text-black"
               : "bg-[#222] text-white"
-          } w-full overflow-hidden`}
-          style={{ wordBreak: "break-word" }}
+          } overflow-hidden relative group`}
+          style={{ 
+            wordBreak: "break-word", 
+            maxWidth: "calc(100% - 3rem)",
+            width: "100%"
+          }}
         >
-          {isFunctionMessage ? (
+          {isFunctionMessage || isTaskExecutor ? (
             <div className="w-full">
               <div
                 className="flex items-center gap-2 cursor-pointer hover:bg-[#444] rounded px-1 py-0.5 transition-colors"
@@ -110,33 +138,56 @@ export function ChatMessage({
                       </div>
                     </>
                   )}
+                {isTaskExecutor && (
+                  <>
+                    <div className="flex-1 font-semibold">
+                      Task Execution
+                    </div>
+                    <div className="flex items-center justify-center w-5 h-5 text-[#00ff9d]">
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
-              {isExpanded &&
-                typeof messageContent === "object" &&
-                "content" in messageContent && (
-                  <div className="mt-2 pt-2 border-t border-[#555]">
-                    <pre className="whitespace-pre-wrap break-all overflow-hidden text-xs">
-                      {(messageContent as FunctionMessageContent).content}
-                    </pre>
-                  </div>
-                )}
+              {isExpanded && (
+                <div className="mt-2 pt-2 border-t border-[#555]">
+                  {typeof messageContent === "object" &&
+                    "content" in messageContent && (
+                      <div className="max-w-full overflow-x-auto">
+                        <pre className="whitespace-pre-wrap text-xs max-w-full" style={{ 
+                          wordWrap: "break-word", 
+                          maxWidth: "100%",
+                          wordBreak: "break-all" 
+                        }}>
+                          {(messageContent as FunctionMessageContent).content}
+                        </pre>
+                      </div>
+                    )}
+                </div>
+              )}
             </div>
           ) : (
-            <div className="markdown-content break-words">
+            <div className="markdown-content break-words max-w-full overflow-x-auto">
               {typeof messageContent === "object" &&
                 "author" in messageContent &&
-                messageContent.author !== "user" && (
+                messageContent.author !== "user" &&
+                !isTaskExecutor && (
                   <div className="text-xs text-gray-400 mb-1">
                     {messageContent.author}
                   </div>
                 )}
-              {(typeof messageContent === "string" &&
+              {((typeof messageContent === "string" &&
                 containsMarkdown(messageContent)) ||
               (typeof messageContent === "object" &&
                 "content" in messageContent &&
                 typeof messageContent.content === "string" &&
-                containsMarkdown(messageContent.content)) ? (
+                containsMarkdown(messageContent.content))) &&
+              !isTaskExecutor ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -199,21 +250,39 @@ export function ChatMessage({
                       }
 
                       return (
-                        <pre className="bg-[#2a2a2a] p-3 rounded-md my-3 overflow-x-auto">
-                          <code
-                            className="text-[#00ff9d] font-mono text-sm"
-                            {...props}
-                          >
-                            {children}
-                          </code>
-                        </pre>
+                        <div className="max-w-full overflow-x-auto">
+                          <pre className="bg-[#2a2a2a] p-3 rounded-md my-3 max-w-full" style={{ 
+                            maxWidth: "100%", 
+                            wordWrap: "break-word", 
+                            wordBreak: "break-all"
+                          }}>
+                            <code
+                              className="text-[#00ff9d] font-mono text-sm"
+                              style={{ 
+                                maxWidth: "100%", 
+                                whiteSpace: "pre-wrap",
+                                wordBreak: "break-all"
+                              }}
+                              {...props}
+                            >
+                              {children}
+                            </code>
+                          </pre>
+                        </div>
                       );
                     },
                     pre: ({ ...props }) => (
-                      <pre
-                        className="bg-[#2a2a2a] p-0 rounded-md my-3 overflow-x-auto font-mono text-sm"
-                        {...props}
-                      />
+                      <div className="max-w-full overflow-x-auto">
+                        <pre
+                          className="bg-[#2a2a2a] p-0 rounded-md my-3 max-w-full font-mono text-sm"
+                          style={{ 
+                            maxWidth: "100%", 
+                            wordWrap: "break-word",
+                            wordBreak: "break-all"
+                          }}
+                          {...props}
+                        />
+                      </div>
                     ),
                     table: ({ ...props }) => (
                       <div className="overflow-x-auto my-3 rounded border border-[#444]">
@@ -269,6 +338,18 @@ export function ChatMessage({
               )}
             </div>
           )}
+          
+          <button 
+            onClick={copyToClipboard}
+            className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-40 p-1 rounded-md hover:bg-opacity-60"
+            title="Copiar mensagem original"
+          >
+            {isCopied ? (
+              <Check className="h-4 w-4 text-green-500" />
+            ) : (
+              <Copy className="h-4 w-4 text-white" />
+            )}
+          </button>
         </div>
       </div>
     </div>

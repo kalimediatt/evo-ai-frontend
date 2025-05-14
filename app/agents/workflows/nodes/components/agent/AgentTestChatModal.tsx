@@ -209,7 +209,7 @@ export function AgentTestChatModal({ open, onOpenChange, agent }: AgentTestChatM
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-[#1a1a1a] border-[#333] text-white max-w-3xl w-full">
+            <DialogContent className="bg-[#1a1a1a] border-[#333] text-white max-w-3xl w-full overflow-hidden">
                 <DialogHeader>
                     <DialogTitle>Test Agent: {agent.name}</DialogTitle>
                 </DialogHeader>
@@ -221,14 +221,16 @@ export function AgentTestChatModal({ open, onOpenChange, agent }: AgentTestChatM
                         <span className="text-xs text-gray-400">{agent.model}</span>
                     </div>
                     
-                    <AgentChatMessageList
-                      messages={messages}
-                      agent={agent}
-                      expandedFunctions={expandedFunctions}
-                      toggleFunctionExpansion={toggleFunctionExpansion}
-                      getMessageText={getMessageText}
-                      containsMarkdown={containsMarkdown}
-                    />
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2">
+                        <AgentChatMessageList
+                          messages={messages}
+                          agent={agent}
+                          expandedFunctions={expandedFunctions}
+                          toggleFunctionExpansion={toggleFunctionExpansion}
+                          getMessageText={getMessageText}
+                          containsMarkdown={containsMarkdown}
+                        />
+                    </div>
                     
                     <div className="p-2 border-t border-[#333] bg-[#1a1a1a] mt-2">
                         <ChatInput
@@ -238,9 +240,6 @@ export function AgentTestChatModal({ open, onOpenChange, agent }: AgentTestChatM
                         />
                     </div>
                 </div>
-                <DialogFooter>
-                    <Button onClick={() => onOpenChange(false)} variant="outline" className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] mt-2">Close</Button>
-                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
