@@ -130,7 +130,7 @@ export function BasicInfoTab({
           },
         },
       };
-    } else if (type === "crew_ai") {
+    } else if (type === "task") {
       newValues = {
         ...newValues,
         model: undefined,

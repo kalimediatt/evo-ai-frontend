@@ -75,9 +75,7 @@ export function SubAgentsTab({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-white">
-          Sub-Agents
-        </h3>
+        <h3 className="text-lg font-medium text-white">Sub-Agents</h3>
         <div className="text-sm text-gray-400">
           {values.config?.sub_agents?.length || 0} sub-agents selected
         </div>
@@ -129,40 +127,40 @@ export function SubAgentsTab({
                 className="flex items-center justify-between p-2 hover:bg-[#2a2a2a] rounded-md"
               >
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-white">
-                    {agent.name}
-                  </span>
+                  <span className="font-medium text-white">{agent.name}</span>
                   <Badge
                     variant="outline"
                     className="ml-2 border-[#444] text-[#00ff9d]"
                   >
-                    {agent.type === "llm" ? "LLM Agent" : 
-                     agent.type === "a2a" ? "A2A Agent" :
-                     agent.type === "sequential" ? "Sequential Agent" :
-                     agent.type === "parallel" ? "Parallel Agent" :
-                     agent.type === "loop" ? "Loop Agent" :
-                     agent.type === "workflow" ? "Workflow Agent" :
-                     agent.type === "crew_ai" ? "CrewAI Agent" : agent.type}
+                    {agent.type === "llm"
+                      ? "LLM Agent"
+                      : agent.type === "a2a"
+                      ? "A2A Agent"
+                      : agent.type === "sequential"
+                      ? "Sequential Agent"
+                      : agent.type === "parallel"
+                      ? "Parallel Agent"
+                      : agent.type === "loop"
+                      ? "Loop Agent"
+                      : agent.type === "workflow"
+                      ? "Workflow Agent"
+                      : agent.type === "task"
+                      ? "Task Agent"
+                      : agent.type}
                   </Badge>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleAddSubAgent(agent.id)}
-                  disabled={values.config?.sub_agents?.includes(
-                    agent.id
-                  )}
+                  disabled={values.config?.sub_agents?.includes(agent.id)}
                   className={
-                    values.config?.sub_agents?.includes(
-                      agent.id
-                    )
+                    values.config?.sub_agents?.includes(agent.id)
                       ? "text-gray-500 bg-[#222] hover:bg-[#333]"
                       : "text-[#00ff9d] hover:bg-[#333] bg-[#222]"
                   }
                 >
-                  {values.config?.sub_agents?.includes(
-                    agent.id
-                  )
+                  {values.config?.sub_agents?.includes(agent.id)
                     ? "Added"
                     : "Add"}
                 </Button>

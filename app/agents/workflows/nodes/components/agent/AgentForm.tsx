@@ -213,7 +213,7 @@ function AgentForm({
       parallel: "Parallel Agent",
       loop: "Loop Agent",
       workflow: "Workflow Agent",
-      crew_ai: "CrewAI Agent",
+      task: "Task Agent",
     };
     return agentTypes[type] || type;
   };

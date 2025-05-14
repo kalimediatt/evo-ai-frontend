@@ -33,7 +33,7 @@ export type AgentType =
   | "parallel"
   | "loop"
   | "workflow"
-  | "crew_ai";
+  | "task";
 
 export interface ToolConfig {
   id: string;
@@ -94,6 +94,7 @@ export interface TaskConfig {
   agent_id: string;
   description: string;
   expected_output: string;
+  enabled_tools?: string[];
 }
 
 export interface AgentConfig {
@@ -113,8 +114,8 @@ export interface AgentConfig {
 
   // Workflow config
   workflow?: WorkflowData;
-  
-  // Crew AI config
+
+  // Task config
   tasks?: TaskConfig[];
 }
 

@@ -48,6 +48,7 @@ import {
   RefreshCw,
   Key,
   Users,
+  BookOpenCheck,
 } from "lucide-react";
 import { Agent, AgentType } from "@/types/agent";
 import {
@@ -82,7 +83,7 @@ export function AgentInfo({ agent, apiKey }: AgentInfoProps) {
       parallel: { label: "Parallel Agent", icon: GitBranch, color: "#8b5cf6" },
       loop: { label: "Loop Agent", icon: RefreshCw, color: "#ec4899" },
       workflow: { label: "Workflow Agent", icon: Workflow, color: "#14b8a6" },
-      crew_ai: { label: "CrewAI Agent", icon: Users, color: "#00cc7d" },
+      task: { label: "Task Agent", icon: BookOpenCheck, color: "#00cc7d" },
     };
 
     return (
