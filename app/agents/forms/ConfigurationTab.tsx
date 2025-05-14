@@ -38,6 +38,7 @@ import { SequentialAgentConfig } from "../config/SequentialAgentConfig";
 import { ApiKey } from "@/services/agentService";
 import { LoopAgentConfig } from "../config/LoopAgentConfig copy";
 import { A2AAgentConfig } from "../config/A2AAgentConfig";
+import { CrewAIConfig } from "../config/CrewAIConfig";
 import { useState } from "react";
 import { MCPDialog } from "../dialogs/MCPDialog";
 import { CustomMCPDialog } from "../dialogs/CustomMCPDialog";
@@ -612,6 +613,20 @@ export function ConfigurationTab({
       <div className="space-y-4">
         {apiKeyField}
         <LoopAgentConfig
+          values={values}
+          onChange={onChange}
+          agents={agents}
+          getAgentNameById={getAgentNameById}
+        />
+      </div>
+    );
+  }
+
+  if (values.type === "crew_ai") {
+    return (
+      <div className="space-y-4">
+        {apiKeyField}
+        <CrewAIConfig
           values={values}
           onChange={onChange}
           agents={agents}

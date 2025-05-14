@@ -32,7 +32,8 @@ export type AgentType =
   | "sequential"
   | "parallel"
   | "loop"
-  | "workflow";
+  | "workflow"
+  | "crew_ai";
 
 export interface ToolConfig {
   id: string;
@@ -89,6 +90,12 @@ export interface WorkflowData {
   edges: any[];
 }
 
+export interface TaskConfig {
+  agent_id: string;
+  description: string;
+  expected_output: string;
+}
+
 export interface AgentConfig {
   // LLM config
   api_key?: string;
@@ -103,10 +110,12 @@ export interface AgentConfig {
 
   // Loop config
   max_iterations?: number;
-  condition?: string;
 
   // Workflow config
   workflow?: WorkflowData;
+  
+  // Crew AI config
+  tasks?: TaskConfig[];
 }
 
 export interface Agent {
@@ -115,12 +124,15 @@ export interface Agent {
   folder_id?: string;
   name: string;
   description?: string;
+  role?: string;
+  goal?: string;
   type: AgentType;
   model?: string;
   api_key_id?: string;
   instruction?: string;
   agent_card_url?: string;
   config?: AgentConfig;
+  tasks?: TaskConfig[];
   created_at: string;
   updated_at?: string;
 }
@@ -129,6 +141,8 @@ export interface AgentCreate {
   client_id: string;
   name: string;
   description?: string;
+  role?: string;
+  goal?: string;
   type: AgentType;
   model?: string;
   api_key_id?: string;
