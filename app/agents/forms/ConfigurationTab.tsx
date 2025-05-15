@@ -32,7 +32,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Agent } from "@/types/agent";
 import { MCPServer } from "@/types/mcpServer";
-import { Check, Copy, Eye, EyeOff, Plus, Server, Settings, X } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Eye,
+  EyeOff,
+  Plus,
+  Server,
+  Settings,
+  X,
+} from "lucide-react";
 import { ParallelAgentConfig } from "../config/ParallelAgentConfig";
 import { SequentialAgentConfig } from "../config/SequentialAgentConfig";
 import { ApiKey } from "@/services/agentService";
@@ -86,6 +95,7 @@ export function ConfigurationTab({
   const [editingCustomTool, setEditingCustomTool] = useState<any>(null);
   const [showApiKey, setShowApiKey] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedCardUrl, setCopiedCardUrl] = useState(false);
   const { toast } = useToast();
 
   const handleAddAgentTool = (tool: { id: string }) => {
@@ -166,55 +176,115 @@ export function ConfigurationTab({
 
   const apiKeyField = (
     <div className="space-y-2 mb-4">
-      <h3 className="text-lg font-medium text-white">API Key</h3>
-      <div className="border border-[#444] rounded-md p-4 bg-[#222] flex flex-col gap-2">
-        <label className="text-sm text-gray-400 mb-1" htmlFor="agent-api_key">
-          Configure the API key for this agent. This key will be used for
-          authentication with external services.
-        </label>
-        <div className="relative flex items-center">
-          <input
-            id="agent-api_key"
-            type={showApiKey ? "text" : "password"}
-            className="w-full bg-[#2a2a2a] border border-[#444] rounded-md px-3 py-2 text-white pr-24 focus:outline-none focus:ring-2 focus:ring-[#00ff9d]/40"
-            value={values.config?.api_key || ""}
-            onChange={(e) =>
-              onChange({
-                ...values,
-                config: {
-                  ...(values.config || {}),
-                  api_key: e.target.value,
-                },
-              })
-            }
-            autoComplete="off"
-          />
-          <button
-            type="button"
-            className="absolute right-9 text-gray-400 hover:text-[#00ff9d] px-1 py-1"
-            onClick={() => setShowApiKey((v) => !v)}
-            tabIndex={-1}
+      <h3 className="text-lg font-medium text-white">Credentials</h3>
+      <div className="border border-[#444] rounded-md p-4 bg-[#222] flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <label
+            className="text-sm text-gray-400 mb-1"
+            htmlFor="agent-card-url"
           >
-            {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-          <button
-            type="button"
-            className="absolute right-2 text-gray-400 hover:text-[#00ff9d] px-1 py-1"
-            onClick={async () => {
-              if (values.config?.api_key) {
-                await navigator.clipboard.writeText(values.config.api_key);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1200);
-                toast({
-                  title: "Copied!",
-                  description: "The API key has been copied to the clipboard."
-                });
+            Agent URL. This URL can be used to access the agent card externally.
+          </label>
+          <div className="relative flex items-center">
+            <input
+              id="agent-card-url"
+              type="text"
+              className="w-full bg-[#2a2a2a] border border-[#444] rounded-md px-3 py-2 text-white pr-12 focus:outline-none focus:ring-2 focus:ring-[#00ff9d]/40"
+              value={
+                values?.agent_card_url?.replace(
+                  "/.well-known/agent.json",
+                  ""
+                ) || ""
               }
-            }}
-            tabIndex={-1}
-          >
-            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          </button>
+              disabled
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              className="absolute right-2 text-gray-400 hover:text-[#00ff9d] px-1 py-1"
+              onClick={async () => {
+                if (values?.agent_card_url) {
+                  await navigator.clipboard.writeText(
+                    values.agent_card_url.replace("/.well-known/agent.json", "")
+                  );
+                  setCopiedCardUrl(true);
+                  setTimeout(() => setCopiedCardUrl(false), 1200);
+                  toast({
+                    title: "Copied!",
+                    description:
+                      "The agent URL was copied to the clipboard.",
+                  });
+                }
+              }}
+              tabIndex={-1}
+            >
+              {copiedCardUrl ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Copy className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-sm text-gray-400 mb-1" htmlFor="agent-api_key">
+            Configure the API Key for this agent. This key will be used for
+            authentication with external services.
+          </label>
+          <div className="relative flex items-center">
+            <input
+              id="agent-api_key"
+              type={showApiKey ? "text" : "password"}
+              className="w-full bg-[#2a2a2a] border border-[#444] rounded-md px-3 py-2 text-white pr-24 focus:outline-none focus:ring-2 focus:ring-[#00ff9d]/40"
+              value={values.config?.api_key || ""}
+              onChange={(e) =>
+                onChange({
+                  ...values,
+                  config: {
+                    ...(values.config || {}),
+                    api_key: e.target.value,
+                  },
+                })
+              }
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              className="absolute right-9 text-gray-400 hover:text-[#00ff9d] px-1 py-1"
+              onClick={() => setShowApiKey((v) => !v)}
+              tabIndex={-1}
+            >
+              {showApiKey ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
+            <button
+              type="button"
+              className="absolute right-2 text-gray-400 hover:text-[#00ff9d] px-1 py-1"
+              onClick={async () => {
+                if (values.config?.api_key) {
+                  await navigator.clipboard.writeText(values.config.api_key);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1200);
+                  toast({
+                    title: "Copied!",
+                    description:
+                      "The API key was copied to the clipboard.",
+                  });
+                }
+              }}
+              tabIndex={-1}
+            >
+              {copied ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Copy className="w-4 h-4" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
