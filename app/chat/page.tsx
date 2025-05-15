@@ -59,12 +59,15 @@ import {
   ChatMessage,
   deleteSession,
   ChatSession,
+  ChatPart
 } from "@/services/sessionService";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAgentWebSocket } from "@/hooks/use-agent-webSocket";
 import { getAccessTokenFromCookie } from "@/lib/utils";
 import { ChatMessage as ChatMessageComponent } from "./components/ChatMessage";
 import { SessionList } from "./components/SessionList";
+import { ChatInput } from "./components/ChatInput";
+import { FileData } from "@/lib/file-utils";
 
 interface FunctionMessageContent {
   title: string;
@@ -229,6 +232,51 @@ export default function Chat() {
     if (textarea) textarea.style.height = "auto";
   };
 
+  const handleSendMessageWithFiles = (message: string, files?: FileData[]) => {
+    if ((!message.trim() && (!files || files.length === 0)) || !currentAgentId)
+      return;
+    setIsSending(true);
+
+    const messageParts: ChatPart[] = [];
+    
+    if (message.trim()) {
+      messageParts.push({ text: message });
+    }
+    
+    if (files && files.length > 0) {
+      files.forEach(file => {
+        messageParts.push({
+          inline_data: {
+            data: file.data,
+            mime_type: file.content_type,
+            metadata: {
+              filename: file.filename
+            }
+          }
+        });
+      });
+    }
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `temp-${Date.now()}`,
+        content: {
+          parts: messageParts,
+          role: "user"
+        },
+        author: "user",
+        timestamp: Date.now() / 1000,
+      },
+    ]);
+
+    wsSendMessage(message, files);
+
+    setMessageInput("");
+    const textarea = document.querySelector("textarea");
+    if (textarea) textarea.style.height = "auto";
+  };
+
   const generateExternalId = () => {
     const now = new Date();
     return (
@@ -311,6 +359,8 @@ export default function Chat() {
       (part) => part.functionResponse || part.function_response
     );
 
+    const inlineDataParts = parts.filter((part) => part.inline_data);
+
     if (functionCallPart) {
       const funcCall =
         functionCallPart.functionCall || functionCallPart.function_call || {};
@@ -391,12 +441,7 @@ Args: ${
       } as FunctionMessageContent;
     }
 
-    try {
-      return JSON.stringify(parts, null, 2).replace(/\\n/g, "\n");
-    } catch (error) {
-      console.error("Error processing message:", error);
-      return "Unable to interpret message content";
-    }
+    return "Empty content";
   };
 
   const toggleFunctionExpansion = (messageId: string) => {
@@ -475,7 +520,8 @@ Args: ${
 
   const agentId = useMemo(() => currentAgentId || "", [currentAgentId]);
   const externalId = useMemo(
-    () => (selectedSession ? getExternalId(selectedSession) : generateExternalId()),
+    () =>
+      selectedSession ? getExternalId(selectedSession) : generateExternalId(),
     [selectedSession]
   );
 
@@ -489,7 +535,7 @@ Args: ${
 
   return (
     <div className="flex h-screen max-h-screen bg-[#121212]">
-      <SessionList 
+      <SessionList
         sessions={sessions}
         agents={agents}
         selectedSession={selectedSession}
@@ -516,7 +562,9 @@ Args: ${
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
                       <MessageSquare className="h-5 w-5 text-[#00ff9d]" />
                       {selectedSession
-                        ? `Session ${sessionInfo?.externalId || selectedSession}`
+                        ? `Session ${
+                            sessionInfo?.externalId || selectedSession
+                          }`
                         : "New Conversation"}
                     </h2>
 
@@ -553,9 +601,7 @@ Args: ${
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-center text-gray-400">
-                  <p>
-                    No messages in this conversation. Start typing below.
-                  </p>
+                  <p>No messages in this conversation. Start typing below.</p>
                 </div>
               ) : (
                 <div className="space-y-4 w-full max-w-full">
@@ -573,6 +619,7 @@ Args: ${
                         toggleExpansion={toggleFunctionExpansion}
                         containsMarkdown={containsMarkdown}
                         messageContent={messageContent}
+                        sessionId={selectedSession as string}
                       />
                     );
                   })}
@@ -606,33 +653,11 @@ Args: ${
             </div>
 
             <div className="p-4 border-t border-[#333] bg-[#1a1a1a]">
-              <form onSubmit={handleSendMessage} className="flex w-full gap-2">
-                <Textarea
-                  value={messageInput}
-                  onChange={autoResizeTextarea}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type your message..."
-                  className="flex-1 bg-[#222] border-[#444] text-white focus-visible:ring-[#00ff9d] min-h-[40px] max-h-[240px] resize-none"
-                  disabled={isSending || isLoading}
-                  rows={1}
-                />
-                <Button
-                  type="submit"
-                  disabled={
-                    isSending ||
-                    isLoading ||
-                    !messageInput.trim() ||
-                    !currentAgentId
-                  }
-                  className="bg-[#00ff9d] text-black hover:bg-[#00cc7d]"
-                >
-                  {isSending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
-              </form>
+              <ChatInput
+                onSendMessage={handleSendMessageWithFiles}
+                isLoading={isSending || isLoading}
+                placeholder="Type your message..."
+              />
             </div>
           </>
         ) : (
@@ -758,8 +783,8 @@ Args: ${
               Delete Session
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Are you sure you want to delete this session? This action cannot be
-              undone.
+              Are you sure you want to delete this session? This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
 

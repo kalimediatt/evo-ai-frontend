@@ -1,9 +1,9 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: /services/sessionService.ts                                           │
+│ @file: /lib/file-utils.ts                                                    │
 │ Developed by: Davidson Gomes                                                 │
-│ Creation date: May 13, 2025                                                  │
+│ Creation date: August 24, 2025                                               │
 │ Contact: contato@evolution-api.com                                           │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ @copyright © Evolution API 2025. All rights reserved.                        │
@@ -26,117 +26,85 @@
 │ who changed it and the date of modification.                                 │
 └──────────────────────────────────────────────────────────────────────────────┘
 */
-import api from "./api";
 
-export interface ChatSession {
-  id: string;
-  app_name: string;
-  user_id: string;
-  state: Record<string, any>;
-  events: any[];
-  last_update_time: number;
-  update_time: string;
-  create_time: string;
-  created_at: string;
-  agent_id: string;
-  client_id: string;
-}
-
-export interface ChatPart {
-  text?: string;
-  functionCall?: any;
-  function_call?: any;
-  functionResponse?: any;
-  function_response?: any;
-  inline_data?: {
-    data: string;
-    mime_type: string;
-    metadata?: {
-      filename?: string;
-      [key: string]: any;
-    };
-    fileId?: string;
-  };
-  videoMetadata?: any;
-  thought?: any;
-  codeExecutionResult?: any;
-  executableCode?: any;
-  file_data?: {
-    filename?: string;
-    fileId?: string;
-    [key: string]: any;
-  };
-}
-
-export interface AttachedFile {
+export interface FileData {
   filename: string;
   content_type: string;
-  data?: string;
-  size?: number;
-}
-
-export interface InlineData {
-  type: string;
   data: string;
+  size: number;
+  preview_url?: string;
 }
 
-export interface ChatMessage {
-  id: string;
-  content: {
-    parts: ChatPart[];
-    role: string;
-    inlineData?: InlineData[];
-    files?: AttachedFile[];
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      const base64Data = base64.split(',')[1];
+      resolve(base64Data);
+    };
+    reader.onerror = error => reject(error);
+  });
+}
+
+export async function fileToFileData(file: File): Promise<FileData> {
+  const base64Data = await fileToBase64(file);
+  const previewUrl = URL.createObjectURL(file);
+  
+  return {
+    filename: file.name,
+    content_type: file.type,
+    data: base64Data,
+    size: file.size,
+    preview_url: previewUrl
   };
-  author: string;
-  timestamp: number;
-  [key: string]: any;
 }
 
-export const generateExternalId = () => {
-  const now = new Date();
-  return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(
-    2,
-    "0"
-  )}${String(now.getMinutes()).padStart(2, "0")}${String(
-    now.getSeconds()
-  ).padStart(2, "0")}`;
-};
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) {
+    return '0 Bytes';
+  }
+  
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  
+  return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
+}
 
-export const listSessions = (clientId: string) =>
-  api.get<ChatSession[]>(`/api/v1/sessions/client/${clientId}`);
+export function isImageFile(mimeType: string): boolean {
+  return mimeType.startsWith('image/');
+}
 
-export const getSessionMessages = (sessionId: string) =>
-  api.get<ChatMessage[]>(`/api/v1/sessions/${sessionId}/messages`);
+export function isPdfFile(mimeType: string): boolean {
+  return mimeType === 'application/pdf';
+}
 
-export const createSession = (clientId: string, agentId: string) => {
-  const externalId = generateExternalId();
-  const sessionId = `${externalId}_${agentId}`;
-
-  return api.post<ChatSession>(`/api/v1/sessions/`, {
-    id: sessionId,
-    client_id: clientId,
-    agent_id: agentId,
-  });
-};
-
-export const deleteSession = (sessionId: string) => {
-  return api.delete<ChatSession>(`/api/v1/sessions/${sessionId}`);
-};
-
-export const sendMessage = (
-  sessionId: string,
-  agentId: string,
-  message: string
-) => {
-  const externalId = sessionId.split("_")[0];
-
-  return api.post<ChatMessage>(`/api/v1/chat`, {
-    agent_id: agentId,
-    external_id: externalId,
-    message: message,
-  });
-};
+export function getFileIcon(mimeType: string): string {
+  if (isImageFile(mimeType)) {
+    return 'image';
+  }
+  if (isPdfFile(mimeType)) {
+    return 'file-text';
+  }
+  if (mimeType.includes('word')) {
+    return 'file-text';
+  }
+  if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) {
+    return 'file-spreadsheet';
+  }
+  if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) {
+    return 'file-presentation';
+  }
+  if (mimeType.includes('text/')) {
+    return 'file-text';
+  }
+  if (mimeType.includes('audio/')) {
+    return 'file-audio';
+  }
+  if (mimeType.includes('video/')) {
+    return 'file-video';
+  }
+  
+  return 'file';
+} 

@@ -34,11 +34,20 @@ import { ChevronDown, ChevronRight, Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useState } from "react";
+import { InlineDataAttachments } from "./InlineDataAttachments";
 
 interface FunctionMessageContent {
   title: string;
   content: string;
   author?: string;
+}
+
+interface AttachedFile {
+  filename: string;
+  content_type: string;
+  data: string;
+  size: number;
+  preview_url?: string;
 }
 
 interface ChatMessageProps {
@@ -48,6 +57,7 @@ interface ChatMessageProps {
   toggleExpansion: (messageId: string) => void;
   containsMarkdown: (text: string) => boolean;
   messageContent: string | FunctionMessageContent;
+  sessionId?: string;
 }
 
 export function ChatMessage({
@@ -57,6 +67,7 @@ export function ChatMessage({
   toggleExpansion,
   containsMarkdown,
   messageContent,
+  sessionId,
 }: ChatMessageProps) {
   const [isCopied, setIsCopied] = useState(false);
   
@@ -72,6 +83,9 @@ export function ChatMessage({
     "author" in messageContent && 
     typeof messageContent.author === "string" && 
     messageContent.author.endsWith("- Task executor");
+  
+  const inlineDataParts = message.content.parts.filter(part => part.inline_data);
+  const hasInlineData = inlineDataParts.length > 0;
 
   const copyToClipboard = () => {
     const textToCopy = typeof messageContent === "string" 
@@ -250,78 +264,53 @@ export function ChatMessage({
                       }
 
                       return (
-                        <div className="max-w-full overflow-x-auto">
-                          <pre className="bg-[#2a2a2a] p-3 rounded-md my-3 max-w-full" style={{ 
-                            maxWidth: "100%", 
-                            wordWrap: "break-word", 
-                            wordBreak: "break-all"
-                          }}>
-                            <code
-                              className="text-[#00ff9d] font-mono text-sm"
-                              style={{ 
-                                maxWidth: "100%", 
-                                whiteSpace: "pre-wrap",
-                                wordBreak: "break-all"
-                              }}
-                              {...props}
+                        <div className="my-3 relative group/code">
+                          <div className="bg-[#1a1a1a] rounded-t-md border-b border-[#333] p-2 text-xs text-gray-400 flex justify-between items-center">
+                            <span>{match?.[1] || "Code"}</span>
+                            <button
+                              onClick={copyToClipboard}
+                              className="text-gray-400 hover:text-[#00ff9d] transition-colors"
+                              title="Copy code"
                             >
-                              {children}
-                            </code>
+                              {isCopied ? (
+                                <Check className="h-3.5 w-3.5" />
+                              ) : (
+                                <Copy className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </div>
+                          <pre className="bg-[#1a1a1a] p-3 rounded-b-md overflow-x-auto whitespace-pre text-sm">
+                            <code {...props}>{children}</code>
                           </pre>
                         </div>
                       );
                     },
-                    pre: ({ ...props }) => (
-                      <div className="max-w-full overflow-x-auto">
-                        <pre
-                          className="bg-[#2a2a2a] p-0 rounded-md my-3 max-w-full font-mono text-sm"
-                          style={{ 
-                            maxWidth: "100%", 
-                            wordWrap: "break-word",
-                            wordBreak: "break-all"
-                          }}
-                          {...props}
-                        />
-                      </div>
-                    ),
                     table: ({ ...props }) => (
-                      <div className="overflow-x-auto my-3 rounded border border-[#444]">
+                      <div className="overflow-x-auto my-3">
                         <table
-                          className="min-w-full border-collapse text-sm"
+                          className="min-w-full border border-[#333] rounded"
                           {...props}
                         />
                       </div>
                     ),
                     thead: ({ ...props }) => (
-                      <thead className="bg-[#333]" {...props} />
+                      <thead className="bg-[#1a1a1a]" {...props} />
                     ),
-                    th: ({ ...props }) => (
-                      <th
-                        className="py-2 px-3 text-left font-semibold border-b border-[#444] text-[#00ff9d]"
+                    tbody: ({ ...props }) => <tbody {...props} />,
+                    tr: ({ ...props }) => (
+                      <tr
+                        className="border-b border-[#333] last:border-0"
                         {...props}
                       />
                     ),
-                    tr: ({ ...props }) => (
-                      <tr
-                        className="border-b border-[#444] last:border-0"
+                    th: ({ ...props }) => (
+                      <th
+                        className="px-4 py-2 text-left text-xs font-semibold text-gray-300"
                         {...props}
                       />
                     ),
                     td: ({ ...props }) => (
-                      <td className="py-2 px-3" {...props} />
-                    ),
-                    img: ({ ...props }) => (
-                      <img
-                        className="max-w-full h-auto rounded my-2"
-                        {...props}
-                        alt={props.alt || "Image"}
-                      />
-                    ),
-                    hr: ({ ...props }) => (
-                      <hr
-                        className="my-6 border-t border-[#444]"
-                        {...props}
-                      />
+                      <td className="px-4 py-2 text-sm" {...props} />
                     ),
                   }}
                 >
@@ -330,24 +319,28 @@ export function ChatMessage({
                     : messageContent.content}
                 </ReactMarkdown>
               ) : (
-                <p>
+                <div className="whitespace-pre-wrap">
                   {typeof messageContent === "string"
                     ? messageContent
                     : messageContent.content}
-                </p>
+                </div>
+              )}
+              
+              {hasInlineData && (
+                <InlineDataAttachments parts={inlineDataParts} sessionId={sessionId} />
               )}
             </div>
           )}
-          
-          <button 
+
+          <button
             onClick={copyToClipboard}
-            className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-40 p-1 rounded-md hover:bg-opacity-60"
-            title="Copiar mensagem original"
+            className="absolute top-2 right-2 text-gray-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            title="Copy message"
           >
             {isCopied ? (
-              <Check className="h-4 w-4 text-green-500" />
+              <Check className="h-3.5 w-3.5" />
             ) : (
-              <Copy className="h-4 w-4 text-white" />
+              <Copy className="h-3.5 w-3.5" />
             )}
           </button>
         </div>

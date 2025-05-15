@@ -31,12 +31,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  MessageSquare,
-  Loader2,
-  ChevronRight,
-  Info,
-} from "lucide-react";
+import { MessageSquare, Loader2, ChevronRight, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -55,6 +50,14 @@ import { AgentInfo } from "./AgentInfo";
 import Image from "next/image";
 import { SharedSessionList } from "./components/SharedSessionList";
 import { SharedChatPanel } from "./components/SharedChatPanel";
+
+interface AttachedFile {
+  filename: string;
+  content_type: string;
+  data: string;
+  size: number;
+  preview_url?: string;
+}
 
 interface FunctionMessageContent {
   title: string;
@@ -85,51 +88,55 @@ export default function SharedChat() {
   const [manualApiKey, setManualApiKey] = useState("");
   const [savedAgents, setSavedAgents] = useState<SharedAgentInfo[]>([]);
   const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
-  
-  // Variáveis para o gerenciamento de sessões
+
   const [sessions, setSessions] = useState<SharedSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [isSessionsCollapsed, setIsSessionsCollapsed] = useState(false);
   const [sessionSearchTerm, setSessionSearchTerm] = useState("");
-  
+
   const { toast } = useToast();
 
-  // Função para criar uma nova sessão
   const createNewSession = () => {
     const sessionId = generateExternalId();
     const newSession: SharedSession = {
       id: sessionId,
       update_time: new Date().toISOString(),
-      messages: [{
-        id: `system-${Date.now()}`,
-        content: {
-          parts: [{ text: "Welcome to this shared agent. Type a message to start chatting." }],
-          role: "system"
+      messages: [
+        {
+          id: `system-${Date.now()}`,
+          content: {
+            parts: [
+              {
+                text: "Welcome to this shared agent. Type a message to start chatting.",
+              },
+            ],
+            role: "system",
+          },
+          author: "assistant",
+          timestamp: Date.now() / 1000,
         },
-        author: "assistant",
-        timestamp: Date.now() / 1000
-      }]
+      ],
     };
 
-    setSessions(prev => [...prev, newSession]);
+    setSessions((prev) => [...prev, newSession]);
     setSelectedSession(sessionId);
     setMessages(newSession.messages);
-    
-    // Salvar sessões no localStorage
+
     if (agentParams) {
       saveSessionsToLocalStorage(agentParams.id, [...sessions, newSession]);
     }
   };
 
-  // Função para salvar sessões no localStorage
-  const saveSessionsToLocalStorage = (agentId: string, sessionsToSave: SharedSession[]) => {
+  const saveSessionsToLocalStorage = (
+    agentId: string,
+    sessionsToSave: SharedSession[]
+  ) => {
     if (typeof window !== "undefined") {
       const key = `shared_agent_sessions_${agentId}`;
       localStorage.setItem(key, JSON.stringify(sessionsToSave));
     }
   };
 
-  // Função para carregar sessões do localStorage
   const loadSessionsFromLocalStorage = (agentId: string): SharedSession[] => {
     if (typeof window !== "undefined") {
       const key = `shared_agent_sessions_${agentId}`;
@@ -153,19 +160,22 @@ export default function SharedChat() {
 
     if (agentId && apiKey) {
       setAgentParams({ id: agentId, apiKey });
-      
+
       if (typeof window !== "undefined") {
         localStorage.setItem("shared_agent_api_key", apiKey);
         console.log("[Shared Chat] API key set in localStorage");
-        
+
         const savedAgentsJson = localStorage.getItem("shared_agents") || "[]";
         try {
           const savedAgents = JSON.parse(savedAgentsJson) as SharedAgentInfo[];
-          const existingAgent = savedAgents.find(a => a.id === agentId);
-          
+          const existingAgent = savedAgents.find((a) => a.id === agentId);
+
           if (!existingAgent) {
             const updatedAgents = [...savedAgents, { id: agentId, apiKey }];
-            localStorage.setItem("shared_agents", JSON.stringify(updatedAgents));
+            localStorage.setItem(
+              "shared_agents",
+              JSON.stringify(updatedAgents)
+            );
             console.log("[Shared Chat] Agent added to saved agents");
           }
         } catch (e) {
@@ -178,10 +188,13 @@ export default function SharedChat() {
         try {
           const savedAgents = JSON.parse(savedAgentsJson) as SharedAgentInfo[];
           setSavedAgents(savedAgents);
-          
+
           if (savedAgents.length > 0) {
             setAgentParams(savedAgents[savedAgents.length - 1]);
-            localStorage.setItem("shared_agent_api_key", savedAgents[savedAgents.length - 1].apiKey);
+            localStorage.setItem(
+              "shared_agent_api_key",
+              savedAgents[savedAgents.length - 1].apiKey
+            );
           } else {
             setIsParamsDialogOpen(true);
           }
@@ -198,11 +211,11 @@ export default function SharedChat() {
   useEffect(() => {
     const loadAgentData = async () => {
       if (!agentParams) return;
-      
+
       setIsLoading(true);
       try {
         localStorage.setItem("shared_agent_api_key", agentParams.apiKey);
-        
+
         try {
           const response = await getSharedAgent(agentParams.id);
           setAgent(response.data);
@@ -214,23 +227,22 @@ export default function SharedChat() {
             description: "This agent is being accessed via a shared API key",
             type: "llm",
             model: "Unknown model",
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
           });
         }
 
-        // Carregar sessões do localStorage
         const loadedSessions = loadSessionsFromLocalStorage(agentParams.id);
-        
+
         if (loadedSessions.length > 0) {
           setSessions(loadedSessions);
-          // Selecionar a sessão mais recente por padrão
-          const latestSession = loadedSessions.sort((a, b) => 
-            new Date(b.update_time).getTime() - new Date(a.update_time).getTime()
+          const latestSession = loadedSessions.sort(
+            (a, b) =>
+              new Date(b.update_time).getTime() -
+              new Date(a.update_time).getTime()
           )[0];
           setSelectedSession(latestSession.id);
           setMessages(latestSession.messages);
         } else {
-          // Se não houver sessões, criar uma nova
           createNewSession();
         }
       } catch (error) {
@@ -248,26 +260,24 @@ export default function SharedChat() {
     loadAgentData();
   }, [agentParams, toast]);
 
-  // Atualizar a sessão atual com as novas mensagens
   useEffect(() => {
     if (selectedSession && messages.length > 0) {
-      setSessions(prev => {
-        const updatedSessions = prev.map(session => {
+      setSessions((prev) => {
+        const updatedSessions = prev.map((session) => {
           if (session.id === selectedSession) {
             return {
               ...session,
               messages: messages,
-              update_time: new Date().toISOString()
+              update_time: new Date().toISOString(),
             };
           }
           return session;
         });
-        
-        // Salvar sessões atualizadas no localStorage
+
         if (agentParams) {
           saveSessionsToLocalStorage(agentParams.id, updatedSessions);
         }
-        
+
         return updatedSessions;
       });
     }
@@ -337,6 +347,8 @@ export default function SharedChat() {
     const functionResponsePart = parts.find(
       (part) => part.functionResponse || part.function_response
     );
+
+    const inlineDataParts = parts.filter((part) => part.inline_data);
 
     if (functionCallPart) {
       const funcCall =
@@ -429,7 +441,6 @@ Args: ${
     setIsSending(false);
   }, []);
 
-  // Use o ID da sessão selecionada como externalId
   const externalId = selectedSession || generateExternalId();
 
   const { sendMessage: wsSendMessage } = useAgentWebSocket({
@@ -447,21 +458,23 @@ Args: ${
         const savedAgentsJson = localStorage.getItem("shared_agents") || "[]";
         try {
           const savedAgents = JSON.parse(savedAgentsJson) as SharedAgentInfo[];
-          const existingAgentIndex = savedAgents.findIndex(a => a.id === manualAgentId);
-          
+          const existingAgentIndex = savedAgents.findIndex(
+            (a) => a.id === manualAgentId
+          );
+
           if (existingAgentIndex >= 0) {
             savedAgents[existingAgentIndex] = newAgent;
           } else {
             savedAgents.push(newAgent);
           }
-          
+
           localStorage.setItem("shared_agents", JSON.stringify(savedAgents));
           setSavedAgents(savedAgents);
         } catch (e) {
           console.error("Error processing saved agents:", e);
         }
       }
-      
+
       setAgentParams(newAgent);
       setIsParamsDialogOpen(false);
     } else {
@@ -480,9 +493,9 @@ Args: ${
 
   const handleSessionSelect = (sessionId: string | null) => {
     if (!sessionId) return;
-    
+
     // Encontre a sessão selecionada e carregue suas mensagens
-    const session = sessions.find(s => s.id === sessionId);
+    const session = sessions.find((s) => s.id === sessionId);
     if (session) {
       setMessages(session.messages);
       setSelectedSession(sessionId);
@@ -501,7 +514,7 @@ Args: ${
               height={30}
             />
             <div className="h-10 w-px bg-[#333]" />
-            <div 
+            <div
               className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
               onClick={() => setIsInfoPanelOpen(!isInfoPanelOpen)}
             >
@@ -511,10 +524,11 @@ Args: ${
               <div>
                 <h1 className="text-lg font-medium text-white flex items-center gap-2">
                   {agent.name}
-                  {isInfoPanelOpen ? 
-                    <ChevronRight className="h-4 w-4 text-gray-400" /> : 
+                  {isInfoPanelOpen ? (
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                  ) : (
                     <Info className="h-4 w-4 text-gray-400" />
-                  }
+                  )}
                 </h1>
                 <p className="text-sm text-gray-400">
                   {agent.description?.length > 100
@@ -531,7 +545,6 @@ Args: ${
       )}
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Painel de sessões */}
         <SharedSessionList
           sessions={sessions}
           selectedSession={selectedSession}
@@ -545,20 +558,19 @@ Args: ${
           agentName={agent?.name}
         />
 
-        {/* Painel principal de chat */}
         {selectedSession && (
           <SharedChatPanel
             messages={messages}
             isLoading={isLoading}
             isSending={isSending}
-            agentName={agent?.name}
+            agentName={agent?.name || "Shared Agent"}
             onSendMessage={handleSendMessage}
             getMessageText={getMessageText}
             containsMarkdown={containsMarkdown}
+            sessionId={selectedSession}
           />
         )}
-        
-        {/* Painel lateral com informações do agente - agora controlado por isInfoPanelOpen */}
+
         {agent && isInfoPanelOpen && (
           <div className="lg:block w-80 border-l border-[#1e3a36] overflow-y-auto p-4 bg-[#151515] animate-in slide-in-from-right duration-300">
             <AgentInfo agent={agent} apiKey={agentParams?.apiKey || ""} />
@@ -578,10 +590,12 @@ Args: ${
           <div className="space-y-4 py-2">
             {savedAgents.length > 0 && (
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-white">Recent Agents</h3>
+                <h3 className="text-sm font-medium text-white">
+                  Recent Agents
+                </h3>
                 <div className="space-y-2">
                   {savedAgents.map((savedAgent) => (
-                    <div 
+                    <div
                       key={savedAgent.id}
                       className="p-3 border border-[#333] rounded-md hover:bg-[#222] cursor-pointer"
                       onClick={() => selectSavedAgent(savedAgent)}
@@ -594,7 +608,9 @@ Args: ${
                   ))}
                 </div>
                 <div className="pt-2 border-t border-[#333] mt-2">
-                  <h3 className="text-sm font-medium text-white mb-2">Or connect to a new agent</h3>
+                  <h3 className="text-sm font-medium text-white mb-2">
+                    Or connect to a new agent
+                  </h3>
                 </div>
               </div>
             )}
@@ -643,4 +659,4 @@ Args: ${
       )}
     </div>
   );
-} 
+}

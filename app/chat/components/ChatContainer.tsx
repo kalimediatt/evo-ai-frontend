@@ -54,6 +54,7 @@ interface ChatContainerProps {
   containerClassName?: string;
   messagesContainerClassName?: string;
   inputContainerClassName?: string;
+  sessionId?: string;
 }
 
 export function ChatContainer({
@@ -65,10 +66,11 @@ export function ChatContainer({
   toggleFunctionExpansion,
   containsMarkdown,
   getMessageText,
-  agentName = "Agente",
+  agentName = "Agent",
   containerClassName = "",
   messagesContainerClassName = "",
   inputContainerClassName = "",
+  sessionId,
 }: ChatContainerProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -103,7 +105,7 @@ export function ChatContainer({
                 {`Chat com ${agentName}`}
               </h3>
               <p className="text-gray-400 max-w-md">
-                Digite sua mensagem abaixo para iniciar a conversa.
+                Type your message below to start the conversation.
               </p>
             </div>
           ) : (
@@ -121,6 +123,7 @@ export function ChatContainer({
                     toggleExpansion={toggleFunctionExpansion}
                     containsMarkdown={containsMarkdown}
                     messageContent={messageContent}
+                    sessionId={sessionId}
                   />
                 );
               })}
@@ -133,7 +136,7 @@ export function ChatContainer({
         <ChatInput 
           onSendMessage={onSendMessage}
           isLoading={isLoading}
-          placeholder="Digite sua mensagem..."
+          placeholder="Type your message..."
         />
       </div>
     </div>

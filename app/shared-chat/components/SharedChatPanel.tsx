@@ -50,6 +50,7 @@ interface SharedChatPanelProps {
   onSendMessage: (message: string) => void;
   getMessageText: (message: ChatMessageType) => string | FunctionMessageContent;
   containsMarkdown: (text: string) => boolean;
+  sessionId?: string;
 }
 
 export function SharedChatPanel({
@@ -60,6 +61,7 @@ export function SharedChatPanel({
   onSendMessage,
   getMessageText,
   containsMarkdown,
+  sessionId,
 }: SharedChatPanelProps) {
   const [messageInput, setMessageInput] = useState("");
   const [expandedFunctions, setExpandedFunctions] = useState<Record<string, boolean>>({});
@@ -145,6 +147,7 @@ export function SharedChatPanel({
                     toggleExpansion={toggleFunctionExpansion}
                     containsMarkdown={containsMarkdown}
                     messageContent={messageContent}
+                    sessionId={sessionId}
                   />
                 );
               })}
