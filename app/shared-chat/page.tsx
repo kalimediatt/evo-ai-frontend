@@ -44,12 +44,13 @@ import {
 } from "@/components/ui/dialog";
 import { getQueryParam } from "@/lib/utils";
 import { getSharedAgent } from "@/services/agentService";
-import { ChatMessage } from "@/services/sessionService";
+import { ChatMessage, ChatPart } from "@/services/sessionService";
 import { useAgentWebSocket } from "@/hooks/use-agent-webSocket";
 import { AgentInfo } from "./AgentInfo";
 import Image from "next/image";
 import { SharedSessionList } from "./components/SharedSessionList";
 import { SharedChatPanel } from "./components/SharedChatPanel";
+import { FileData } from "@/lib/file-utils";
 
 interface AttachedFile {
   filename: string;
@@ -283,22 +284,47 @@ export default function SharedChat() {
     }
   }, [messages, selectedSession, agentParams]);
 
-  const handleSendMessage = async (messageText: string) => {
-    if (!messageText.trim() || !agentParams?.id || !selectedSession) return;
+  const handleSendMessage = async (messageText: string, files?: FileData[]) => {
+    if (
+      (!messageText.trim() && (!files || files.length === 0)) ||
+      !agentParams?.id ||
+      !selectedSession
+    )
+      return;
+
     setIsSending(true);
+
+    const messageParts: ChatPart[] = [];
+
+    if (messageText.trim()) {
+      messageParts.push({ text: messageText });
+    }
+
+    if (files && files.length > 0) {
+      files.forEach((file) => {
+        messageParts.push({
+          inline_data: {
+            data: file.data,
+            mime_type: file.content_type,
+          },
+        });
+      });
+    }
+
     setMessages((prev) => [
       ...prev,
       {
         id: `temp-${Date.now()}`,
         content: {
-          parts: [{ text: messageText }],
+          parts: messageParts,
           role: "user",
         },
         author: "user",
         timestamp: Date.now() / 1000,
       },
     ]);
-    wsSendMessage(messageText);
+
+    wsSendMessage(messageText, files);
   };
 
   const generateExternalId = () => {
