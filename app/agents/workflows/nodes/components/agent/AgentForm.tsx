@@ -212,6 +212,8 @@ function AgentForm({
       sequential: "Sequential Agent",
       parallel: "Parallel Agent",
       loop: "Loop Agent",
+      workflow: "Workflow Agent",
+      task: "Task Agent",
     };
     return agentTypes[type] || type;
   };

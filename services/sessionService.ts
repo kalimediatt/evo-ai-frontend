@@ -38,32 +38,55 @@ export interface ChatSession {
   update_time: string;
   create_time: string;
   created_at: string;
+  agent_id: string;
+  client_id: string;
+}
+
+export interface ChatPart {
+  text?: string;
+  functionCall?: any;
+  function_call?: any;
+  functionResponse?: any;
+  function_response?: any;
+  inline_data?: {
+    data: string;
+    mime_type: string;
+    metadata?: {
+      filename?: string;
+      [key: string]: any;
+    };
+    fileId?: string;
+  };
+  videoMetadata?: any;
+  thought?: any;
+  codeExecutionResult?: any;
+  executableCode?: any;
+  file_data?: {
+    filename?: string;
+    fileId?: string;
+    [key: string]: any;
+  };
+}
+
+export interface AttachedFile {
+  filename: string;
+  content_type: string;
+  data?: string;
+  size?: number;
+}
+
+export interface InlineData {
+  type: string;
+  data: string;
 }
 
 export interface ChatMessage {
   id: string;
   content: {
-    parts: Array<{
-      text?: string;
-      functionCall?: any;
-      functionResponse?: any;
-      function_call?: {
-        id: string;
-        name: string;
-        args?: Record<string, any>;
-      };
-      function_response?: {
-        id: string;
-        name: string;
-        response: {
-          status: string;
-          error_message?: string;
-          [key: string]: any;
-        };
-      };
-      [key: string]: any;
-    }>;
+    parts: ChatPart[];
     role: string;
+    inlineData?: InlineData[];
+    files?: AttachedFile[];
   };
   author: string;
   timestamp: number;

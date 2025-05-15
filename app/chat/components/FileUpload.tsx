@@ -1,9 +1,9 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: /app/chat/components/ChatInput.tsx                                    │
+│ @file: /app/chat/components/FileUpload.tsx                                   │
 │ Developed by: Davidson Gomes                                                 │
-│ Creation date: May 14, 2025                                                  │
+│ Creation date: August 24, 2025                                               │
 │ Contact: contato@evolution-api.com                                           │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ @copyright © Evolution API 2025. All rights reserved.                        │
@@ -28,79 +28,46 @@
 */
 "use client";
 
-import React, { useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send, Paperclip, X, Image, FileText, File } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
 import { FileData, formatFileSize, isImageFile } from "@/lib/file-utils";
+import { Paperclip, X, Image, File, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
-interface ChatInputProps {
-  onSendMessage: (message: string, files?: FileData[]) => void;
-  isLoading?: boolean;
-  placeholder?: string;
+interface FileUploadProps {
+  onFilesSelected: (files: FileData[]) => void;
+  maxFileSize?: number;
+  maxFiles?: number;
   className?: string;
-  buttonClassName?: string;
-  containerClassName?: string;
+  reset?: boolean;
 }
 
-export function ChatInput({
-  onSendMessage,
-  isLoading = false,
-  placeholder = "Type your message...",
+export function FileUpload({
+  onFilesSelected,
+  maxFileSize = 10 * 1024 * 1024, // 10MB
+  maxFiles = 5,
   className = "",
-  buttonClassName = "",
-  containerClassName = "",
-}: ChatInputProps) {
-  const [messageInput, setMessageInput] = useState("");
+  reset = false, // Default false
+}: FileUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<FileData[]>([]);
-  const [resetFileUpload, setResetFileUpload] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!messageInput.trim() && selectedFiles.length === 0) return;
-    
-    onSendMessage(messageInput, selectedFiles.length > 0 ? selectedFiles : undefined);
-    
-    setMessageInput("");
-    setSelectedFiles([]);
-    
-    setResetFileUpload(true);
-    
-    setTimeout(() => {
-      setResetFileUpload(false);
-    }, 100);
-    
-    const textarea = document.querySelector("textarea");
-    if (textarea) textarea.style.height = "auto";
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage(e as unknown as React.FormEvent);
+  
+  useEffect(() => {
+    if (reset && selectedFiles.length > 0) {
+      setSelectedFiles([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
-  };
+  }, [reset]);
 
-  const autoResizeTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const textarea = e.target;
-    textarea.style.height = "auto";
-    const maxHeight = 10 * 24;
-    const newHeight = Math.min(textarea.scrollHeight, maxHeight);
-    textarea.style.height = `${newHeight}px`;
-    setMessageInput(textarea.value);
-  };
-
-  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     
     const newFiles = Array.from(e.target.files);
-    const maxFileSize = 10 * 1024 * 1024; // 10MB
     
-    if (selectedFiles.length + newFiles.length > 5) {
+    if (selectedFiles.length + newFiles.length > maxFiles) {
       toast({
-        title: `You can only attach up to 5 files.`,
+        title: `You can only attach up to ${maxFiles} files.`,
         variant: "destructive",
       });
       return;
@@ -153,25 +120,28 @@ export function ChatInput({
     if (validFiles.length > 0) {
       const updatedFiles = [...selectedFiles, ...validFiles];
       setSelectedFiles(updatedFiles);
+      onFilesSelected(updatedFiles);
     }
     
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
-
-  const openFileSelector = () => {
-    fileInputRef.current?.click();
+  
+  const removeFile = (index: number) => {
+    const updatedFiles = selectedFiles.filter((_, i) => i !== index);
+    setSelectedFiles(updatedFiles);
+    onFilesSelected(updatedFiles);
   };
 
   return (
-    <div className={`flex flex-col w-full ${containerClassName}`}>
+    <div className={`flex gap-2 items-center ${className}`}>
       {selectedFiles.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-2 mb-2">
+        <div className="flex gap-2 flex-wrap items-center flex-1">
           {selectedFiles.map((file, index) => (
             <div 
               key={index} 
-              className="flex items-center gap-1 bg-[#333] text-white rounded-md p-1.5 text-xs"
+              className="flex items-center gap-1 bg-[#333] text-white rounded-md p-1.5 text-xs group relative"
             >
               {isImageFile(file.content_type) ? (
                 <Image className="h-4 w-4 text-[#00ff9d]" />
@@ -183,10 +153,7 @@ export function ChatInput({
               <span className="max-w-[120px] truncate">{file.filename}</span>
               <span className="text-gray-400">({formatFileSize(file.size)})</span>
               <button 
-                onClick={() => {
-                  const updatedFiles = selectedFiles.filter((_, i) => i !== index);
-                  setSelectedFiles(updatedFiles);
-                }}
+                onClick={() => removeFile(index)}
                 className="ml-1 text-gray-400 hover:text-white transition-colors"
               >
                 <X className="h-3.5 w-3.5" />
@@ -196,53 +163,23 @@ export function ChatInput({
         </div>
       )}
       
-      <form 
-        onSubmit={handleSendMessage} 
-        className="flex w-full items-center gap-2 px-2"
-      >
-        {selectedFiles.length < 5 && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              openFileSelector();
-            }}
-            type="button"
-            className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-[#333] text-gray-400 hover:text-[#00ff9d] transition-colors"
-            title="Attach file"
-          >
-            <Paperclip className="h-5 w-5" />
-          </button>
-        )}
-        
-        <Textarea
-          value={messageInput}
-          onChange={autoResizeTextarea}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          className={`flex-1 bg-[#222] border-[#444] text-white focus-visible:ring-[#00ff9d] min-h-[40px] max-h-[240px] resize-none ${className}`}
-          disabled={isLoading}
-          rows={1}
-        />
-        <Button
-          type="submit"
-          disabled={isLoading || (!messageInput.trim() && selectedFiles.length === 0)}
-          className={`bg-[#00ff9d] text-black hover:bg-[#00cc7d] ${buttonClassName}`}
+      {selectedFiles.length < maxFiles && (
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          type="button"
+          className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-[#333] text-gray-400 hover:text-[#00ff9d] transition-colors"
+          title="Attach file"
         >
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-        </Button>
-        
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFilesSelected}
-          className="hidden"
-          multiple
-        />
-      </form>
+          <Paperclip className="h-5 w-5" />
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            multiple
+          />
+        </button>
+      )}
     </div>
   );
 } 

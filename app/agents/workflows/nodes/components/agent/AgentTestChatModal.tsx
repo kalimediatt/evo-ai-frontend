@@ -35,6 +35,8 @@ import { getAccessTokenFromCookie } from "@/lib/utils";
 import { Agent } from "@/types/agent";
 import { ChatInput } from "@/app/chat/components/ChatInput";
 import { AgentChatMessageList } from "./AgentChatMessageList";
+import { ChatPart } from "@/services/sessionService";
+import { FileData } from "@/lib/file-utils";
 
 interface FunctionMessageContent {
     title: string;
@@ -95,22 +97,44 @@ export function AgentTestChatModal({ open, onOpenChange, agent }: AgentTestChatM
         onTurnComplete,
     });
 
-    const handleSendMessage = async (message: string) => {
-        if (!message.trim()) return;
+    const handleSendMessageWithFiles = (message: string, files?: FileData[]) => {
+        if ((!message.trim() && (!files || files.length === 0))) return;
         setIsSending(true);
+        
+        const messageParts: ChatPart[] = [];
+        
+        if (message.trim()) {
+          messageParts.push({ text: message });
+        }
+        
+        if (files && files.length > 0) {
+          files.forEach(file => {
+            messageParts.push({
+              inline_data: {
+                data: file.data,
+                mime_type: file.content_type,
+                metadata: {
+                  filename: file.filename
+                }
+              }
+            });
+          });
+        }
+
         setMessages((prev) => [
             ...prev,
             {
                 id: `temp-${Date.now()}`,
                 content: {
-                    parts: [{ text: message }],
-                    role: "user",
+                    parts: messageParts,
+                    role: "user"
                 },
                 author: "user",
                 timestamp: Date.now() / 1000,
             },
         ]);
-        wsSendMessage(message);
+        
+        wsSendMessage(message, files);
     };
 
     const containsMarkdown = (text: string): boolean => {
@@ -136,6 +160,9 @@ export function AgentTestChatModal({ open, onOpenChange, agent }: AgentTestChatM
         if (!parts || parts.length === 0) return "Empty content";
         const functionCallPart = parts.find((part: any) => part.functionCall || part.function_call);
         const functionResponsePart = parts.find((part: any) => part.functionResponse || part.function_response);
+        
+        const inlineDataParts = parts.filter((part: any) => part.inline_data);
+        
         if (functionCallPart) {
             const funcCall = functionCallPart.functionCall || functionCallPart.function_call || {};
             const args = funcCall.args || {};
@@ -181,6 +208,7 @@ export function AgentTestChatModal({ open, onOpenChange, agent }: AgentTestChatM
                 content: `ID: ${id}\n${resultText}`,
             } as FunctionMessageContent;
         }
+        
         if (parts.length === 1 && parts[0].text) {
             return {
                 author,
@@ -209,7 +237,7 @@ export function AgentTestChatModal({ open, onOpenChange, agent }: AgentTestChatM
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-[#1a1a1a] border-[#333] text-white max-w-3xl w-full">
+            <DialogContent className="bg-[#1a1a1a] border-[#333] text-white max-w-3xl w-full overflow-hidden">
                 <DialogHeader>
                     <DialogTitle>Test Agent: {agent.name}</DialogTitle>
                 </DialogHeader>
@@ -221,26 +249,25 @@ export function AgentTestChatModal({ open, onOpenChange, agent }: AgentTestChatM
                         <span className="text-xs text-gray-400">{agent.model}</span>
                     </div>
                     
-                    <AgentChatMessageList
-                      messages={messages}
-                      agent={agent}
-                      expandedFunctions={expandedFunctions}
-                      toggleFunctionExpansion={toggleFunctionExpansion}
-                      getMessageText={getMessageText}
-                      containsMarkdown={containsMarkdown}
-                    />
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2">
+                        <AgentChatMessageList
+                          messages={messages}
+                          agent={agent}
+                          expandedFunctions={expandedFunctions}
+                          toggleFunctionExpansion={toggleFunctionExpansion}
+                          getMessageText={getMessageText}
+                          containsMarkdown={containsMarkdown}
+                        />
+                    </div>
                     
                     <div className="p-2 border-t border-[#333] bg-[#1a1a1a] mt-2">
                         <ChatInput
-                          onSendMessage={handleSendMessage}
+                          onSendMessage={handleSendMessageWithFiles}
                           isLoading={isSending}
-                          placeholder="Digite sua mensagem..."
+                          placeholder="Type your message..."
                         />
                     </div>
                 </div>
-                <DialogFooter>
-                    <Button onClick={() => onOpenChange(false)} variant="outline" className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] mt-2">Close</Button>
-                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

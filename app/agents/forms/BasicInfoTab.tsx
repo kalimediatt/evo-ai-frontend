@@ -75,6 +75,8 @@ export function BasicInfoTab({
         ...newValues,
         model: "openai/gpt-4.1-nano",
         instruction: "",
+        role: "",
+        goal: "",
         agent_card_url: undefined,
         config: {
           tools: [],
@@ -91,6 +93,8 @@ export function BasicInfoTab({
         ...newValues,
         model: undefined,
         instruction: undefined,
+        role: undefined,
+        goal: undefined,
         agent_card_url: "",
         api_key_id: undefined,
         config: undefined,
@@ -100,6 +104,8 @@ export function BasicInfoTab({
         ...newValues,
         model: undefined,
         instruction: undefined,
+        role: undefined,
+        goal: undefined,
         agent_card_url: undefined,
         api_key_id: undefined,
         config: {
@@ -112,6 +118,8 @@ export function BasicInfoTab({
         ...newValues,
         model: undefined,
         instruction: undefined,
+        role: undefined,
+        goal: undefined,
         agent_card_url: undefined,
         api_key_id: undefined,
         config: {
@@ -122,11 +130,27 @@ export function BasicInfoTab({
           },
         },
       };
+    } else if (type === "task") {
+      newValues = {
+        ...newValues,
+        model: undefined,
+        instruction: undefined,
+        role: undefined,
+        goal: undefined,
+        agent_card_url: undefined,
+        api_key_id: undefined,
+        config: {
+          tasks: [],
+          sub_agents: [],
+        },
+      };
     } else {
       newValues = {
         ...newValues,
         model: undefined,
         instruction: undefined,
+        role: undefined,
+        goal: undefined,
         agent_card_url: undefined,
         api_key_id: undefined,
         config: {

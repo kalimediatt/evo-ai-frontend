@@ -30,11 +30,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, Loader2, Send } from "lucide-react";
+import { MessageSquare, Loader2, Send, Paperclip, X, Image, FileText, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ChatMessage as ChatMessageType } from "@/services/sessionService";
 import { ChatMessage } from "@/app/chat/components/ChatMessage";
+import { FileData, formatFileSize, isImageFile } from "@/lib/file-utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface FunctionMessageContent {
   title: string;
@@ -47,9 +49,10 @@ interface SharedChatPanelProps {
   isLoading: boolean;
   isSending: boolean;
   agentName?: string;
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, files?: FileData[]) => void;
   getMessageText: (message: ChatMessageType) => string | FunctionMessageContent;
   containsMarkdown: (text: string) => boolean;
+  sessionId?: string;
 }
 
 export function SharedChatPanel({
@@ -60,10 +63,14 @@ export function SharedChatPanel({
   onSendMessage,
   getMessageText,
   containsMarkdown,
+  sessionId,
 }: SharedChatPanelProps) {
   const [messageInput, setMessageInput] = useState("");
   const [expandedFunctions, setExpandedFunctions] = useState<Record<string, boolean>>({});
+  const [selectedFiles, setSelectedFiles] = useState<FileData[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
@@ -86,9 +93,13 @@ export function SharedChatPanel({
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageInput.trim()) return;
-    onSendMessage(messageInput);
+    if (!messageInput.trim() && selectedFiles.length === 0) return;
+    
+    onSendMessage(messageInput, selectedFiles.length > 0 ? selectedFiles : undefined);
+    
     setMessageInput("");
+    setSelectedFiles([]);
+    
     const textarea = document.querySelector("textarea");
     if (textarea) textarea.style.height = "auto";
   };
@@ -103,8 +114,82 @@ export function SharedChatPanel({
   const autoResizeTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = e.target;
     textarea.style.height = "auto";
-    textarea.style.height = `${textarea.scrollHeight}px`;
+    const maxHeight = 10 * 24;
+    const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+    textarea.style.height = `${newHeight}px`;
     setMessageInput(textarea.value);
+  };
+  
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const newFiles = Array.from(e.target.files);
+    const maxFileSize = 10 * 1024 * 1024; // 10MB
+    
+    if (selectedFiles.length + newFiles.length > 5) {
+      toast({
+        title: `You can only attach up to 5 files.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const validFiles: FileData[] = [];
+    
+    for (const file of newFiles) {
+      if (file.size > maxFileSize) {
+        toast({
+          title: `The file ${file.name} exceeds the maximum size of ${formatFileSize(maxFileSize)}.`,
+          variant: "destructive",
+        });
+        continue;
+      }
+      
+      try {
+        const reader = new FileReader();
+        
+        const readFile = new Promise<string>((resolve, reject) => {
+          reader.onload = () => {
+            const base64 = reader.result as string;
+            const base64Data = base64.split(',')[1];
+            resolve(base64Data);
+          };
+          reader.onerror = reject;
+        });
+        
+        reader.readAsDataURL(file);
+        
+        const base64Data = await readFile;
+        const previewUrl = URL.createObjectURL(file);
+        
+        validFiles.push({
+          filename: file.name,
+          content_type: file.type,
+          data: base64Data,
+          size: file.size,
+          preview_url: previewUrl
+        });
+      } catch (error) {
+        console.error("Error processing file:", error);
+        toast({
+          title: `Error processing file ${file.name}`,
+          variant: "destructive",
+        });
+      }
+    }
+    
+    if (validFiles.length > 0) {
+      const updatedFiles = [...selectedFiles, ...validFiles];
+      setSelectedFiles(updatedFiles);
+    }
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const openFileSelector = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -115,7 +200,7 @@ export function SharedChatPanel({
       >
         <ScrollArea
           ref={messagesContainerRef}
-          className="h-full pr-4"
+          className="h-full pr-4 overflow-x-hidden"
         >
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6">
@@ -145,6 +230,7 @@ export function SharedChatPanel({
                     toggleExpansion={toggleFunctionExpansion}
                     containsMarkdown={containsMarkdown}
                     messageContent={messageContent}
+                    sessionId={sessionId}
                   />
                 );
               })}
@@ -157,18 +243,59 @@ export function SharedChatPanel({
         onSubmit={handleSendMessage}
         className="p-4 border-t border-[#333] bg-[#1a1a1a]"
       >
+        {selectedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-2 mb-2">
+            {selectedFiles.map((file, index) => (
+              <div 
+                key={index} 
+                className="flex items-center gap-1 bg-[#333] text-white rounded-md p-1.5 text-xs"
+              >
+                {isImageFile(file.content_type) ? (
+                  <Image className="h-4 w-4 text-[#00ff9d]" />
+                ) : file.content_type === 'application/pdf' ? (
+                  <FileText className="h-4 w-4 text-[#00ff9d]" />
+                ) : (
+                  <File className="h-4 w-4 text-[#00ff9d]" />
+                )}
+                <span className="max-w-[120px] truncate">{file.filename}</span>
+                <span className="text-gray-400">({formatFileSize(file.size)})</span>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    const updatedFiles = selectedFiles.filter((_, i) => i !== index);
+                    setSelectedFiles(updatedFiles);
+                  }}
+                  className="ml-1 text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      
         <div className="flex gap-2 items-end">
+          {selectedFiles.length < 5 && (
+            <button
+              type="button"
+              onClick={openFileSelector}
+              className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-[#333] text-gray-400 hover:text-[#00ff9d] transition-colors"
+              title="Attach file"
+            >
+              <Paperclip className="h-5 w-5" />
+            </button>
+          )}
           <Textarea
             value={messageInput}
             onChange={autoResizeTextarea}
             onKeyDown={handleKeyDown}
             placeholder="Type your message..."
-            className="bg-[#222] border-[#444] text-white resize-none min-h-[44px] max-h-32"
+            className="flex-1 bg-[#222] border-[#444] text-white resize-none min-h-[44px] max-h-32"
             disabled={isLoading || isSending}
           />
           <Button
             type="submit"
-            disabled={!messageInput.trim() || isLoading || isSending}
+            disabled={((!messageInput.trim() && selectedFiles.length === 0) || isLoading || isSending)}
             className="bg-[#00ff9d] text-black hover:bg-[#00cc7d] h-[44px] px-4"
           >
             {isSending ? (
@@ -177,6 +304,14 @@ export function SharedChatPanel({
               <Send className="h-5 w-5" />
             )}
           </Button>
+          
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFilesSelected}
+            className="hidden"
+            multiple
+          />
         </div>
       </form>
     </div>

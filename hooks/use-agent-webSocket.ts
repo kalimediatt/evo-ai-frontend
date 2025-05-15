@@ -26,7 +26,14 @@
 │ who changed it and the date of modification.                                 │
 └──────────────────────────────────────────────────────────────────────────────┘
 */
+import { getApiUrl } from "@/lib/env";
 import { useEffect, useRef, useCallback, useState } from "react";
+
+interface FileData {
+    filename: string;
+    content_type: string;
+    data: string;
+}
 
 interface UseAgentWebSocketProps {
     agentId: string;
@@ -35,6 +42,11 @@ interface UseAgentWebSocketProps {
     apiKey?: string;
     onEvent: (event: any) => void;
     onTurnComplete?: () => void;
+}
+
+interface PendingMessageData {
+    message: string;
+    files?: FileData[];
 }
 
 export function useAgentWebSocket({
@@ -46,18 +58,19 @@ export function useAgentWebSocket({
     onTurnComplete,
 }: UseAgentWebSocketProps) {
     const wsRef = useRef<WebSocket | null>(null);
-    const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+    const [pendingMessage, setPendingMessage] = useState<PendingMessageData | null>(null);
 
     const openWebSocket = useCallback(() => {
         if (!agentId || !externalId || (!jwt && !apiKey)) {
             return;
         }
-        const wsUrl = `${process.env.NEXT_PUBLIC_API_URL?.replace("http", "ws").replace("https", "wss")}/api/v1/chat/ws/${agentId}/${externalId}`;
+        const apiUrl = getApiUrl();
+
+        const wsUrl = `${apiUrl?.replace("http", "ws").replace("https", "wss")}/api/v1/chat/ws/${agentId}/${externalId}`;
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         ws.onopen = () => {
-            // Autenticação com JWT ou API key
             if (apiKey) {
                 ws.send(
                     JSON.stringify({
@@ -75,7 +88,14 @@ export function useAgentWebSocket({
             }
 
             if (pendingMessage) {
-                ws.send(JSON.stringify({ message: pendingMessage }));
+                if (pendingMessage.files && pendingMessage.files.length > 0) {
+                    ws.send(JSON.stringify({ 
+                        message: pendingMessage.message,
+                        files: pendingMessage.files 
+                    }));
+                } else {
+                    ws.send(JSON.stringify({ message: pendingMessage.message }));
+                }
                 setPendingMessage(null);
             }
         };
@@ -120,12 +140,16 @@ export function useAgentWebSocket({
         };
     }, [openWebSocket]);
 
-    const sendMessage = useCallback((msg: string) => {
+    const sendMessage = useCallback((msg: string, files?: FileData[]) => {
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ message: msg }));
+            if (files && files.length > 0) {
+                wsRef.current.send(JSON.stringify({ message: msg, files }));
+            } else {
+                wsRef.current.send(JSON.stringify({ message: msg }));
+            }
         } else {
             console.warn("[WebSocket] unable to send message, connection not open.");
-            setPendingMessage(msg);
+            setPendingMessage({ message: msg, files });
             openWebSocket();
         }
     }, [openWebSocket]);

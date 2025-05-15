@@ -27,12 +27,21 @@
 └──────────────────────────────────────────────────────────────────────────────┘
 */
 
+import { useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Send } from "lucide-react";
+import { Send, Paperclip, X, FileText, Image, File } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+
+interface AttachedFile {
+  name: string;
+  type: string;
+  size: number;
+  base64: string;
+}
 
 interface StreamLabFormProps {
   agentUrl: string;
@@ -54,6 +63,7 @@ interface StreamLabFormProps {
   streamHistory: string[];
   renderStatusIndicator: () => JSX.Element | null;
   renderTypingIndicator: () => JSX.Element | null;
+  setFiles?: (files: AttachedFile[]) => void;
 }
 
 export function StreamLabForm({
@@ -75,8 +85,107 @@ export function StreamLabForm({
   streamStatus,
   streamHistory,
   renderStatusIndicator,
-  renderTypingIndicator
+  renderTypingIndicator,
+  setFiles = () => {}
 }: StreamLabFormProps) {
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const clearAttachedFiles = () => {
+    setAttachedFiles([]);
+  };
+  
+  const handleSendStreamRequest = async () => {
+    await sendStreamRequest();
+    clearAttachedFiles();
+  };
+  
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const maxFileSize = 5 * 1024 * 1024; // 5MB limit
+    const newFiles = Array.from(e.target.files);
+    
+    if (attachedFiles.length + newFiles.length > 5) {
+      toast({
+        title: "File limit exceeded",
+        description: "You can only attach up to 5 files.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const filesToAdd: AttachedFile[] = [];
+    
+    for (const file of newFiles) {
+      if (file.size > maxFileSize) {
+        toast({
+          title: "File too large",
+          description: `The file ${file.name} exceeds the 5MB size limit.`,
+          variant: "destructive"
+        });
+        continue;
+      }
+      
+      try {
+        const base64 = await readFileAsBase64(file);
+        filesToAdd.push({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          base64: base64
+        });
+      } catch (error) {
+        console.error("Failed to read file:", error);
+        toast({
+          title: "Failed to read file",
+          description: `Could not process ${file.name}.`,
+          variant: "destructive"
+        });
+      }
+    }
+    
+    if (filesToAdd.length > 0) {
+      const updatedFiles = [...attachedFiles, ...filesToAdd];
+      setAttachedFiles(updatedFiles);
+      setFiles(updatedFiles);
+    }
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+  
+  const readFileAsBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1]; // Remove data URL prefix
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+  
+  const removeFile = (index: number) => {
+    const updatedFiles = attachedFiles.filter((_, i) => i !== index);
+    setAttachedFiles(updatedFiles);
+    setFiles(updatedFiles);
+  };
+  
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+  
+  const isImageFile = (type: string): boolean => {
+    return type.startsWith('image/');
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -113,6 +222,60 @@ export function StreamLabForm({
         />
       </div>
       
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm text-gray-400">
+            Attach Files (up to 5, max 5MB each)
+          </label>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="bg-[#222] border-[#444] text-gray-300 hover:bg-[#333] hover:text-white"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={attachedFiles.length >= 5 || isStreaming}
+          >
+            <Paperclip className="h-4 w-4 mr-2" />
+            Browse Files
+          </Button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            multiple
+            onChange={handleFileSelect}
+            disabled={isStreaming}
+          />
+        </div>
+        
+        {attachedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {attachedFiles.map((file, index) => (
+              <div 
+                key={index} 
+                className="flex items-center gap-1.5 bg-[#333] text-white rounded-md p-1.5 text-xs"
+              >
+                {isImageFile(file.type) ? (
+                  <Image className="h-4 w-4 text-[#00ff9d]" />
+                ) : file.type === 'application/pdf' ? (
+                  <FileText className="h-4 w-4 text-[#00ff9d]" />
+                ) : (
+                  <File className="h-4 w-4 text-[#00ff9d]" />
+                )}
+                <span className="max-w-[150px] truncate">{file.name}</span>
+                <span className="text-gray-400">({formatFileSize(file.size)})</span>
+                <button 
+                  onClick={() => removeFile(index)}
+                  className="ml-1 text-gray-400 hover:text-white transition-colors"
+                  disabled={isStreaming}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      
       <Separator className="my-4 bg-[#333]" />
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -146,14 +309,14 @@ export function StreamLabForm({
       </div>
       
       <Button 
-        onClick={sendStreamRequest}
+        onClick={handleSendStreamRequest}
         disabled={isStreaming}
         className="bg-[#00ff9d] text-black hover:bg-[#00cc7d] w-full mt-4"
       >
         {isStreaming ? (
           <div className="flex items-center">
             <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-black mr-2"></div>
-            Processing Stream...
+            Streaming...
           </div>
         ) : (
           <div className="flex items-center">
@@ -162,58 +325,17 @@ export function StreamLabForm({
           </div>
         )}
       </Button>
-
-      {/* Streaming response area */}
-      {(streamResponse || isStreaming) && (
-        <div className="mt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[#00ff9d] font-medium">Real-Time Response</h3>
-            <div className="flex items-center space-x-2">
-              {renderStatusIndicator()}
-            </div>
+      
+      {streamResponse && (
+        <div className="mt-6 rounded-md bg-[#222] border border-[#333] p-4">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-lg font-medium text-white">Response</h3>
+            {renderStatusIndicator && renderStatusIndicator()}
           </div>
-          
-          <div className="bg-[#222] rounded-md p-4 border border-[#444] min-h-[200px] relative">
-            <div className="prose prose-invert max-w-none">
-              {streamResponse ? (
-                <div className="whitespace-pre-wrap">{streamResponse}</div>
-              ) : (
-                <div className="text-gray-500 italic">Waiting for response...</div>
-              )}
-              {renderTypingIndicator()}
-            </div>
+          <div className="whitespace-pre-wrap text-sm font-mono text-gray-300">
+            {streamResponse}
           </div>
-          
-          <Tabs defaultValue="live" className="w-full">
-            <TabsList className="bg-[#222] border-[#333]">
-              <TabsTrigger value="live" className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]">
-                Live View
-              </TabsTrigger>
-              <TabsTrigger value="raw" className="data-[state=active]:bg-[#333] data-[state=active]:text-[#00ff9d]">
-                SSE Events
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="live" className="mt-2">
-              {/* Already rendered above */}
-            </TabsContent>
-            
-            <TabsContent value="raw" className="mt-2">
-              <div className="bg-[#222] rounded-md p-4 border border-[#444] max-h-[300px] overflow-y-auto">
-                {streamHistory.length > 0 ? (
-                  <div className="space-y-2">
-                    {streamHistory.map((event, idx) => (
-                      <div key={idx} className="border-b border-[#333] pb-2 last:border-0">
-                        <pre className="text-xs overflow-x-auto"><code>data: {event}</code></pre>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-gray-500 italic">No events received yet</div>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
+          {renderTypingIndicator && renderTypingIndicator()}
         </div>
       )}
     </div>

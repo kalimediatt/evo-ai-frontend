@@ -42,6 +42,8 @@ import {
   GitBranch,
   RefreshCw,
   Workflow,
+  Users,
+  BookOpenCheck,
 } from "lucide-react";
 
 interface AgentTypeSelectorProps {
@@ -62,6 +64,7 @@ export function AgentTypeSelector({
     { value: "parallel", label: "Parallel Agent", icon: GitBranch },
     { value: "loop", label: "Loop Agent", icon: RefreshCw },
     { value: "workflow", label: "Workflow Agent", icon: Workflow },
+    { value: "task", label: "Task Agent", icon: BookOpenCheck },
   ];
 
   return (

@@ -64,6 +64,8 @@ interface LLMAgentConfigProps {
     model?: string;
     api_key_id?: string;
     instruction?: string;
+    role?: string;
+    goal?: string;
   };
   onChange: (values: any) => void;
   onOpenApiKeysDialog: () => void;
@@ -110,6 +112,54 @@ export function LLMAgentConfig({
 
   return (
     <div className="space-y-4">
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="role" className="text-right text-gray-300">
+          Role
+        </Label>
+        <div className="col-span-3">
+          <Input
+            id="role"
+            value={values.role || ""}
+            onChange={(e) =>
+              onChange({
+                ...values,
+                role: e.target.value,
+              })
+            }
+            placeholder="Ex: Research Assistant, Customer Support, etc."
+            className="bg-[#222] border-[#444] text-white"
+          />
+          <div className="mt-1 text-xs text-gray-400">
+            <span className="inline-block h-3 w-3 mr-1">ℹ️</span>
+            <span>Define the role or persona that the agent will assume</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="goal" className="text-right text-gray-300">
+          Goal
+        </Label>
+        <div className="col-span-3">
+          <Input
+            id="goal"
+            value={values.goal || ""}
+            onChange={(e) =>
+              onChange({
+                ...values,
+                goal: e.target.value,
+              })
+            }
+            placeholder="Ex: Find and organize information, Assist customers with inquiries, etc."
+            className="bg-[#222] border-[#444] text-white"
+          />
+          <div className="mt-1 text-xs text-gray-400">
+            <span className="inline-block h-3 w-3 mr-1">ℹ️</span>
+            <span>Define the main objective or purpose of this agent</span>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="api_key" className="text-right text-gray-300">
           API Key

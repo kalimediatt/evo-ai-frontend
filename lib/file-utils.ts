@@ -1,9 +1,9 @@
 /*
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ @author: Davidson Gomes                                                      │
-│ @file: /app/layout.tsx                                                       │
+│ @file: /lib/file-utils.ts                                                    │
 │ Developed by: Davidson Gomes                                                 │
-│ Creation date: May 13, 2025                                                  │
+│ Creation date: August 24, 2025                                               │
 │ Contact: contato@evolution-api.com                                           │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ @copyright © Evolution API 2025. All rights reserved.                        │
@@ -26,48 +26,85 @@
 │ who changed it and the date of modification.                                 │
 └──────────────────────────────────────────────────────────────────────────────┘
 */
-import type React from "react";
-import "./globals.css";
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/toaster";
-import ClientLayout from "./client-layout";
-import ImpersonationBar from "@/components/ImpersonationBar";
-import { PublicEnvScript } from "next-runtime-env";
 
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "Evo AI",
-  description: "AI Multi-Agent Platform",
-  icons: {
-    icon: "/favicon.svg",
-  },
-  generator: "v0.dev",
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <PublicEnvScript />
-      </head>
-      <body className={inter.className}>
-        <ImpersonationBar />
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
-        >
-          <ClientLayout>{children}</ClientLayout>
-          <Toaster />
-        </ThemeProvider>
-      </body>
-    </html>
-  );
+export interface FileData {
+  filename: string;
+  content_type: string;
+  data: string;
+  size: number;
+  preview_url?: string;
 }
+
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      const base64Data = base64.split(',')[1];
+      resolve(base64Data);
+    };
+    reader.onerror = error => reject(error);
+  });
+}
+
+export async function fileToFileData(file: File): Promise<FileData> {
+  const base64Data = await fileToBase64(file);
+  const previewUrl = URL.createObjectURL(file);
+  
+  return {
+    filename: file.name,
+    content_type: file.type,
+    data: base64Data,
+    size: file.size,
+    preview_url: previewUrl
+  };
+}
+
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) {
+    return '0 Bytes';
+  }
+  
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  
+  return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+export function isImageFile(mimeType: string): boolean {
+  return mimeType.startsWith('image/');
+}
+
+export function isPdfFile(mimeType: string): boolean {
+  return mimeType === 'application/pdf';
+}
+
+export function getFileIcon(mimeType: string): string {
+  if (isImageFile(mimeType)) {
+    return 'image';
+  }
+  if (isPdfFile(mimeType)) {
+    return 'file-text';
+  }
+  if (mimeType.includes('word')) {
+    return 'file-text';
+  }
+  if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) {
+    return 'file-spreadsheet';
+  }
+  if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) {
+    return 'file-presentation';
+  }
+  if (mimeType.includes('text/')) {
+    return 'file-text';
+  }
+  if (mimeType.includes('audio/')) {
+    return 'file-audio';
+  }
+  if (mimeType.includes('video/')) {
+    return 'file-video';
+  }
+  
+  return 'file';
+} 
