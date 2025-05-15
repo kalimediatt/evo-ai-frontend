@@ -26,6 +26,7 @@
 │ who changed it and the date of modification.                                 │
 └──────────────────────────────────────────────────────────────────────────────┘
 */
+import { getApiUrl } from "@/lib/env";
 import { useEffect, useRef, useCallback, useState } from "react";
 
 interface FileData {
@@ -63,7 +64,9 @@ export function useAgentWebSocket({
         if (!agentId || !externalId || (!jwt && !apiKey)) {
             return;
         }
-        const wsUrl = `${process.env.NEXT_PUBLIC_API_URL?.replace("http", "ws").replace("https", "wss")}/api/v1/chat/ws/${agentId}/${externalId}`;
+        const apiUrl = getApiUrl();
+
+        const wsUrl = `${apiUrl?.replace("http", "ws").replace("https", "wss")}/api/v1/chat/ws/${agentId}/${externalId}`;
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 

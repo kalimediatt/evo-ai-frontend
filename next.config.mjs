@@ -1,3 +1,5 @@
+import { withRuntimeEnv } from 'next-runtime-env/plugin';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -9,6 +11,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  reactStrictMode: true,
+  swcMinify: true,
 }
 
-export default nextConfig
+export default withRuntimeEnv(nextConfig);

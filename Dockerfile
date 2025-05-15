@@ -40,8 +40,12 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
+# Script to replace environment variables at runtime
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 # Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["npm", "start"] 
+# Use entrypoint script to initialize environment variables before starting the app
+ENTRYPOINT ["/docker-entrypoint.sh"] 

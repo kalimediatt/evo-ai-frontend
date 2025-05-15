@@ -34,6 +34,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import ClientLayout from "./client-layout"
 import ImpersonationBar from "@/components/ImpersonationBar"
+import { EnvProvider } from "@/app/components/EnvProvider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -53,6 +54,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <EnvProvider />
+      </head>
       <body className={inter.className}>
         <ImpersonationBar />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>

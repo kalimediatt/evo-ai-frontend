@@ -27,9 +27,12 @@
 └──────────────────────────────────────────────────────────────────────────────┘
 */
 import axios from "axios";
+import { getApiUrl } from "@/lib/env";
+
+const apiUrl = getApiUrl();
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: apiUrl,
   headers: {
     "Content-Type": "application/json",
   },
