@@ -17,4 +17,4 @@ done
 echo "};" >> $ENV_FILE
 
 # Iniciar a aplicação
-exec npm start 
+exec pnpm start 

@@ -26,44 +26,48 @@
 │ who changed it and the date of modification.                                 │
 └──────────────────────────────────────────────────────────────────────────────┘
 */
-import type React from "react"
-import "./globals.css"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
-import ClientLayout from "./client-layout"
-import ImpersonationBar from "@/components/ImpersonationBar"
-import { EnvProvider } from "@/app/components/EnvProvider"
+import type React from "react";
+import "./globals.css";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
+import ClientLayout from "./client-layout";
+import ImpersonationBar from "@/components/ImpersonationBar";
+import { PublicEnvScript } from "next-runtime-env";
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Evo AI",
   description: "AI Multi-Agent Platform",
   icons: {
-    icon: '/favicon.svg',
+    icon: "/favicon.svg",
   },
-  generator: 'v0.dev'
-}
+  generator: "v0.dev",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <EnvProvider />
+        <PublicEnvScript />
       </head>
       <body className={inter.className}>
         <ImpersonationBar />
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+        >
           <ClientLayout>{children}</ClientLayout>
           <Toaster />
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }
