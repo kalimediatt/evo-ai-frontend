@@ -11,5 +11,5 @@ export const getEnv = (key: string, defaultValue?: string): string => {
 };
 
 export const getApiUrl = (): string => {
-  return getEnv('NEXT_PUBLIC_API_URL', 'https://api-evoai.evoapicloud.com');
+  return getEnv('NEXT_PUBLIC_API_URL', 'https://evo-ai.safeskale.com/');
 }; 
