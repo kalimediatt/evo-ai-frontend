@@ -1,4 +1,4 @@
-const { withRuntimeEnv } = require('next-runtime-env');
+const withRuntimeEnv = require('next-runtime-env').default;
 
 module.exports = withRuntimeEnv({
   eslint: {
