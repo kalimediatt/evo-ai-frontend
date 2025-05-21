@@ -30,7 +30,7 @@ FROM node:20.15.1-alpine AS runner
 WORKDIR /app
 
 # Define build arguments again for the runner stage
-ARG NEXT_PUBLIC_API_URL=https://api-evoai.evoapicloud.com
+ARG NEXT_PUBLIC_API_URL=https://evo-ai.safeskale.com
 
 # Instalar pnpm globalmente
 RUN npm install -g pnpm
@@ -60,4 +60,4 @@ RUN chmod +x ./docker-entrypoint.sh
 EXPOSE 3000
 
 # Use entrypoint script to initialize environment variables before starting the app
-CMD ["pnpm", "preview", "--", "--host", "0.0.0.0", "--port", "3000"]
+ENTRYPOINT ["sh", "./docker-entrypoint.sh"]
