@@ -1,6 +1,8 @@
-import { withRuntimeEnv } from 'next-runtime-env';
-
 /** @type {import('next').NextConfig} */
+
+import pkg from 'next-runtime-env';
+const { withRuntimeEnv } = pkg;
+
 const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
@@ -13,6 +15,5 @@ const nextConfig = {
   },
 };
 
-export default withRuntimeEnv(nextConfig, {
-  runtimeEnv: ['NEXT_PUBLIC_API_URL'],
-});
+// Adiciona suporte a variáveis em tempo de execução
+export default withRuntimeEnv(nextConfig);
