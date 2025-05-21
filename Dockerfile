@@ -49,7 +49,7 @@ COPY --from=builder /app/next.config.mjs ./
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=3001
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 # Script to replace environment variables at runtime - create it diretamente no container
@@ -57,7 +57,7 @@ COPY docker-entrypoint.sh ./
 RUN chmod +x ./docker-entrypoint.sh
 
 # Expose port
-EXPOSE 3000
+EXPOSE 3001
 
 # Use entrypoint script to initialize environment variables before starting the app
 CMD ["pnpm", "preview", "--", "--host", "0.0.0.0", "--port", "3000"]
