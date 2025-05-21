@@ -1,5 +1,4 @@
 // app/layout.tsx (ou app/documentation/layout.tsx)
-import './globals.css'
 import { ReactNode } from 'react'
 
 export const metadata = {
