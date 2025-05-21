@@ -60,4 +60,4 @@ RUN chmod +x ./docker-entrypoint.sh
 EXPOSE 3000
 
 # Use entrypoint script to initialize environment variables before starting the app
-CMD ["pnpm", "start"]
+CMD ["pnpm", "exec", "next", "start", "-p", "3000"]
