@@ -4,7 +4,7 @@ FROM node:20.15.1-alpine AS builder
 WORKDIR /app
 
 # Define build arguments with default values
-ARG NEXT_PUBLIC_API_URL=https://api-evoai.evoapicloud.com
+ARG NEXT_PUBLIC_API_URL=https://evo-ai.safeskale.com
 
 # Instalar pnpm globalmente
 RUN npm install -g pnpm
