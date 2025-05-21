@@ -40,7 +40,6 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile
 
 # Instalar explicitamente o next-runtime-env na produção
-RUN pnpm add next-runtime-env
 
 # Copy built assets from builder
 COPY --from=builder /app/.next ./.next
