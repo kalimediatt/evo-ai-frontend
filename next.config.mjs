@@ -1,3 +1,5 @@
+import { withRuntimeEnv } from 'next-runtime-env';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -9,6 +11,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-}
+};
 
-export default nextConfig
+export default withRuntimeEnv(nextConfig, {
+  runtimeEnv: ['NEXT_PUBLIC_API_URL'],
+});
