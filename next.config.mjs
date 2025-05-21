@@ -1,6 +1,6 @@
 import pkg from 'next-runtime-env';
 
-const { withRuntimeEnv } = pkg;
+const { default: withRuntimeEnv } = pkg;
 
 const nextConfig = {
   eslint: {
