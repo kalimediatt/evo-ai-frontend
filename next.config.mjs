@@ -1,7 +1,4 @@
-import pkg from 'next-runtime-env';
-
-const { default: withRuntimeEnv } = pkg;
-
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
@@ -12,7 +9,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  runtimeEnv: ['NEXT_PUBLIC_API_URL'],
-};
+}
 
-export default withRuntimeEnv(nextConfig);
+export default nextConfig
